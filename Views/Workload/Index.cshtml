@@ -7,7 +7,7 @@
 
 <div class="container-fluid py-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="mb-0">Таблица расчета нагрузки</h2>
+        <h2 class="mb-0">Дисциплины (модули)</h2>
         <div class="d-flex gap-2">
             <button type="submit" form="workloadForm" class="btn btn-outline-secondary">
                 Сохранить
@@ -18,6 +18,13 @@
                     formmethod="post"
                     class="btn btn-primary">
                 Выполнить расчет
+            </button>
+            <button type="submit"
+                    form="workloadForm"
+                    formaction="@Url.Action("AddDisciplineRow", "Workload")"
+                    formmethod="post"
+                    class="btn btn-outline-primary">
+                Добавить строку
             </button>
         </div>
     </div>
@@ -39,29 +46,24 @@
                         <th rowspan="2">Форма обучения</th>
                         <th rowspan="2">Дисциплина по выбору</th>
                         <th rowspan="2">Код направления(специальности) по ФГОС 3+</th>
-                        <th rowspan="2" style="min-width: 280px;">Полное наименование дисциплин</th>
+                        <th rowspan="2" style="min-width:280px;">Полное наименование дисциплин</th>
                         <th rowspan="2">Курс</th>
                         <th rowspan="2">Студентов</th>
                         <th rowspan="2">Потоков</th>
                         <th rowspan="2">Групп</th>
                         <th rowspan="2">Подгрупп</th>
+
                         <th colspan="2">Лекции</th>
                         <th colspan="2">Практ.Семин.</th>
                         <th colspan="2">Лаборат.занятия</th>
                         <th colspan="4">По учебному плану</th>
+
                         <th rowspan="2">Консультации</th>
                         <th rowspan="2">Экзамен</th>
                         <th rowspan="2">Зачет</th>
                         <th rowspan="2">Курсовая работа</th>
                         <th rowspan="2">Курсовой проект</th>
-                        <th rowspan="2">Госэкзамен</th>
-                        <th rowspan="2">Дипломное проектирование</th>
-                        <th rowspan="2">ГЭК</th>
                         <th rowspan="2">Орг.работа</th>
-                        <th rowspan="2">Учебная практика(недели)</th>
-                        <th rowspan="2">Практика</th>
-                        <th rowspan="2">Преддипломная практика</th>
-                        <th rowspan="2">Научно-педагогич.практика зет</th>
                         <th rowspan="2">Руков. научной работой</th>
                         <th rowspan="2">Рефераты/РГР</th>
                         <th rowspan="2">Итого</th>
@@ -80,224 +82,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr class="table-secondary fw-bold">
-                        <td colspan="36">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span>Руководство</span>
-                                <button type="submit"
-                                        class="btn btn-sm btn-outline-primary"
-                                        formaction="@Url.Action("AddGuidanceRow", "Workload")"
-                                        formmethod="post">
-                                    Добавить строку
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    @for (var i = 0; i < Model.GuidanceRows.Count; i++)
-                    {
-                        <tr>
-                            <td>
-                                <input type="hidden" asp-for="GuidanceRows[i].Id" />
-                                <input type="hidden" asp-for="GuidanceRows[i].DisplayOrder" />
-                                <input type="hidden" asp-for="GuidanceRows[i].IsSectionHeader" />
-                                <input type="hidden" asp-for="GuidanceRows[i].SectionType" />
-                                <input type="hidden" asp-for="GuidanceRows[i].RowKind" />
-                                <input type="hidden" asp-for="GuidanceRows[i].FormulaType" />
-                                <input type="hidden" asp-for="GuidanceRows[i].SectionTitle" />
-                                <select asp-for="GuidanceRows[i].Semester" class="form-select form-select-sm">
-                                    <option value="">Выбрать</option>
-                                    <option value="@SemesterType.Autumn">Осень</option>
-                                    <option value="@SemesterType.Spring">Весна</option>
-                                </select>
-                            </td>
-                            <td><input asp-for="GuidanceRows[i].EducationForm" class="form-control form-control-sm" /></td>
-                            <td class="text-center"><input asp-for="GuidanceRows[i].IsElectiveDiscipline" class="form-check-input" /></td>
-                            <td><input asp-for="GuidanceRows[i].DirectionCode" class="form-control form-control-sm" list="directionCodesList" /></td>
-                            <td><input asp-for="GuidanceRows[i].DisciplineName" class="form-control form-control-sm" /></td>
-                            <td><input asp-for="GuidanceRows[i].Course" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="GuidanceRows[i].StudentsCount" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="GuidanceRows[i].StreamsCount" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="GuidanceRows[i].GroupsCount" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="GuidanceRows[i].SubGroupsCount" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="GuidanceRows[i].LecturePlanHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="GuidanceRows[i].LectureTotalHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GuidanceRows[i].PracticePlanHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="GuidanceRows[i].PracticeTotalHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GuidanceRows[i].LaboratoryPlanHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="GuidanceRows[i].LaboratoryTotalHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td class="text-center"><input asp-for="GuidanceRows[i].HasExamInPlan" class="form-check-input" /></td>
-                            <td class="text-center"><input asp-for="GuidanceRows[i].HasCreditInPlan" class="form-check-input" /></td>
-                            <td class="text-center"><input asp-for="GuidanceRows[i].HasCourseWorkInPlan" class="form-check-input" /></td>
-                            <td class="text-center"><input asp-for="GuidanceRows[i].HasCourseProjectInPlan" class="form-check-input" /></td>
-                            <td><input asp-for="GuidanceRows[i].ConsultationHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GuidanceRows[i].ExamHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GuidanceRows[i].CreditHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GuidanceRows[i].CourseWorkHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GuidanceRows[i].CourseProjectHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GuidanceRows[i].StateExamHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GuidanceRows[i].DiplomaProjectHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GuidanceRows[i].GekHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GuidanceRows[i].OrganizationalWorkHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="GuidanceRows[i].StudyPracticeWeeks" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="GuidanceRows[i].PracticeHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GuidanceRows[i].PrediplomaPracticeHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GuidanceRows[i].ScientificPedagogicalPracticeValue" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="GuidanceRows[i].ResearchGuidanceHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="GuidanceRows[i].AbstractOrRgrHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="GuidanceRows[i].TotalHours" class="form-control form-control-sm bg-light fw-bold" type="number" step="0.01" readonly /></td>
-                        </tr>
-                    }
-
-                    <tr class="table-secondary fw-bold">
-                        <td colspan="36">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span>ГИА</span>
-                                <button type="submit"
-                                        class="btn btn-sm btn-outline-primary"
-                                        formaction="@Url.Action("AddGiaRow", "Workload")"
-                                        formmethod="post">
-                                    Добавить строку
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    @for (var i = 0; i < Model.GiaRows.Count; i++)
-                    {
-                        <tr>
-                            <td>
-                                <input type="hidden" asp-for="GiaRows[i].Id" />
-                                <input type="hidden" asp-for="GiaRows[i].DisplayOrder" />
-                                <input type="hidden" asp-for="GiaRows[i].IsSectionHeader" />
-                                <input type="hidden" asp-for="GiaRows[i].SectionType" />
-                                <input type="hidden" asp-for="GiaRows[i].RowKind" />
-                                <input type="hidden" asp-for="GiaRows[i].FormulaType" />
-                                <input type="hidden" asp-for="GiaRows[i].SectionTitle" />
-                                <select asp-for="GiaRows[i].Semester" class="form-select form-select-sm">
-                                    <option value="">Выбрать</option>
-                                    <option value="@SemesterType.Autumn">Осень</option>
-                                    <option value="@SemesterType.Spring">Весна</option>
-                                </select>
-                            </td>
-                            <td><input asp-for="GiaRows[i].EducationForm" class="form-control form-control-sm" /></td>
-                            <td class="text-center"><input asp-for="GiaRows[i].IsElectiveDiscipline" class="form-check-input" /></td>
-                            <td><input asp-for="GiaRows[i].DirectionCode" class="form-control form-control-sm" list="directionCodesList" /></td>
-                            <td><input asp-for="GiaRows[i].DisciplineName" class="form-control form-control-sm" /></td>
-                            <td><input asp-for="GiaRows[i].Course" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="GiaRows[i].StudentsCount" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="GiaRows[i].StreamsCount" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="GiaRows[i].GroupsCount" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="GiaRows[i].SubGroupsCount" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="GiaRows[i].LecturePlanHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="GiaRows[i].LectureTotalHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GiaRows[i].PracticePlanHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="GiaRows[i].PracticeTotalHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GiaRows[i].LaboratoryPlanHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="GiaRows[i].LaboratoryTotalHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td class="text-center"><input asp-for="GiaRows[i].HasExamInPlan" class="form-check-input" /></td>
-                            <td class="text-center"><input asp-for="GiaRows[i].HasCreditInPlan" class="form-check-input" /></td>
-                            <td class="text-center"><input asp-for="GiaRows[i].HasCourseWorkInPlan" class="form-check-input" /></td>
-                            <td class="text-center"><input asp-for="GiaRows[i].HasCourseProjectInPlan" class="form-check-input" /></td>
-                            <td><input asp-for="GiaRows[i].ConsultationHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GiaRows[i].ExamHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GiaRows[i].CreditHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GiaRows[i].CourseWorkHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GiaRows[i].CourseProjectHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GiaRows[i].StateExamHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GiaRows[i].DiplomaProjectHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GiaRows[i].GekHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GiaRows[i].OrganizationalWorkHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="GiaRows[i].StudyPracticeWeeks" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="GiaRows[i].PracticeHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GiaRows[i].PrediplomaPracticeHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="GiaRows[i].ScientificPedagogicalPracticeValue" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="GiaRows[i].ResearchGuidanceHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="GiaRows[i].AbstractOrRgrHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="GiaRows[i].TotalHours" class="form-control form-control-sm bg-light fw-bold" type="number" step="0.01" readonly /></td>
-                        </tr>
-                    }
-
-                    <tr class="table-secondary fw-bold">
-                        <td colspan="36">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span>Практика</span>
-                                <button type="submit"
-                                        class="btn btn-sm btn-outline-primary"
-                                        formaction="@Url.Action("AddPracticeRow", "Workload")"
-                                        formmethod="post">
-                                    Добавить строку
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    @for (var i = 0; i < Model.PracticeRows.Count; i++)
-                    {
-                        <tr>
-                            <td>
-                                <input type="hidden" asp-for="PracticeRows[i].Id" />
-                                <input type="hidden" asp-for="PracticeRows[i].DisplayOrder" />
-                                <input type="hidden" asp-for="PracticeRows[i].IsSectionHeader" />
-                                <input type="hidden" asp-for="PracticeRows[i].SectionType" />
-                                <input type="hidden" asp-for="PracticeRows[i].RowKind" />
-                                <input type="hidden" asp-for="PracticeRows[i].FormulaType" />
-                                <input type="hidden" asp-for="PracticeRows[i].SectionTitle" />
-                                <select asp-for="PracticeRows[i].Semester" class="form-select form-select-sm">
-                                    <option value="">Выбрать</option>
-                                    <option value="@SemesterType.Autumn">Осень</option>
-                                    <option value="@SemesterType.Spring">Весна</option>
-                                </select>
-                            </td>
-                            <td><input asp-for="PracticeRows[i].EducationForm" class="form-control form-control-sm" /></td>
-                            <td class="text-center"><input asp-for="PracticeRows[i].IsElectiveDiscipline" class="form-check-input" /></td>
-                            <td><input asp-for="PracticeRows[i].DirectionCode" class="form-control form-control-sm" list="directionCodesList" /></td>
-                            <td><input asp-for="PracticeRows[i].DisciplineName" class="form-control form-control-sm" /></td>
-                            <td><input asp-for="PracticeRows[i].Course" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="PracticeRows[i].StudentsCount" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="PracticeRows[i].StreamsCount" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="PracticeRows[i].GroupsCount" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="PracticeRows[i].SubGroupsCount" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="PracticeRows[i].LecturePlanHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="PracticeRows[i].LectureTotalHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="PracticeRows[i].PracticePlanHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="PracticeRows[i].PracticeTotalHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="PracticeRows[i].LaboratoryPlanHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="PracticeRows[i].LaboratoryTotalHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td class="text-center"><input asp-for="PracticeRows[i].HasExamInPlan" class="form-check-input" /></td>
-                            <td class="text-center"><input asp-for="PracticeRows[i].HasCreditInPlan" class="form-check-input" /></td>
-                            <td class="text-center"><input asp-for="PracticeRows[i].HasCourseWorkInPlan" class="form-check-input" /></td>
-                            <td class="text-center"><input asp-for="PracticeRows[i].HasCourseProjectInPlan" class="form-check-input" /></td>
-                            <td><input asp-for="PracticeRows[i].ConsultationHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="PracticeRows[i].ExamHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="PracticeRows[i].CreditHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="PracticeRows[i].CourseWorkHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="PracticeRows[i].CourseProjectHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="PracticeRows[i].StateExamHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="PracticeRows[i].DiplomaProjectHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="PracticeRows[i].GekHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="PracticeRows[i].OrganizationalWorkHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="PracticeRows[i].StudyPracticeWeeks" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="PracticeRows[i].PracticeHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="PracticeRows[i].PrediplomaPracticeHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="PracticeRows[i].ScientificPedagogicalPracticeValue" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="PracticeRows[i].ResearchGuidanceHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="PracticeRows[i].AbstractOrRgrHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="PracticeRows[i].TotalHours" class="form-control form-control-sm bg-light fw-bold" type="number" step="0.01" readonly /></td>
-                        </tr>
-                    }
-
-                    <tr class="table-secondary fw-bold">
-                        <td colspan="36">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span>Дисциплины (модули)</span>
-                                <button type="submit"
-                                        class="btn btn-sm btn-outline-primary"
-                                        formaction="@Url.Action("AddDisciplineRow", "Workload")"
-                                        formmethod="post">
-                                    Добавить строку
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    @for (var i = 0; i < Model.DisciplineRows.Count; i++)
+                    @for (int i = 0; i < Model.DisciplineRows.Count; i++)
                     {
                         <tr>
                             <td>
@@ -307,48 +92,127 @@
                                 <input type="hidden" asp-for="DisciplineRows[i].SectionType" />
                                 <input type="hidden" asp-for="DisciplineRows[i].RowKind" />
                                 <input type="hidden" asp-for="DisciplineRows[i].FormulaType" />
-                                <input type="hidden" asp-for="DisciplineRows[i].SectionTitle" />
+
                                 <select asp-for="DisciplineRows[i].Semester" class="form-select form-select-sm">
                                     <option value="">Выбрать</option>
                                     <option value="@SemesterType.Autumn">Осень</option>
                                     <option value="@SemesterType.Spring">Весна</option>
                                 </select>
                             </td>
-                            <td><input asp-for="DisciplineRows[i].EducationForm" class="form-control form-control-sm" /></td>
-                            <td class="text-center"><input asp-for="DisciplineRows[i].IsElectiveDiscipline" class="form-check-input" /></td>
-                            <td><input asp-for="DisciplineRows[i].DirectionCode" class="form-control form-control-sm" list="directionCodesList" /></td>
-                            <td><input asp-for="DisciplineRows[i].DisciplineName" class="form-control form-control-sm" /></td>
-                            <td><input asp-for="DisciplineRows[i].Course" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="DisciplineRows[i].StudentsCount" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="DisciplineRows[i].StreamsCount" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="DisciplineRows[i].GroupsCount" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="DisciplineRows[i].SubGroupsCount" class="form-control form-control-sm" type="number" min="0" /></td>
-                            <td><input asp-for="DisciplineRows[i].LecturePlanHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="DisciplineRows[i].LectureTotalHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="DisciplineRows[i].PracticePlanHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="DisciplineRows[i].PracticeTotalHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="DisciplineRows[i].LaboratoryPlanHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="DisciplineRows[i].LaboratoryTotalHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td class="text-center"><input asp-for="DisciplineRows[i].HasExamInPlan" class="form-check-input" /></td>
-                            <td class="text-center"><input asp-for="DisciplineRows[i].HasCreditInPlan" class="form-check-input" /></td>
-                            <td class="text-center"><input asp-for="DisciplineRows[i].HasCourseWorkInPlan" class="form-check-input" /></td>
-                            <td class="text-center"><input asp-for="DisciplineRows[i].HasCourseProjectInPlan" class="form-check-input" /></td>
-                            <td><input asp-for="DisciplineRows[i].ConsultationHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="DisciplineRows[i].ExamHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="DisciplineRows[i].CreditHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="DisciplineRows[i].CourseWorkHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="DisciplineRows[i].CourseProjectHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="DisciplineRows[i].StateExamHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="DisciplineRows[i].DiplomaProjectHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="DisciplineRows[i].GekHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="DisciplineRows[i].OrganizationalWorkHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="DisciplineRows[i].StudyPracticeWeeks" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="DisciplineRows[i].PracticeHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="DisciplineRows[i].PrediplomaPracticeHours" class="form-control form-control-sm bg-light" type="number" step="0.01" readonly /></td>
-                            <td><input asp-for="DisciplineRows[i].ScientificPedagogicalPracticeValue" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="DisciplineRows[i].ResearchGuidanceHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="DisciplineRows[i].AbstractOrRgrHours" class="form-control form-control-sm" type="number" step="0.01" min="0" /></td>
-                            <td><input asp-for="DisciplineRows[i].TotalHours" class="form-control form-control-sm bg-light fw-bold" type="number" step="0.01" readonly /></td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].EducationForm" class="form-control form-control-sm" />
+                            </td>
+
+                            <td class="text-center">
+                                <input asp-for="DisciplineRows[i].IsElectiveDiscipline" class="form-check-input" />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].DirectionCode"
+                                       class="form-control form-control-sm"
+                                       list="directionCodesList" />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].DisciplineName" class="form-control form-control-sm" />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].Course" class="form-control form-control-sm" type="number" min="0" />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].StudentsCount" class="form-control form-control-sm" type="number" min="0" />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].StreamsCount" class="form-control form-control-sm" type="number" min="0" />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].GroupsCount" class="form-control form-control-sm" type="number" min="0" />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].SubGroupsCount" class="form-control form-control-sm" type="number" min="0" />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].LecturePlanHours" class="form-control form-control-sm" type="number" step="0.01" min="0" />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].LectureTotalHours" class="form-control form-control-sm bg-light" readonly />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].PracticePlanHours" class="form-control form-control-sm" type="number" step="0.01" min="0" />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].PracticeTotalHours" class="form-control form-control-sm bg-light" readonly />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].LaboratoryPlanHours" class="form-control form-control-sm" type="number" step="0.01" min="0" />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].LaboratoryTotalHours" class="form-control form-control-sm bg-light" readonly />
+                            </td>
+
+                            <td class="text-center">
+                                <input asp-for="DisciplineRows[i].HasExamInPlan" class="form-check-input" />
+                            </td>
+
+                            <td class="text-center">
+                                <input asp-for="DisciplineRows[i].HasCreditInPlan" class="form-check-input" />
+                            </td>
+
+                            <td class="text-center">
+                                <input asp-for="DisciplineRows[i].HasCourseWorkInPlan" class="form-check-input" />
+                            </td>
+
+                            <td class="text-center">
+                                <input asp-for="DisciplineRows[i].HasCourseProjectInPlan" class="form-check-input" />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].ConsultationHours" class="form-control form-control-sm bg-light" readonly />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].ExamHours" class="form-control form-control-sm bg-light" readonly />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].CreditHours" class="form-control form-control-sm bg-light" readonly />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].CourseWorkHours" class="form-control form-control-sm bg-light" readonly />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].CourseProjectHours" class="form-control form-control-sm bg-light" readonly />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].OrganizationalWorkHours" class="form-control form-control-sm" type="number" step="0.01" min="0" />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].ResearchGuidanceHours" class="form-control form-control-sm" type="number" step="0.01" min="0" />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].AbstractOrRgrHours" class="form-control form-control-sm" type="number" step="0.01" min="0" />
+                            </td>
+
+                            <td>
+                                <input asp-for="DisciplineRows[i].TotalHours" class="form-control form-control-sm bg-light fw-bold" readonly />
+                            </td>
                         </tr>
                     }
                 </tbody>

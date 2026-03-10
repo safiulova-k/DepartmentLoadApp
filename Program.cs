@@ -1,10 +1,6 @@
-using DepartmentLoadApp.Interfaces;
-using DepartmentLoadApp.Services;
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
-builder.Services.AddScoped<IWorkloadCalculationService, WorkloadCalculationService>();
 
 var app = builder.Build();
 

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Linq;
+using Microsoft.AspNetCore.Mvc;
 using DepartmentLoadApp.Models.Enums;
 using DepartmentLoadApp.Models.Workload;
-using Microsoft.AspNetCore.Mvc;
 
 namespace DepartmentLoadApp.Controllers
 {
@@ -20,6 +20,7 @@ namespace DepartmentLoadApp.Controllers
         {
             EnsureCollections(model);
             RecalculateAll(model);
+            ModelState.Clear();
             return View(model);
         }
 
@@ -28,42 +29,7 @@ namespace DepartmentLoadApp.Controllers
         {
             EnsureCollections(model);
             RecalculateAll(model);
-            return View("Index", model);
-        }
-
-        [HttpPost]
-        public IActionResult AddGuidanceRow(WorkloadTablePageViewModel model)
-        {
-            EnsureCollections(model);
-            model.GuidanceRows.Add(CreateRow(
-                WorkloadSectionType.Guidance,
-                WorkloadRowKind.Custom,
-                WorkloadFormulaType.Custom,
-                GetNextId(model)));
-            return View("Index", model);
-        }
-
-        [HttpPost]
-        public IActionResult AddGiaRow(WorkloadTablePageViewModel model)
-        {
-            EnsureCollections(model);
-            model.GiaRows.Add(CreateRow(
-                WorkloadSectionType.Gia,
-                WorkloadRowKind.Custom,
-                WorkloadFormulaType.Custom,
-                GetNextId(model)));
-            return View("Index", model);
-        }
-
-        [HttpPost]
-        public IActionResult AddPracticeRow(WorkloadTablePageViewModel model)
-        {
-            EnsureCollections(model);
-            model.PracticeRows.Add(CreateRow(
-                WorkloadSectionType.Practice,
-                WorkloadRowKind.Custom,
-                WorkloadFormulaType.Custom,
-                GetNextId(model)));
+            ModelState.Clear();
             return View("Index", model);
         }
 
@@ -71,57 +37,32 @@ namespace DepartmentLoadApp.Controllers
         public IActionResult AddDisciplineRow(WorkloadTablePageViewModel model)
         {
             EnsureCollections(model);
-            model.DisciplineRows.Add(CreateRow(
-                WorkloadSectionType.Disciplines,
-                WorkloadRowKind.Discipline,
-                WorkloadFormulaType.Discipline,
-                GetNextId(model)));
+            model.DisciplineRows.Add(CreateRow(GetNextId(model)));
             return View("Index", model);
         }
 
         private static WorkloadTablePageViewModel CreateDefaultModel()
         {
             var model = new WorkloadTablePageViewModel();
-
-            model.DisciplineRows.Add(CreateRow(
-                WorkloadSectionType.Disciplines,
-                WorkloadRowKind.Discipline,
-                WorkloadFormulaType.Discipline,
-                1));
-
+            model.DisciplineRows.Add(CreateRow(1));
             return model;
         }
 
         private static void EnsureCollections(WorkloadTablePageViewModel model)
         {
-            model.GuidanceRows ??= new();
-            model.GiaRows ??= new();
-            model.PracticeRows ??= new();
             model.DisciplineRows ??= new();
         }
 
-        private static void RecalculateAll(WorkloadTablePageViewModel model)
-        {
-            RecalculateCollection(model.GuidanceRows);
-            RecalculateCollection(model.GiaRows);
-            RecalculateCollection(model.PracticeRows);
-            RecalculateCollection(model.DisciplineRows);
-        }
-
-        private static WorkloadTableRowViewModel CreateRow(
-            WorkloadSectionType sectionType,
-            WorkloadRowKind rowKind,
-            WorkloadFormulaType formulaType,
-            int id)
+        private static WorkloadTableRowViewModel CreateRow(int id)
         {
             return new WorkloadTableRowViewModel
             {
                 Id = id,
                 DisplayOrder = id,
                 IsSectionHeader = false,
-                SectionType = sectionType,
-                RowKind = rowKind,
-                FormulaType = formulaType,
+                SectionType = WorkloadSectionType.Disciplines,
+                RowKind = WorkloadRowKind.Discipline,
+                FormulaType = WorkloadFormulaType.Discipline,
                 SectionTitle = null,
                 Semester = null,
                 EducationForm = string.Empty,
@@ -134,8 +75,11 @@ namespace DepartmentLoadApp.Controllers
                 GroupsCount = 0,
                 SubGroupsCount = 0,
                 LecturePlanHours = 0,
+                LectureTotalHours = 0,
                 PracticePlanHours = 0,
+                PracticeTotalHours = 0,
                 LaboratoryPlanHours = 0,
+                LaboratoryTotalHours = 0,
                 HasExamInPlan = false,
                 HasCreditInPlan = false,
                 HasCourseWorkInPlan = false,
@@ -161,17 +105,12 @@ namespace DepartmentLoadApp.Controllers
 
         private static int GetNextId(WorkloadTablePageViewModel model)
         {
-            var allIds = model.GuidanceRows.Select(x => x.Id)
-                .Concat(model.GiaRows.Select(x => x.Id))
-                .Concat(model.PracticeRows.Select(x => x.Id))
-                .Concat(model.DisciplineRows.Select(x => x.Id));
-
-            return allIds.Any() ? allIds.Max() + 1 : 1;
+            return model.DisciplineRows.Any() ? model.DisciplineRows.Max(x => x.Id) + 1 : 1;
         }
 
-        private static void RecalculateCollection(System.Collections.Generic.List<WorkloadTableRowViewModel> rows)
+        private static void RecalculateAll(WorkloadTablePageViewModel model)
         {
-            foreach (var row in rows)
+            foreach (var row in model.DisciplineRows)
             {
                 RecalculateRow(row);
             }
@@ -183,125 +122,35 @@ namespace DepartmentLoadApp.Controllers
             var groups = row.GroupsCount ?? 0;
             var subGroups = row.SubGroupsCount ?? 0;
 
-            row.LectureTotalHours = 0;
-            row.PracticeTotalHours = 0;
-            row.LaboratoryTotalHours = 0;
-            row.ConsultationHours = 0;
-            row.ExamHours = 0;
-            row.CreditHours = 0;
-            row.CourseWorkHours = 0;
-            row.CourseProjectHours = 0;
-            row.StateExamHours = 0;
-            row.DiplomaProjectHours = 0;
-            row.GekHours = 0;
-            row.TotalHours = 0;
+            row.FormulaType = WorkloadFormulaType.Discipline;
+            row.RowKind = WorkloadRowKind.Discipline;
+            row.SectionType = WorkloadSectionType.Disciplines;
 
-            switch (row.FormulaType)
-            {
-                case WorkloadFormulaType.Discipline:
-                    row.LectureTotalHours = row.LecturePlanHours;
-                    row.PracticeTotalHours = row.PracticePlanHours * groups;
-                    row.LaboratoryTotalHours = row.LaboratoryPlanHours * subGroups;
+            row.LectureTotalHours = row.LecturePlanHours;
+            row.PracticeTotalHours = row.PracticePlanHours * groups;
+            row.LaboratoryTotalHours = row.LaboratoryPlanHours * subGroups;
 
-                    row.ConsultationHours =
-                        RoundToHalf(0.05m * groups * row.LecturePlanHours) +
-                        (row.HasExamInPlan ? 2m * groups : 0m);
+            row.ConsultationHours =
+                RoundToHalf(0.05m * groups * row.LecturePlanHours) +
+                (row.HasExamInPlan ? 2m * groups : 0m);
 
-                    row.ExamHours = row.HasExamInPlan ? students * 0.3m : 0m;
-                    row.CreditHours = row.HasCreditInPlan ? students * 0.2m : 0m;
-                    row.CourseWorkHours = row.HasCourseWorkInPlan ? students * 1.5m : 0m;
-                    row.CourseProjectHours = row.HasCourseProjectInPlan ? students * 3m : 0m;
+            row.ExamHours = row.HasExamInPlan ? students * 0.3m : 0m;
+            row.CreditHours = row.HasCreditInPlan ? students * 0.2m : 0m;
+            row.CourseWorkHours = row.HasCourseWorkInPlan ? students * 1.5m : 0m;
+            row.CourseProjectHours = row.HasCourseProjectInPlan ? students * 3m : 0m;
 
-                    row.TotalHours =
-                        row.LectureTotalHours +
-                        row.PracticeTotalHours +
-                        row.LaboratoryTotalHours +
-                        row.ConsultationHours +
-                        row.ExamHours +
-                        row.CreditHours +
-                        row.CourseWorkHours +
-                        row.CourseProjectHours +
-                        row.OrganizationalWorkHours +
-                        row.ResearchGuidanceHours +
-                        row.AbstractOrRgrHours;
-                    break;
-
-                case WorkloadFormulaType.BachelorThesisGuidance:
-                    row.DiplomaProjectHours = students * 10m + students * 0.5m;
-                    row.TotalHours = row.DiplomaProjectHours;
-                    break;
-
-                case WorkloadFormulaType.SpecialistThesisGuidance:
-                    row.DiplomaProjectHours = students * 15m + students * 0.5m;
-                    row.TotalHours = row.DiplomaProjectHours;
-                    break;
-
-                case WorkloadFormulaType.MasterThesisGuidance:
-                    row.DiplomaProjectHours = students * 30m + students * 0.5m;
-                    row.TotalHours = row.DiplomaProjectHours;
-                    break;
-
-                case WorkloadFormulaType.ThesisReview:
-                    row.DiplomaProjectHours = students * 2m;
-                    row.TotalHours = row.DiplomaProjectHours;
-                    break;
-
-                case WorkloadFormulaType.ThesisPreReview:
-                    row.DiplomaProjectHours = students * 0.5m;
-                    row.TotalHours = row.DiplomaProjectHours;
-                    break;
-
-                case WorkloadFormulaType.NormControl:
-                    row.DiplomaProjectHours = students * 1m;
-                    row.TotalHours = row.DiplomaProjectHours;
-                    break;
-
-                case WorkloadFormulaType.StateExam:
-                    row.StateExamHours = students * (0.5m * 5m + 1m);
-                    row.TotalHours = row.StateExamHours;
-                    break;
-
-                case WorkloadFormulaType.GekWork:
-                    row.GekHours = students * (0.5m * 5m + 1m);
-                    row.TotalHours = row.GekHours;
-                    break;
-
-                case WorkloadFormulaType.StudyPractice:
-                    row.TotalHours = students * row.StudyPracticeWeeks;
-                    break;
-
-                case WorkloadFormulaType.ProductionPractice:
-                    row.TotalHours = groups * row.PracticeHours * 10m;
-                    break;
-
-                case WorkloadFormulaType.PrediplomaPractice:
-                    row.TotalHours = students * row.PrediplomaPracticeHours;
-                    break;
-
-                case WorkloadFormulaType.ScientificPedagogicalPractice:
-                    row.TotalHours = students * row.ScientificPedagogicalPracticeValue;
-                    break;
-
-                case WorkloadFormulaType.ResearchWork:
-                    row.TotalHours = students * 1.3m * row.PracticeHours;
-                    break;
-
-                case WorkloadFormulaType.Custom:
-                    row.TotalHours =
-                        row.OrganizationalWorkHours +
-                        row.StudyPracticeWeeks +
-                        row.PracticeHours +
-                        row.PrediplomaPracticeHours +
-                        row.ScientificPedagogicalPracticeValue +
-                        row.ResearchGuidanceHours +
-                        row.AbstractOrRgrHours;
-                    break;
-
-                case WorkloadFormulaType.None:
-                default:
-                    row.TotalHours = 0;
-                    break;
-            }
+            row.TotalHours =
+                row.LectureTotalHours +
+                row.PracticeTotalHours +
+                row.LaboratoryTotalHours +
+                row.ConsultationHours +
+                row.ExamHours +
+                row.CreditHours +
+                row.CourseWorkHours +
+                row.CourseProjectHours +
+                row.OrganizationalWorkHours +
+                row.ResearchGuidanceHours +
+                row.AbstractOrRgrHours;
         }
 
         private static decimal RoundToHalf(decimal value)
