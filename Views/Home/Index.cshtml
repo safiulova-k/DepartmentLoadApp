@@ -1,0 +1,100 @@
+﻿@{
+    ViewData["Title"] = "Главная";
+}
+
+<div class="row">
+
+    <div class="col-12 mb-4">
+        <h2>Модуль расчета нагрузки преподавателей</h2>
+        <p>
+            Система предназначена для автоматического расчета учебной нагрузки
+            и формирования индивидуальных планов преподавателей кафедры.
+        </p>
+    </div>
+
+</div>
+
+
+<div class="row g-4">
+
+    <div class="col-md-4">
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+
+                <h5 class="card-title">
+                    Расчет необходимой нагрузки
+                </h5>
+
+                <p class="card-text">
+                    Автоматический расчет количества часов на основе
+                    норм времени и контингента студентов.
+                </p>
+
+                <a asp-controller="WorkloadCalculation"
+                   asp-action="Index"
+                   class="btn btn-primary">
+
+                    Открыть
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+
+
+    <div class="col-md-4">
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+
+                <h5 class="card-title">
+                    Распределение нагрузки
+                </h5>
+
+                <p class="card-text">
+                    Ручное распределение рассчитанных часов
+                    между преподавателями кафедры.
+                </p>
+
+                <a asp-controller="WorkloadDistribution"
+                   asp-action="Index"
+                   class="btn btn-primary">
+
+                    Открыть
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+
+
+    <div class="col-md-4">
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+
+                <h5 class="card-title">
+                    Индивидуальные планы
+                </h5>
+
+                <p class="card-text">
+                    Просмотр и формирование индивидуальных
+                    планов преподавателей.
+                </p>
+
+                <a asp-controller="IndividualPlans"
+                   asp-action="Index"
+                   class="btn btn-primary">
+
+                    Открыть
+                </a>
+
+            </div>
+        </div>
+
+    </div>
+
+</div>
