@@ -1,0 +1,264 @@
+﻿@model DepartmentLoadApp.Models.Workload.WorkloadTablePageViewModel
+
+@{
+    ViewData["Title"] = "Таблица расчета нагрузки";
+}
+
+<div class="container-fluid py-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white border-0 pb-0 d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div>
+                <h2 class="mb-1">Таблица расчета нагрузки</h2>
+                <p class="text-muted mb-3">Расчет часов на основе контингента и норм времени</p>
+            </div>
+
+            <form asp-controller="WorkloadCalculation" asp-action="AddRow" method="post" class="m-0">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-primary">
+                    Добавить строку
+                </button>
+            </form>
+        </div>
+
+        <div class="card-body pt-0">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success">
+                    @TempData["SuccessMessage"]
+                </div>
+            }
+
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger">
+                    @TempData["ErrorMessage"]
+                </div>
+            }
+
+            <form asp-controller="WorkloadCalculation" asp-action="Save" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle workload-table">
+                        <thead>
+                            <tr>
+                                <th rowspan="2" class="text-center sticky-col">Семестр</th>
+                                <th rowspan="2" class="text-center">Форма</th>
+                                <th rowspan="2" class="text-center">Дисц. по выбору</th>
+                                <th rowspan="2" class="text-center">Код направления</th>
+                                <th rowspan="2" class="text-center discipline-col">Полное наименование дисциплины</th>
+                                <th rowspan="2" class="text-center">Курс</th>
+                                <th rowspan="2" class="text-center">Студентов</th>
+                                <th rowspan="2" class="text-center">Потоков</th>
+                                <th rowspan="2" class="text-center">Групп</th>
+                                <th rowspan="2" class="text-center">Подгрупп</th>
+                                <th colspan="2" class="text-center">Лекции</th>
+                                <th colspan="2" class="text-center">Практ. / семин.</th>
+                                <th colspan="2" class="text-center">Лаборатор. занят.</th>
+                                <th rowspan="2" class="text-center">Итого часов</th>
+                            </tr>
+                            <tr>
+                                <th class="text-center">По плану</th>
+                                <th class="text-center">Всего</th>
+                                <th class="text-center">По плану</th>
+                                <th class="text-center">Всего</th>
+                                <th class="text-center">По плану</th>
+                                <th class="text-center">Всего</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < Model.Rows.Count; i++)
+                            {
+                                <tr>
+                                    <td>
+                                        <input type="hidden" name="Rows[@i].Id" value="@Model.Rows[i].Id" />
+                                        <select name="Rows[@i].SemesterName" class="form-select form-select-sm">
+                                            @if (Model.Rows[i].SemesterName == "осень")
+                                            {
+                                                <option value="осень" selected>осень</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="осень">осень</option>
+                                            }
+
+                                            @if (Model.Rows[i].SemesterName == "весна")
+                                            {
+                                                <option value="весна" selected>весна</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="весна">весна</option>
+                                            }
+                                        </select>
+                                    </td>
+
+                                    <td>
+                                        <input type="text"
+                                               class="form-control form-control-sm text-center"
+                                               name="Rows[@i].EducationForm"
+                                               value="@Model.Rows[i].EducationForm" />
+                                    </td>
+
+                                    <td class="text-center">
+                                        <input type="hidden" name="Rows[@i].IsElectiveDiscipline" value="false" />
+                                        <input type="checkbox"
+                                               class="form-check-input"
+                                               name="Rows[@i].IsElectiveDiscipline"
+                                               value="true"
+                                        @(Model.Rows[i].IsElectiveDiscipline ? "checked" : null) />
+                                    </td>
+
+                                    <td>
+                                        <input type="text"
+                                               class="form-control form-control-sm text-center"
+                                               name="Rows[@i].DirectionCode"
+                                               value="@Model.Rows[i].DirectionCode" />
+                                    </td>
+
+                                    <td>
+                                        <input type="text"
+                                               class="form-control form-control-sm"
+                                               name="Rows[@i].DisciplineName"
+                                               value="@Model.Rows[i].DisciplineName" />
+                                    </td>
+
+                                    <td>
+                                        <input type="number"
+                                               class="form-control form-control-sm text-center"
+                                               name="Rows[@i].Course"
+                                               value="@Model.Rows[i].Course"
+                                               min="1"
+                                               max="4" />
+                                    </td>
+
+                                    <td class="readonly-cell text-center fw-semibold">
+                                        @Model.Rows[i].StudentsCount
+                                        <input type="hidden" name="Rows[@i].StudentsCount" value="@Model.Rows[i].StudentsCount" />
+                                    </td>
+
+                                    <td>
+                                        <input type="number"
+                                               class="form-control form-control-sm text-center"
+                                               name="Rows[@i].FlowCount"
+                                               value="@Model.Rows[i].FlowCount"
+                                               min="0" />
+                                    </td>
+
+                                    <td>
+                                        <input type="number"
+                                               class="form-control form-control-sm text-center"
+                                               name="Rows[@i].GroupCount"
+                                               value="@Model.Rows[i].GroupCount"
+                                               min="0" />
+                                    </td>
+
+                                    <td>
+                                        <input type="number"
+                                               class="form-control form-control-sm text-center"
+                                               name="Rows[@i].SubgroupCount"
+                                               value="@Model.Rows[i].SubgroupCount"
+                                               min="0" />
+                                    </td>
+
+                                    <td>
+                                        <input type="number"
+                                               class="form-control form-control-sm text-center"
+                                               name="Rows[@i].LecturePlanHours"
+                                               value="@Model.Rows[i].LecturePlanHours"
+                                               min="0"
+                                               step="0.01" />
+                                    </td>
+
+                                    <td class="readonly-cell text-center fw-semibold">
+                                        @Model.Rows[i].LectureTotalHours.ToString("0.##")
+                                        <input type="hidden" name="Rows[@i].LectureTotalHours" value="@Model.Rows[i].LectureTotalHours" />
+                                    </td>
+
+                                    <td>
+                                        <input type="number"
+                                               class="form-control form-control-sm text-center"
+                                               name="Rows[@i].PracticePlanHours"
+                                               value="@Model.Rows[i].PracticePlanHours"
+                                               min="0"
+                                               step="0.01" />
+                                    </td>
+
+                                    <td class="readonly-cell text-center fw-semibold">
+                                        @Model.Rows[i].PracticeTotalHours.ToString("0.##")
+                                        <input type="hidden" name="Rows[@i].PracticeTotalHours" value="@Model.Rows[i].PracticeTotalHours" />
+                                    </td>
+
+                                    <td>
+                                        <input type="number"
+                                               class="form-control form-control-sm text-center"
+                                               name="Rows[@i].LabPlanHours"
+                                               value="@Model.Rows[i].LabPlanHours"
+                                               min="0"
+                                               step="0.01" />
+                                    </td>
+
+                                    <td class="readonly-cell text-center fw-semibold">
+                                        @Model.Rows[i].LabTotalHours.ToString("0.##")
+                                        <input type="hidden" name="Rows[@i].LabTotalHours" value="@Model.Rows[i].LabTotalHours" />
+                                    </td>
+
+                                    <td class="readonly-cell text-center fw-bold">
+                                        @Model.Rows[i].TotalHours.ToString("0.##")
+                                    </td>
+                                </tr>
+                            }
+
+                            <tr class="summary-row total-row">
+                                <td colspan="11" class="text-end fw-bold">Итого</td>
+                                <td class="text-center fw-bold">@Model.TotalLectureHours.ToString("0.##")</td>
+                                <td></td>
+                                <td class="text-center fw-bold">@Model.TotalPracticeHours.ToString("0.##")</td>
+                                <td></td>
+                                <td class="text-center fw-bold">@Model.TotalLabHours.ToString("0.##")</td>
+                                <td class="text-center fw-bold">@Model.GrandTotalHours.ToString("0.##")</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-end mt-3">
+                    <button type="submit" class="btn btn-primary px-4">
+                        Сохранить и пересчитать
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .workload-table th,
+    .workload-table td {
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .workload-table thead th {
+        background: #f3f6fb;
+        font-weight: 700;
+    }
+
+    .workload-table .discipline-col {
+        min-width: 280px;
+        white-space: normal;
+    }
+
+    .workload-table input,
+    .workload-table select {
+        min-width: 90px;
+    }
+
+    .workload-table .readonly-cell {
+        background: #f8fafc;
+    }
+
+    .summary-row td {
+        background: #eef4ff;
+    }
+</style>
