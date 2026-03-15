@@ -1,0 +1,73 @@
+﻿@model DepartmentLoadApp.Models.NormTime.NormTimeRowViewModel
+@using DepartmentLoadApp.Models.Enums
+
+@{
+    ViewData["Title"] = "Редактирование нормы времени";
+}
+
+<div class="container-fluid py-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white border-0 pb-0">
+            <h2 class="mb-1">Редактирование нормы времени</h2>
+            <p class="text-muted mb-3">Изменение записи справочника</p>
+        </div>
+
+        <div class="card-body pt-0">
+            <form asp-controller="NormTime" asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="Id" type="hidden" />
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="WorkTypeName" class="form-label"></label>
+                        <input asp-for="WorkTypeName" class="form-control" />
+                        <span asp-validation-for="WorkTypeName" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label asp-for="CalculationType" class="form-label"></label>
+                        <select asp-for="CalculationType" class="form-select" asp-items="Html.GetEnumSelectList<NormCalculationType>()"></select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label asp-for="HoursValue" class="form-label"></label>
+                        <input asp-for="HoursValue" class="form-control" type="number" step="0.01" min="0" />
+                        <span asp-validation-for="HoursValue" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="UnitName" class="form-label"></label>
+                        <input asp-for="UnitName" class="form-control" />
+                    </div>
+
+                    <div class="col-md-8">
+                        <label asp-for="Note" class="form-label"></label>
+                        <input asp-for="Note" class="form-control" />
+                    </div>
+
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input asp-for="IsActive" class="form-check-input" />
+                            <label asp-for="IsActive" class="form-check-label"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a asp-controller="NormTime" asp-action="Index" class="btn btn-outline-secondary">
+                        Назад
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
