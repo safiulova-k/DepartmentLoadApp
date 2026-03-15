@@ -1,0 +1,163 @@
+﻿@model DepartmentLoadApp.Models.Contingent.ContingentPageViewModel
+
+@{
+    ViewData["Title"] = "Контингент";
+}
+
+<div class="container-fluid py-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white border-0 pb-0">
+            <h2 class="mb-1">Контингент</h2>
+            <p class="text-muted mb-3">Ручной ввод данных по направлениям и курсам</p>
+        </div>
+
+        <div class="card-body pt-0">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success">
+                    @TempData["SuccessMessage"]
+                </div>
+            }
+
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger">
+                    @TempData["ErrorMessage"]
+                </div>
+            }
+
+            <form asp-controller="Contingent" asp-action="Save" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle contingent-table">
+                        <thead>
+                            <tr>
+                                <th class="text-center direction-col">Направление</th>
+                                <th class="text-center course-col">1 курс</th>
+                                <th class="text-center course-col">2 курс</th>
+                                <th class="text-center course-col">3 курс</th>
+                                <th class="text-center course-col">4 курс</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < Model.Rows.Count; i++)
+                            {
+                                <tr>
+                                    <td class="fw-semibold">
+                                        @Model.Rows[i].DirectionCode
+
+                                        <input type="hidden" name="Rows[@i].DirectionCode" value="@Model.Rows[i].DirectionCode" />
+                                        <input type="hidden" name="Rows[@i].IsBachelor" value="@Model.Rows[i].IsBachelor.ToString().ToLower()" />
+                                        <input type="hidden" name="Rows[@i].IsMaster" value="@Model.Rows[i].IsMaster.ToString().ToLower()" />
+                                    </td>
+
+                                    <td>
+                                        <input type="number"
+                                               class="form-control text-center"
+                                               name="Rows[@i].Course1Count"
+                                               value="@Model.Rows[i].Course1Count"
+                                               min="0" />
+                                    </td>
+
+                                    <td>
+                                        <input type="number"
+                                               class="form-control text-center"
+                                               name="Rows[@i].Course2Count"
+                                               value="@Model.Rows[i].Course2Count"
+                                               min="0" />
+                                    </td>
+
+                                    <td>
+                                        <input type="number"
+                                               class="form-control text-center"
+                                               name="Rows[@i].Course3Count"
+                                               value="@Model.Rows[i].Course3Count"
+                                               min="0" />
+                                    </td>
+
+                                    <td>
+                                        <input type="number"
+                                               class="form-control text-center"
+                                               name="Rows[@i].Course4Count"
+                                               value="@Model.Rows[i].Course4Count"
+                                               min="0" />
+                                    </td>
+                                </tr>
+                            }
+
+                            <tr class="summary-row total-row">
+                                <td class="fw-bold">Всего</td>
+                                <td class="text-center fw-bold">@Model.TotalCourse1</td>
+                                <td class="text-center fw-bold">@Model.TotalCourse2</td>
+                                <td class="text-center fw-bold">@Model.TotalCourse3</td>
+                                <td class="text-center fw-bold">@Model.TotalCourse4</td>
+                            </tr>
+
+                            <tr class="summary-row">
+                                <td class="fw-semibold">Общее количество студентов</td>
+                                <td colspan="4" class="text-center fw-bold">
+                                    @Model.TotalStudents
+                                </td>
+                            </tr>
+
+                            <tr class="summary-row">
+                                <td class="fw-semibold">Поток бакалавров</td>
+                                <td class="text-center">@Model.BachelorCourse1</td>
+                                <td class="text-center">@Model.BachelorCourse2</td>
+                                <td class="text-center">@Model.BachelorCourse3</td>
+                                <td class="text-center">@Model.BachelorCourse4</td>
+                            </tr>
+
+                            <tr class="summary-row">
+                                <td class="fw-semibold">Поток магистров</td>
+                                <td class="text-center">@Model.MasterCourse1</td>
+                                <td class="text-center">@Model.MasterCourse2</td>
+                                <td class="text-center">@Model.MasterCourse3</td>
+                                <td class="text-center">@Model.MasterCourse4</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-end mt-3">
+                    <button type="submit" class="btn btn-primary px-4">
+                        Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .contingent-table th,
+    .contingent-table td {
+        vertical-align: middle;
+    }
+
+    .contingent-table .direction-col {
+        min-width: 240px;
+    }
+
+    .contingent-table .course-col {
+        min-width: 130px;
+    }
+
+    .contingent-table input.form-control {
+        min-width: 100px;
+    }
+
+    .contingent-table thead th {
+        background: #f3f6fb;
+        font-weight: 700;
+    }
+
+    .summary-row td {
+        background: #fafbfc;
+    }
+
+    .total-row td {
+        background: #eaf2ff;
+    }
+</style>

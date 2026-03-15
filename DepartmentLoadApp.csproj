@@ -13,7 +13,6 @@
     <Folder Include="Interfaces\" />
     <Folder Include="Mappings\" />
     <Folder Include="Views\AcademicYears\" />
-    <Folder Include="Views\Contingents\" />
     <Folder Include="Views\TimeNorms\" />
     <Folder Include="Views\Streams\" />
     <Folder Include="Views\IndividualPlans\" />
