@@ -1,4 +1,4 @@
-﻿namespace DepartmentLoadApp.Entities
+﻿namespace DepartmentLoadApp.Models
 {
     public class IndividualPlanItem
     {

@@ -1,4 +1,4 @@
-﻿@model DepartmentLoadApp.Models.Contingent.ContingentPageViewModel
+﻿@model DepartmentLoadApp.ViewModels.Contingent.ContingentPageViewModel
 
 @{
     ViewData["Title"] = "Контингент";
@@ -8,120 +8,223 @@
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white border-0 pb-0">
             <h2 class="mb-1">Контингент</h2>
-            <p class="text-muted mb-3">Ручной ввод данных по направлениям и курсам</p>
+            <p class="text-muted mb-3">В ячейке сверху — студенты, ниже — группы, затем подгруппы</p>
         </div>
 
         <div class="card-body pt-0">
             @if (TempData["SuccessMessage"] != null)
             {
-                <div class="alert alert-success">
-                    @TempData["SuccessMessage"]
-                </div>
+                <div class="alert alert-success">@TempData["SuccessMessage"]</div>
             }
 
             @if (TempData["ErrorMessage"] != null)
             {
-                <div class="alert alert-danger">
-                    @TempData["ErrorMessage"]
-                </div>
+                <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
             }
 
-            <form asp-controller="Contingent" asp-action="Save" method="post">
+            <form asp-controller="Contingent" method="post" id="contingentForm">
                 @Html.AntiForgeryToken()
+
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+                    <button type="submit" asp-action="Add" class="btn btn-outline-primary">
+                        Добавить направление
+                    </button>
+
+                    <div class="legend-box">
+                        <div><span class="legend-mark legend-students"></span> Студенты</div>
+                        <div><span class="legend-mark legend-groups"></span> Группы</div>
+                        <div><span class="legend-mark legend-subgroups"></span> Подгруппы</div>
+                    </div>
+                </div>
 
                 <div class="table-responsive">
                     <table class="table table-bordered align-middle contingent-table">
                         <thead>
                             <tr>
-                                <th class="text-center direction-col">Направление</th>
+                                <th class="text-center code-col">Код</th>
+                                <th class="text-center type-col">Тип</th>
                                 <th class="text-center course-col">1 курс</th>
                                 <th class="text-center course-col">2 курс</th>
                                 <th class="text-center course-col">3 курс</th>
                                 <th class="text-center course-col">4 курс</th>
+                                <th class="text-center action-col"></th>
                             </tr>
                         </thead>
                         <tbody>
                             @for (int i = 0; i < Model.Rows.Count; i++)
                             {
                                 <tr>
-                                    <td class="fw-semibold">
-                                        @Model.Rows[i].DirectionCode
+                                    <td>
+                                        <input type="hidden" name="Rows[@i].Id" value="@Model.Rows[i].Id" />
+                                        <input type="text"
+                                               class="form-control form-control-sm text-center"
+                                               name="Rows[@i].DirectionCode"
+                                               value="@Model.Rows[i].DirectionCode" />
+                                    </td>
 
-                                        <input type="hidden" name="Rows[@i].DirectionCode" value="@Model.Rows[i].DirectionCode" />
-                                        <input type="hidden" name="Rows[@i].IsBachelor" value="@Model.Rows[i].IsBachelor.ToString().ToLower()" />
-                                        <input type="hidden" name="Rows[@i].IsMaster" value="@Model.Rows[i].IsMaster.ToString().ToLower()" />
+                                    <td>
+                                        <div class="type-switch">
+                                            <label class="form-check-label small d-block mb-1">
+                                                <input type="radio"
+                                                       class="form-check-input me-1"
+                                                       name="Rows[@i].IsBachelor"
+                                                       value="true"
+                                                @(Model.Rows[i].IsBachelor ? "checked" : null) />
+                                                Бак
+                                            </label>
+
+                                            <label class="form-check-label small d-block">
+                                                <input type="radio"
+                                                       class="form-check-input me-1"
+                                                       name="Rows[@i].IsBachelor"
+                                                       value="false"
+                                                @(Model.Rows[i].IsMaster ? "checked" : null) />
+                                                Маг
+                                            </label>
+                                        </div>
                                     </td>
 
                                     <td>
                                         <input type="number"
-                                               class="form-control text-center"
+                                               class="form-control form-control-sm compact-input students-input js-course1"
                                                name="Rows[@i].Course1Count"
                                                value="@Model.Rows[i].Course1Count"
-                                               min="0" />
+                                               min="0"
+                                               placeholder="Студ." />
+
+                                        <input type="number"
+                                               class="form-control form-control-sm compact-input groups-input"
+                                               name="Rows[@i].Course1Groups"
+                                               value="@Model.Rows[i].Course1Groups"
+                                               min="0"
+                                               placeholder="Груп." />
+
+                                        <input type="number"
+                                               class="form-control form-control-sm compact-input subgroups-input"
+                                               name="Rows[@i].Course1Subgroups"
+                                               value="@Model.Rows[i].Course1Subgroups"
+                                               min="0"
+                                               placeholder="Подгр." />
                                     </td>
 
                                     <td>
                                         <input type="number"
-                                               class="form-control text-center"
+                                               class="form-control form-control-sm compact-input students-input js-course2"
                                                name="Rows[@i].Course2Count"
                                                value="@Model.Rows[i].Course2Count"
-                                               min="0" />
+                                               min="0"
+                                               placeholder="Студ." />
+
+                                        <input type="number"
+                                               class="form-control form-control-sm compact-input groups-input"
+                                               name="Rows[@i].Course2Groups"
+                                               value="@Model.Rows[i].Course2Groups"
+                                               min="0"
+                                               placeholder="Груп." />
+
+                                        <input type="number"
+                                               class="form-control form-control-sm compact-input subgroups-input"
+                                               name="Rows[@i].Course2Subgroups"
+                                               value="@Model.Rows[i].Course2Subgroups"
+                                               min="0"
+                                               placeholder="Подгр." />
                                     </td>
 
                                     <td>
                                         <input type="number"
-                                               class="form-control text-center"
+                                               class="form-control form-control-sm compact-input students-input js-course3"
                                                name="Rows[@i].Course3Count"
                                                value="@Model.Rows[i].Course3Count"
-                                               min="0" />
+                                               min="0"
+                                               placeholder="Студ." />
+
+                                        <input type="number"
+                                               class="form-control form-control-sm compact-input groups-input"
+                                               name="Rows[@i].Course3Groups"
+                                               value="@Model.Rows[i].Course3Groups"
+                                               min="0"
+                                               placeholder="Груп." />
+
+                                        <input type="number"
+                                               class="form-control form-control-sm compact-input subgroups-input"
+                                               name="Rows[@i].Course3Subgroups"
+                                               value="@Model.Rows[i].Course3Subgroups"
+                                               min="0"
+                                               placeholder="Подгр." />
                                     </td>
 
                                     <td>
                                         <input type="number"
-                                               class="form-control text-center"
+                                               class="form-control form-control-sm compact-input students-input js-course4"
                                                name="Rows[@i].Course4Count"
                                                value="@Model.Rows[i].Course4Count"
-                                               min="0" />
+                                               min="0"
+                                               placeholder="Студ." />
+
+                                        <input type="number"
+                                               class="form-control form-control-sm compact-input groups-input"
+                                               name="Rows[@i].Course4Groups"
+                                               value="@Model.Rows[i].Course4Groups"
+                                               min="0"
+                                               placeholder="Груп." />
+
+                                        <input type="number"
+                                               class="form-control form-control-sm compact-input subgroups-input"
+                                               name="Rows[@i].Course4Subgroups"
+                                               value="@Model.Rows[i].Course4Subgroups"
+                                               min="0"
+                                               placeholder="Подгр." />
+                                    </td>
+
+                                    <td class="text-center">
+                                        <button type="submit"
+                                                asp-action="Delete"
+                                                asp-route-id="@Model.Rows[i].Id"
+                                                class="btn btn-sm btn-danger delete-btn">
+                                            ×
+                                        </button>
                                     </td>
                                 </tr>
                             }
 
                             <tr class="summary-row total-row">
-                                <td class="fw-bold">Всего</td>
-                                <td class="text-center fw-bold">@Model.TotalCourse1</td>
-                                <td class="text-center fw-bold">@Model.TotalCourse2</td>
-                                <td class="text-center fw-bold">@Model.TotalCourse3</td>
-                                <td class="text-center fw-bold">@Model.TotalCourse4</td>
+                                <td colspan="2" class="fw-bold text-end">Итого</td>
+                                <td class="text-center fw-bold" id="totalCourse1">@Model.TotalCourse1</td>
+                                <td class="text-center fw-bold" id="totalCourse2">@Model.TotalCourse2</td>
+                                <td class="text-center fw-bold" id="totalCourse3">@Model.TotalCourse3</td>
+                                <td class="text-center fw-bold" id="totalCourse4">@Model.TotalCourse4</td>
+                                <td></td>
                             </tr>
 
                             <tr class="summary-row">
-                                <td class="fw-semibold">Общее количество студентов</td>
-                                <td colspan="4" class="text-center fw-bold">
-                                    @Model.TotalStudents
-                                </td>
+                                <td colspan="2" class="fw-semibold text-end">Общее количество студентов</td>
+                                <td colspan="4" class="text-center fw-bold" id="totalStudents">@Model.TotalStudents</td>
+                                <td></td>
                             </tr>
 
                             <tr class="summary-row">
-                                <td class="fw-semibold">Поток бакалавров</td>
+                                <td colspan="2" class="fw-semibold text-end">Поток бакалавров</td>
                                 <td class="text-center">@Model.BachelorCourse1</td>
                                 <td class="text-center">@Model.BachelorCourse2</td>
                                 <td class="text-center">@Model.BachelorCourse3</td>
                                 <td class="text-center">@Model.BachelorCourse4</td>
+                                <td></td>
                             </tr>
 
                             <tr class="summary-row">
-                                <td class="fw-semibold">Поток магистров</td>
+                                <td colspan="2" class="fw-semibold text-end">Поток магистров</td>
                                 <td class="text-center">@Model.MasterCourse1</td>
                                 <td class="text-center">@Model.MasterCourse2</td>
                                 <td class="text-center">@Model.MasterCourse3</td>
                                 <td class="text-center">@Model.MasterCourse4</td>
+                                <td></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
                 <div class="d-flex justify-content-end mt-3">
-                    <button type="submit" class="btn btn-primary px-4">
+                    <button type="submit" asp-action="Save" class="btn btn-primary px-4">
                         Сохранить
                     </button>
                 </div>
@@ -133,19 +236,7 @@
 <style>
     .contingent-table th,
     .contingent-table td {
-        vertical-align: middle;
-    }
-
-    .contingent-table .direction-col {
-        min-width: 240px;
-    }
-
-    .contingent-table .course-col {
-        min-width: 130px;
-    }
-
-    .contingent-table input.form-control {
-        min-width: 100px;
+        vertical-align: top;
     }
 
     .contingent-table thead th {
@@ -153,11 +244,133 @@
         font-weight: 700;
     }
 
+    .code-col {
+        width: 120px;
+        min-width: 120px;
+    }
+
+    .type-col {
+        width: 90px;
+        min-width: 90px;
+    }
+
+    .course-col {
+        width: 132px;
+        min-width: 132px;
+    }
+
+    .action-col {
+        width: 40px;
+        min-width: 40px;
+    }
+
+    .compact-input {
+        min-width: 90px;
+        margin-bottom: 6px;
+        font-size: 13px;
+        padding: 4px 6px;
+    }
+
+        .compact-input:last-child {
+            margin-bottom: 0;
+        }
+
+    .students-input {
+        border-left: 3px solid #3b82f6;
+    }
+
+    .groups-input {
+        border-left: 3px solid #10b981;
+    }
+
+    .subgroups-input {
+        border-left: 3px solid #f59e0b;
+    }
+
     .summary-row td {
         background: #fafbfc;
+        vertical-align: middle;
     }
 
     .total-row td {
         background: #eaf2ff;
     }
+
+    .legend-box {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        font-size: 14px;
+        color: #555;
+    }
+
+    .legend-mark {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        margin-right: 6px;
+    }
+
+    .legend-students {
+        background: #3b82f6;
+    }
+
+    .legend-groups {
+        background: #10b981;
+    }
+
+    .legend-subgroups {
+        background: #f59e0b;
+    }
+
+    .delete-btn {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        line-height: 1;
+    }
+
+    .type-switch {
+        text-align: left;
+        min-width: 56px;
+    }
 </style>
+
+<script>
+    function parseValue(value) {
+        const n = parseInt(value);
+        return isNaN(n) ? 0 : n;
+    }
+
+    function recalcTotals() {
+        let total1 = 0;
+        let total2 = 0;
+        let total3 = 0;
+        let total4 = 0;
+
+        document.querySelectorAll('.js-course1').forEach(x => total1 += parseValue(x.value));
+        document.querySelectorAll('.js-course2').forEach(x => total2 += parseValue(x.value));
+        document.querySelectorAll('.js-course3').forEach(x => total3 += parseValue(x.value));
+        document.querySelectorAll('.js-course4').forEach(x => total4 += parseValue(x.value));
+
+        document.getElementById('totalCourse1').textContent = total1;
+        document.getElementById('totalCourse2').textContent = total2;
+        document.getElementById('totalCourse3').textContent = total3;
+        document.getElementById('totalCourse4').textContent = total4;
+        document.getElementById('totalStudents').textContent = total1 + total2 + total3 + total4;
+    }
+
+    document.addEventListener('input', function (e) {
+        if (e.target.classList.contains('js-course1') ||
+            e.target.classList.contains('js-course2') ||
+            e.target.classList.contains('js-course3') ||
+            e.target.classList.contains('js-course4')) {
+            recalcTotals();
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        recalcTotals();
+    });
+</script>
