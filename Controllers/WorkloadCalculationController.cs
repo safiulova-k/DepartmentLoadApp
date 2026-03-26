@@ -15,9 +15,12 @@ namespace DepartmentLoadApp.Controllers
             _context = context;
         }
 
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var rows = await _context.WorkloadRows.ToListAsync();
+            var rows = await _context.WorkloadRows
+                .OrderBy(x => x.Id)
+                .ToListAsync();
 
             await Recalculate(rows);
 
@@ -36,30 +39,32 @@ namespace DepartmentLoadApp.Controllers
 
             foreach (var row in model.Rows)
             {
-                var db = dbRows.FirstOrDefault(x => x.Id == row.Id);
+                var dbRow = dbRows.FirstOrDefault(x => x.Id == row.Id);
 
-                if (db == null)
+                if (dbRow == null)
                 {
                     _context.WorkloadRows.Add(row);
                 }
                 else
                 {
-                    db.DirectionCode = row.DirectionCode;
-                    db.SemesterName = row.SemesterName;
-                    db.Course = row.Course;
+                    dbRow.DirectionCode = row.DirectionCode;
+                    dbRow.DirectionName = row.DirectionName;
+                    dbRow.SemesterName = row.SemesterName;
+                    dbRow.Course = row.Course;
+                    dbRow.EducationForm = row.EducationForm;
 
-                    db.StudentsCount = row.StudentsCount;
-                    db.FlowCount = row.FlowCount;
-                    db.GroupCount = row.GroupCount;
-                    db.SubgroupCount = row.SubgroupCount;
+                    dbRow.StudentsCount = row.StudentsCount;
+                    dbRow.FlowCount = row.FlowCount;
+                    dbRow.GroupCount = row.GroupCount;
+                    dbRow.SubgroupCount = row.SubgroupCount;
 
-                    db.LecturePlanHours = row.LecturePlanHours;
-                    db.PracticePlanHours = row.PracticePlanHours;
-                    db.LabPlanHours = row.LabPlanHours;
+                    dbRow.LecturePlanHours = row.LecturePlanHours;
+                    dbRow.PracticePlanHours = row.PracticePlanHours;
+                    dbRow.LabPlanHours = row.LabPlanHours;
 
-                    db.LectureTotalHours = row.LectureTotalHours;
-                    db.PracticeTotalHours = row.PracticeTotalHours;
-                    db.LabTotalHours = row.LabTotalHours;
+                    dbRow.LectureTotalHours = row.LectureTotalHours;
+                    dbRow.PracticeTotalHours = row.PracticeTotalHours;
+                    dbRow.LabTotalHours = row.LabTotalHours;
                 }
             }
 
@@ -70,12 +75,26 @@ namespace DepartmentLoadApp.Controllers
 
         private async Task Recalculate(List<WorkloadRow> rows)
         {
+            var normLecture = await GetNorm("Лекции");
+            var normPractice = await GetNorm("Практические занятия");
+            var normLab = await GetNorm("Лабораторные работы");
+
             foreach (var row in rows)
             {
                 var cont = await _context.ContingentRows
                     .FirstOrDefaultAsync(x => x.DirectionCode == row.DirectionCode);
 
-                if (cont == null) continue;
+                if (cont == null)
+                {
+                    row.StudentsCount = 0;
+                    row.GroupCount = 0;
+                    row.SubgroupCount = 0;
+
+                    row.LectureTotalHours = 0;
+                    row.PracticeTotalHours = 0;
+                    row.LabTotalHours = 0;
+                    continue;
+                }
 
                 row.StudentsCount = row.Course switch
                 {
@@ -104,20 +123,19 @@ namespace DepartmentLoadApp.Controllers
                     _ => 0
                 };
 
-                var normLecture = await GetNorm("Лекции");
-                var normPractice = await GetNorm("Практические занятия");
-                var normLab = await GetNorm("Лабораторные занятия");
-
                 row.LectureTotalHours = row.LecturePlanHours * row.FlowCount * normLecture;
                 row.PracticeTotalHours = row.PracticePlanHours * row.GroupCount * normPractice;
                 row.LabTotalHours = row.LabPlanHours * row.SubgroupCount * normLab;
             }
         }
 
-        private async Task<decimal> GetNorm(string name)
+        private async Task<decimal> GetNorm(string workName)
         {
-            var norm = await _context.NormTimes.FirstOrDefaultAsync(x => x.WorkTypeName == name);
-            return norm?.HoursValue ?? 1;
+            var norm = await _context.NormTimes
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.WorkName == workName);
+
+            return norm?.Hours ?? 1m;
         }
     }
 }

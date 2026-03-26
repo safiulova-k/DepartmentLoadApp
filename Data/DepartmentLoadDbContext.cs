@@ -1,6 +1,6 @@
 ﻿using DepartmentLoadApp.Models;
 using DepartmentLoadApp.Models.Contingent;
-using DepartmentLoadApp.Models.NormTime;
+using DepartmentLoadApp.Models.Enums;
 using DepartmentLoadApp.Models.Workload;
 using Microsoft.EntityFrameworkCore;
 
@@ -50,7 +50,6 @@ namespace DepartmentLoadApp.Data
                 entity.Property(x => x.DirectionCode)
                     .IsRequired()
                     .HasMaxLength(50);
-
             });
 
             modelBuilder.Entity<NormTime>(entity =>
@@ -59,19 +58,210 @@ namespace DepartmentLoadApp.Data
 
                 entity.HasKey(x => x.Id);
 
-                entity.Property(x => x.WorkTypeName)
+                entity.Property(x => x.WorkName)
                     .IsRequired()
                     .HasMaxLength(200);
 
-                entity.Property(x => x.UnitName)
+                entity.Property(x => x.CategoryName)
                     .IsRequired()
                     .HasMaxLength(100);
 
-                entity.Property(x => x.HoursValue)
-                    .HasColumnType("numeric(10,2)");
+                entity.Property(x => x.CalculationBase)
+                    .IsRequired();
 
-                entity.Property(x => x.Note)
-                    .HasMaxLength(500);
+                entity.Property(x => x.Hours)
+                    .HasColumnType("numeric(10,2)")
+                    .IsRequired();
+
+                entity.Property(x => x.SortOrder)
+                    .IsRequired();
+
+                entity.HasData(
+                    new NormTime
+                    {
+                        Id = 1,
+                        WorkName = "Лекции",
+                        CategoryName = "Аудиторная нагрузка",
+                        CalculationBase = WorkCalculationBase.PerStream,
+                        Hours = 1m,
+                        SortOrder = 1
+                    },
+                    new NormTime
+                    {
+                        Id = 2,
+                        WorkName = "Практические занятия",
+                        CategoryName = "Аудиторная нагрузка",
+                        CalculationBase = WorkCalculationBase.PerGroup,
+                        Hours = 1m,
+                        SortOrder = 2
+                    },
+                    new NormTime
+                    {
+                        Id = 3,
+                        WorkName = "Лабораторные работы",
+                        CategoryName = "Аудиторная нагрузка",
+                        CalculationBase = WorkCalculationBase.PerSubgroup,
+                        Hours = 1m,
+                        SortOrder = 3
+                    },
+
+                    new NormTime
+                    {
+                        Id = 4,
+                        WorkName = "Экзамены",
+                        CategoryName = "Контроль",
+                        CalculationBase = WorkCalculationBase.PerStudent,
+                        Hours = 0.50m,
+                        SortOrder = 4
+                    },
+                    new NormTime
+                    {
+                        Id = 5,
+                        WorkName = "Зачеты",
+                        CategoryName = "Контроль",
+                        CalculationBase = WorkCalculationBase.PerStudent,
+                        Hours = 0.25m,
+                        SortOrder = 5
+                    },
+                    new NormTime
+                    {
+                        Id = 6,
+                        WorkName = "Курсовая работа",
+                        CategoryName = "Контроль",
+                        CalculationBase = WorkCalculationBase.PerWork,
+                        Hours = 1m,
+                        SortOrder = 6
+                    },
+                    new NormTime
+                    {
+                        Id = 7,
+                        WorkName = "Курсовой проект",
+                        CategoryName = "Контроль",
+                        CalculationBase = WorkCalculationBase.PerWork,
+                        Hours = 1m,
+                        SortOrder = 7
+                    },
+                    new NormTime
+                    {
+                        Id = 8,
+                        WorkName = "Рефераты и РГР",
+                        CategoryName = "Контроль",
+                        CalculationBase = WorkCalculationBase.PerWork,
+                        Hours = 1m,
+                        SortOrder = 8
+                    },
+                    new NormTime
+                    {
+                        Id = 9,
+                        WorkName = "Консультации",
+                        CategoryName = "Контроль",
+                        CalculationBase = WorkCalculationBase.PerGroup,
+                        Hours = 1m,
+                        SortOrder = 9
+                    },
+                    new NormTime
+                    {
+                        Id = 10,
+                        WorkName = "Консультации перед экзаменом",
+                        CategoryName = "Контроль",
+                        CalculationBase = WorkCalculationBase.FromLectureHoursTotal,
+                        Hours = 1m,
+                        SortOrder = 10
+                    },
+
+                    new NormTime
+                    {
+                        Id = 11,
+                        WorkName = "Руководство ВКР бакалавра",
+                        CategoryName = "ВКР",
+                        CalculationBase = WorkCalculationBase.PerWork,
+                        Hours = 10m,
+                        SortOrder = 11
+                    },
+                    new NormTime
+                    {
+                        Id = 12,
+                        WorkName = "Руководство ВКР магистра",
+                        CategoryName = "ВКР",
+                        CalculationBase = WorkCalculationBase.PerWork,
+                        Hours = 15m,
+                        SortOrder = 12
+                    },
+                    new NormTime
+                    {
+                        Id = 13,
+                        WorkName = "Нормоконтроль ВКР",
+                        CategoryName = "ВКР",
+                        CalculationBase = WorkCalculationBase.PerWork,
+                        Hours = 1m,
+                        SortOrder = 13
+                    },
+                    new NormTime
+                    {
+                        Id = 14,
+                        WorkName = "ГосЭкзамен",
+                        CategoryName = "ВКР",
+                        CalculationBase = WorkCalculationBase.PerWork,
+                        Hours = 1m,
+                        SortOrder = 14
+                    },
+
+                    new NormTime
+                    {
+                        Id = 15,
+                        WorkName = "Учебная практика",
+                        CategoryName = "Практика",
+                        CalculationBase = WorkCalculationBase.PerGroup,
+                        Hours = 6m,
+                        SortOrder = 15
+                    },
+                    new NormTime
+                    {
+                        Id = 16,
+                        WorkName = "Производственная практика",
+                        CategoryName = "Практика",
+                        CalculationBase = WorkCalculationBase.PerGroup,
+                        Hours = 6m,
+                        SortOrder = 16
+                    },
+                    new NormTime
+                    {
+                        Id = 17,
+                        WorkName = "Преддипломная практика",
+                        CategoryName = "Практика",
+                        CalculationBase = WorkCalculationBase.PerStudent,
+                        Hours = 1m,
+                        SortOrder = 17
+                    },
+                    new NormTime
+                    {
+                        Id = 18,
+                        WorkName = "Ознакомительная практика",
+                        CategoryName = "Практика",
+                        CalculationBase = WorkCalculationBase.PerGroup,
+                        Hours = 6m,
+                        SortOrder = 18
+                    },
+
+                    new NormTime
+                    {
+                        Id = 19,
+                        WorkName = "НИР",
+                        CategoryName = "Научная работа",
+                        CalculationBase = WorkCalculationBase.PerStudent,
+                        Hours = 1m,
+                        SortOrder = 19
+                    },
+                    new NormTime
+                    {
+                        Id = 20,
+                        WorkName = "НИРМ",
+                        CategoryName = "Научная работа",
+                        CalculationBase = WorkCalculationBase.PerStudent,
+                        Hours = 1m,
+                        SortOrder = 20
+                    }
+                );
             });
 
             modelBuilder.Entity<WorkloadRow>(entity =>

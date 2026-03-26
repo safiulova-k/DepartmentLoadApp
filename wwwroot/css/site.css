@@ -16,3 +16,38 @@ html {
 body {
   margin-bottom: 60px;
 }
+.norm-times-page h2 {
+    font-weight: 700;
+}
+
+.norm-times-table th {
+    white-space: nowrap;
+    font-size: 0.92rem;
+}
+
+.norm-times-table td {
+    vertical-align: middle;
+}
+
+.norm-times-table .form-control,
+.norm-times-table .form-select {
+    min-width: 120px;
+}
+
+.accordion-button {
+    background-color: #fff;
+    box-shadow: none !important;
+}
+
+    .accordion-button:not(.collapsed) {
+        background-color: #f8f9fa;
+        color: #212529;
+    }
+
+.accordion-item {
+    border: 1px solid #e9ecef !important;
+}
+
+.norm-times-table tbody tr:hover {
+    background-color: #fcfcfd;
+}

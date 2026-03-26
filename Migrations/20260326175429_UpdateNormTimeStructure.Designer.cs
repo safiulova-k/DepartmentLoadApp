@@ -2,6 +2,7 @@
 using DepartmentLoadApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -10,9 +11,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DepartmentLoadApp.Migrations
 {
     [DbContext(typeof(DepartmentLoadDbContext))]
-    partial class DepartmentLoadDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260326175429_UpdateNormTimeStructure")]
+    partial class UpdateNormTimeStructure
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

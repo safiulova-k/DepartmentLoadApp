@@ -1,6 +1,5 @@
 ﻿using DepartmentLoadApp.Data;
-using DepartmentLoadApp.Models.Enums;
-using DepartmentLoadApp.Models.NormTime;
+using DepartmentLoadApp.ViewModels.NormTime;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,155 +17,53 @@ namespace DepartmentLoadApp.Controllers
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var rows = await _context.NormTimes
-                .OrderBy(x => x.WorkTypeName)
+            var items = await _context.NormTimes
+                .AsNoTracking()
+                .OrderBy(x => x.SortOrder)
                 .Select(x => new NormTimeRowViewModel
                 {
                     Id = x.Id,
-                    WorkTypeName = x.WorkTypeName,
-                    CalculationType = x.CalculationType,
-                    UnitName = x.UnitName,
-                    HoursValue = x.HoursValue,
-                    Note = x.Note,
-                    IsActive = x.IsActive
+                    WorkName = x.WorkName,
+                    CategoryName = x.CategoryName,
+                    CalculationBase = x.CalculationBase,
+                    Hours = x.Hours
                 })
                 .ToListAsync();
 
             var model = new NormTimePageViewModel
             {
-                Rows = rows
-            };
-
-            return View(model);
-        }
-
-        [HttpGet]
-        public IActionResult Create()
-        {
-            var model = new NormTimeRowViewModel
-            {
-                IsActive = true
+                Items = items
             };
 
             return View(model);
         }
 
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(NormTimeRowViewModel model)
+        public async Task<IActionResult> Save(NormTimePageViewModel model)
         {
             if (!ModelState.IsValid)
             {
-                return View(model);
+                return View("Index", model);
             }
 
-            if (string.IsNullOrWhiteSpace(model.UnitName))
+            var ids = model.Items.Select(x => x.Id).ToList();
+
+            var dbItems = await _context.NormTimes
+                .Where(x => ids.Contains(x.Id))
+                .ToListAsync();
+
+            foreach (var dbItem in dbItems)
             {
-                model.UnitName = GetDefaultUnit(model.CalculationType);
+                var postedItem = model.Items.First(x => x.Id == dbItem.Id);
+
+                dbItem.CalculationBase = postedItem.CalculationBase;
+                dbItem.Hours = postedItem.Hours;
             }
-
-            var entity = new NormTime
-            {
-                WorkTypeName = model.WorkTypeName,
-                CalculationType = model.CalculationType,
-                UnitName = model.UnitName,
-                HoursValue = model.HoursValue < 0 ? 0 : model.HoursValue,
-                Note = model.Note,
-                IsActive = model.IsActive
-            };
-
-            _context.NormTimes.Add(entity);
-            await _context.SaveChangesAsync();
-
-            TempData["SuccessMessage"] = "Норма времени добавлена";
-            return RedirectToAction(nameof(Index));
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> Edit(int id)
-        {
-            var entity = await _context.NormTimes.FirstOrDefaultAsync(x => x.Id == id);
-            if (entity == null)
-            {
-                TempData["ErrorMessage"] = "Запись не найдена";
-                return RedirectToAction(nameof(Index));
-            }
-
-            var model = new NormTimeRowViewModel
-            {
-                Id = entity.Id,
-                WorkTypeName = entity.WorkTypeName,
-                CalculationType = entity.CalculationType,
-                UnitName = entity.UnitName,
-                HoursValue = entity.HoursValue,
-                Note = entity.Note,
-                IsActive = entity.IsActive
-            };
-
-            return View(model);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(NormTimeRowViewModel model)
-        {
-            if (!ModelState.IsValid)
-            {
-                return View(model);
-            }
-
-            var current = await _context.NormTimes.FirstOrDefaultAsync(x => x.Id == model.Id);
-            if (current == null)
-            {
-                TempData["ErrorMessage"] = "Запись не найдена";
-                return RedirectToAction(nameof(Index));
-            }
-
-            current.WorkTypeName = model.WorkTypeName;
-            current.CalculationType = model.CalculationType;
-            current.UnitName = string.IsNullOrWhiteSpace(model.UnitName)
-                ? GetDefaultUnit(model.CalculationType)
-                : model.UnitName;
-            current.HoursValue = model.HoursValue < 0 ? 0 : model.HoursValue;
-            current.Note = model.Note;
-            current.IsActive = model.IsActive;
 
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Норма времени обновлена";
+            TempData["SuccessMessage"] = "Нормы времени сохранены";
             return RedirectToAction(nameof(Index));
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(int id)
-        {
-            var current = await _context.NormTimes.FirstOrDefaultAsync(x => x.Id == id);
-            if (current != null)
-            {
-                _context.NormTimes.Remove(current);
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Норма времени удалена";
-            }
-            else
-            {
-                TempData["ErrorMessage"] = "Запись не найдена";
-            }
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        private static string GetDefaultUnit(NormCalculationType type)
-        {
-            return type switch
-            {
-                NormCalculationType.PerStudent => "час/студент",
-                NormCalculationType.PerGroup => "час/группа",
-                NormCalculationType.PerSubgroup => "час/подгруппа",
-                NormCalculationType.PerFlow => "час/поток",
-                NormCalculationType.Fixed => "фиксировано",
-                _ => string.Empty
-            };
         }
     }
 }

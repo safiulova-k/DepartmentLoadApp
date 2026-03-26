@@ -1,30 +1,22 @@
-﻿using DepartmentLoadApp.Models.Enums;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using DepartmentLoadApp.Models.Enums;
 
-namespace DepartmentLoadApp.Models.NormTime
+namespace DepartmentLoadApp.ViewModels.NormTime
 {
     public class NormTimeRowViewModel
     {
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "Название вида нагрузки обязательно")]
-        [Display(Name = "Вид нагрузки")]
-        public string WorkTypeName { get; set; } = string.Empty;
+        [Display(Name = "Вид работы")]
+        public string WorkName { get; set; } = string.Empty;
 
-        [Display(Name = "Единица расчета")]
-        public string UnitName { get; set; } = string.Empty;
+        public string CategoryName { get; set; } = string.Empty;
 
-        [Display(Name = "Тип расчета")]
-        public NormCalculationType CalculationType { get; set; }
+        [Display(Name = "Основа расчета")]
+        public WorkCalculationBase CalculationBase { get; set; }
 
-        [Range(0, 10000, ErrorMessage = "Часы должны быть неотрицательными")]
-        [Display(Name = "Норма времени, часов")]
-        public decimal HoursValue { get; set; }
-
-        [Display(Name = "Комментарий")]
-        public string? Note { get; set; }
-
-        [Display(Name = "Активно")]
-        public bool IsActive { get; set; } = true;
+        [Display(Name = "Часы")]
+        [Range(0, 9999)]
+        public decimal Hours { get; set; }
     }
 }

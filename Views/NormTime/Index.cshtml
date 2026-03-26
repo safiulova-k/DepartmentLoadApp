@@ -1,144 +1,113 @@
-﻿@model DepartmentLoadApp.Models.NormTime.NormTimePageViewModel
-@using DepartmentLoadApp.Models.Enums
+﻿@model DepartmentLoadApp.ViewModels.NormTime.NormTimePageViewModel
 
 @{
     ViewData["Title"] = "Нормы времени";
+    var groupedItems = Model.Items.GroupBy(x => x.CategoryName).ToList();
 }
 
-<div class="container-fluid py-4">
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-white border-0 pb-0 d-flex justify-content-between align-items-start flex-wrap gap-3">
-            <div>
-                <h2 class="mb-1">Нормы времени</h2>
-                <p class="text-muted mb-3">Справочник нормативов для автоматического расчета нагрузки</p>
+<div class="container-fluid py-4 norm-time-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h2 class="mb-1">Нормы времени</h2>
+            <div class="text-muted">
+                Для каждого вида работы задается основа расчета и количество часов.
             </div>
-
-            <div>
-                <a asp-controller="NormTime" asp-action="Create" class="btn btn-primary">
-                    Добавить норму
-                </a>
-            </div>
-        </div>
-
-        <div class="card-body pt-0">
-            @if (TempData["SuccessMessage"] != null)
-            {
-                <div class="alert alert-success">
-                    @TempData["SuccessMessage"]
-                </div>
-            }
-
-            @if (TempData["ErrorMessage"] != null)
-            {
-                <div class="alert alert-danger">
-                    @TempData["ErrorMessage"]
-                </div>
-            }
-
-            <div class="table-responsive">
-                <table class="table table-bordered align-middle norm-table">
-                    <thead>
-                        <tr>
-                            <th>Вид нагрузки</th>
-                            <th class="text-center">Тип расчета</th>
-                            <th class="text-center">Единица</th>
-                            <th class="text-center">Норма, часов</th>
-                            <th>Комментарий</th>
-                            <th class="text-center">Активно</th>
-                            <th class="text-center actions-col">Действия</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (Model.Rows.Count == 0)
-                        {
-                            <tr>
-                                <td colspan="7" class="text-center text-muted py-4">
-                                    Список норм времени пока пуст
-                                </td>
-                            </tr>
-                        }
-                        else
-                        {
-                            @foreach (var row in Model.Rows)
-                            {
-                                <tr>
-                                    <td class="fw-semibold">@row.WorkTypeName</td>
-                                    <td class="text-center">
-                                        @switch (row.CalculationType)
-                                        {
-                                            case NormCalculationType.PerStudent:
-                                                @:На студента
-                                                break;
-                                            case NormCalculationType.PerGroup:
-                                                @:На группу
-                                                break;
-                                            case NormCalculationType.PerSubgroup:
-                                                @:На подгруппу
-                                                break;
-                                            case NormCalculationType.PerFlow:
-                                                @:На поток
-                                                break;
-                                            case NormCalculationType.Fixed:
-                                                @:Фиксированно
-                                                break;
-                                        }
-                                    </td>
-                                    <td class="text-center">@row.UnitName</td>
-                                    <td class="text-center">@row.HoursValue</td>
-                                    <td>@row.Note</td>
-                                    <td class="text-center">
-                                        @if (row.IsActive)
-                                        {
-                                            <span class="badge bg-success">Да</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-secondary">Нет</span>
-                                        }
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="d-flex justify-content-center gap-2 flex-wrap">
-                                            <a asp-controller="NormTime"
-                                               asp-action="Edit"
-                                               asp-route-id="@row.Id"
-                                               class="btn btn-outline-primary btn-sm">
-                                                Изменить
-                                            </a>
-
-                                            <form asp-controller="NormTime"
-                                                  asp-action="Delete"
-                                                  asp-route-id="@row.Id"
-                                                  method="post"
-                                                  class="d-inline">
-                                                @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-outline-danger btn-sm">
-                                                    Удалить
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        }
-                    </tbody>
-                </table>
+            <div class="alert alert-info rounded-3 mb-4">
+                Для работ <strong>Лекции</strong>, <strong>Практические занятия</strong> и <strong>Лабораторные работы</strong>
+                в поле <strong>Часы</strong> нужно указывать <strong>1</strong>, так как итоговая нагрузка для них
+                считается по формуле: <strong>часы по плану × потоки / группы / подгруппы</strong>.
             </div>
         </div>
     </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success rounded-3 mb-4">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+
+    <form asp-controller="NormTime" asp-action="Save" method="post">
+        <div class="accordion" id="normTimeAccordion">
+            @for (int g = 0; g < groupedItems.Count; g++)
+            {
+                var group = groupedItems[g].ToList();
+                var categoryName = groupedItems[g].Key;
+                var collapseId = $"collapse_{g}";
+                var headingId = $"heading_{g}";
+
+                <div class="accordion-item border-0 shadow-sm rounded-4 overflow-hidden mb-3">
+                    <h2 class="accordion-header" id="@headingId">
+                        <button class="accordion-button @(g == 0 ? "" : "collapsed") fw-semibold"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#@collapseId"
+                                aria-expanded="@(g == 0 ? "true" : "false")"
+                                aria-controls="@collapseId">
+                            @categoryName
+                        </button>
+                    </h2>
+
+                    <div id="@collapseId"
+                         class="accordion-collapse collapse @(g == 0 ? "show" : "")"
+                         aria-labelledby="@headingId"
+                         data-bs-parent="#normTimeAccordion">
+                        <div class="accordion-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0 norm-time-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 40%;">Вид работы</th>
+                                            <th style="width: 35%;">Основа расчета</th>
+                                            <th style="width: 25%;">Часы</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (int i = 0; i < group.Count; i++)
+                                        {
+                                            var row = group[i];
+                                            var index = Model.Items.IndexOf(row);
+
+                                            <tr>
+                                                <td>
+                                                    <input type="hidden" asp-for="Items[index].Id" />
+                                                    <input type="hidden" asp-for="Items[index].WorkName" />
+                                                    <input type="hidden" asp-for="Items[index].CategoryName" />
+
+                                                    <div class="fw-semibold">@row.WorkName</div>
+                                                </td>
+
+                                                <td>
+                                                    <select asp-for="Items[index].CalculationBase"
+                                                            asp-items="Model.CalculationBaseItems"
+                                                            class="form-select form-select-sm">
+                                                    </select>
+                                                </td>
+
+                                                <td>
+                                                    <input asp-for="Items[index].Hours"
+                                                           class="form-control form-control-sm text-center"
+                                                           type="text"
+                                                           inputmode="decimal" />
+                                                    <span asp-validation-for="Items[index].Hours" class="text-danger small"></span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="d-flex justify-content-end mt-4">
+            <button type="submit" class="btn btn-primary px-4">Сохранить</button>
+        </div>
+    </form>
 </div>
 
-<style>
-    .norm-table th,
-    .norm-table td {
-        vertical-align: middle;
-    }
-
-    .norm-table thead th {
-        background: #f3f6fb;
-        font-weight: 700;
-    }
-
-    .norm-table .actions-col {
-        min-width: 180px;
-    }
-</style>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
