@@ -3,6 +3,7 @@ using DepartmentLoadApp.Models.AcademicPlan;
 using DepartmentLoadApp.Models.Contingent;
 using DepartmentLoadApp.Models.Enums;
 using DepartmentLoadApp.Models.Workload;
+using DepartmentLoadApp.Models.Practice;
 using Microsoft.EntityFrameworkCore;
 
 namespace DepartmentLoadApp.Data
@@ -26,6 +27,7 @@ namespace DepartmentLoadApp.Data
         public DbSet<WorkloadRow> WorkloadRows => Set<WorkloadRow>();
         public DbSet<LoadCalculation> LoadCalculations => Set<LoadCalculation>();
         public DbSet<LoadDistribution> LoadDistributions => Set<LoadDistribution>();
+        public DbSet<PracticeWorkloadRow> PracticeWorkloadRows => Set<PracticeWorkloadRow>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -285,6 +287,40 @@ namespace DepartmentLoadApp.Data
                     .WithMany(x => x.LoadDistributions)
                     .HasForeignKey(x => x.LoadCalculationId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<PracticeWorkloadRow>(entity =>
+            {
+                entity.ToTable("PracticeWorkloadRows");
+
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.PlanYear)
+                    .IsRequired();
+
+                entity.Property(x => x.PracticeName)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(x => x.DirectionCode)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(x => x.DirectionName)
+                    .HasMaxLength(200);
+
+                entity.Property(x => x.Course)
+                    .IsRequired();
+
+                entity.Property(x => x.StudentsCount)
+                    .IsRequired();
+
+                entity.Property(x => x.WeeksCount)
+                    .HasColumnType("numeric(10,2)")
+                    .IsRequired();
+
+                entity.Property(x => x.TotalHours)
+                    .HasColumnType("numeric(10,2)")
+                    .IsRequired();
             });
         }
     }
