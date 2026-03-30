@@ -1,0 +1,151 @@
+﻿{
+  "academicPlans": [
+    {
+      "id": 1,
+      "educationDirectionId": 90304,
+      "academicCourses": 1,
+      "year": 2026
+    },
+    {
+      "id": 2,
+      "educationDirectionId": 90304,
+      "academicCourses": 2,
+      "year": 2026
+    }
+  ],
+  "academicPlanRecords": [
+    {
+      "id": 101,
+      "academicPlanId": 1,
+      "disciplineId": 1001,
+      "academicPlanRecordParentId": null,
+      "inDepartment": true,
+      "semester": 1,
+      "zet": 4,
+      "isParent": false,
+      "isChild": false,
+      "isFacultative": false,
+      "isUseInWorkload": true,
+      "isActiveSemester": true
+    },
+    {
+      "id": 102,
+      "academicPlanId": 1,
+      "disciplineId": 1002,
+      "academicPlanRecordParentId": null,
+      "inDepartment": true,
+      "semester": 2,
+      "zet": 3,
+      "isParent": false,
+      "isChild": false,
+      "isFacultative": false,
+      "isUseInWorkload": true,
+      "isActiveSemester": true
+    },
+    {
+      "id": 201,
+      "academicPlanId": 2,
+      "disciplineId": 1003,
+      "academicPlanRecordParentId": null,
+      "inDepartment": true,
+      "semester": 3,
+      "zet": 5,
+      "isParent": false,
+      "isChild": false,
+      "isFacultative": false,
+      "isUseInWorkload": true,
+      "isActiveSemester": true
+    }
+  ],
+  "disciplines": [
+    {
+      "id": 1001,
+      "disciplineBlockId": 1,
+      "disciplineName": "Программирование",
+      "disciplineShortName": "Прогр.",
+      "disciplineDescription": "Основы программирования",
+      "disciplineBlockBlueAsteriskName": "Блок 1"
+    },
+    {
+      "id": 1002,
+      "disciplineBlockId": 1,
+      "disciplineName": "Базы данных",
+      "disciplineShortName": "БД",
+      "disciplineDescription": "Проектирование баз данных",
+      "disciplineBlockBlueAsteriskName": "Блок 1"
+    },
+    {
+      "id": 1003,
+      "disciplineBlockId": 2,
+      "disciplineName": "Операционные системы",
+      "disciplineShortName": "ОС",
+      "disciplineDescription": "Основы операционных систем",
+      "disciplineBlockBlueAsteriskName": "Блок 2"
+    }
+  ],
+  "academicPlanRecordElements": [
+    {
+      "id": 10001,
+      "academicPlanRecordId": 101,
+      "activityType": "Лекции",
+      "planHours": 36.0,
+      "factHours": 0.0
+    },
+    {
+      "id": 10002,
+      "academicPlanRecordId": 101,
+      "activityType": "Практические занятия",
+      "planHours": 18.0,
+      "factHours": 0.0
+    },
+    {
+      "id": 10003,
+      "academicPlanRecordId": 101,
+      "activityType": "Лабораторные работы",
+      "planHours": 18.0,
+      "factHours": 0.0
+    },
+    {
+      "id": 10004,
+      "academicPlanRecordId": 102,
+      "activityType": "Лекции",
+      "planHours": 18.0,
+      "factHours": 0.0
+    },
+    {
+      "id": 10005,
+      "academicPlanRecordId": 102,
+      "activityType": "Практические занятия",
+      "planHours": 18.0,
+      "factHours": 0.0
+    },
+    {
+      "id": 10006,
+      "academicPlanRecordId": 102,
+      "activityType": "Лабораторные работы",
+      "planHours": 36.0,
+      "factHours": 0.0
+    },
+    {
+      "id": 10007,
+      "academicPlanRecordId": 201,
+      "activityType": "Лекции",
+      "planHours": 36.0,
+      "factHours": 0.0
+    },
+    {
+      "id": 10008,
+      "academicPlanRecordId": 201,
+      "activityType": "Практические занятия",
+      "planHours": 18.0,
+      "factHours": 0.0
+    },
+    {
+      "id": 10009,
+      "academicPlanRecordId": 201,
+      "activityType": "Лабораторные работы",
+      "planHours": 36.0,
+      "factHours": 0.0
+    }
+  ]
+}

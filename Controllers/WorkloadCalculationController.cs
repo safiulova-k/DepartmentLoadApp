@@ -1,4 +1,7 @@
 ﻿using DepartmentLoadApp.Data;
+using DepartmentLoadApp.Integration.PortalMock;
+using DepartmentLoadApp.Models;
+using DepartmentLoadApp.Models.Enums;
 using DepartmentLoadApp.Models.Workload;
 using DepartmentLoadApp.ViewModels.Workload;
 using Microsoft.AspNetCore.Mvc;
@@ -9,23 +12,38 @@ namespace DepartmentLoadApp.Controllers
     public class WorkloadCalculationController : Controller
     {
         private readonly DepartmentLoadDbContext _context;
+        private readonly IAcademicPlanImportService _academicPlanImportService;
 
-        public WorkloadCalculationController(DepartmentLoadDbContext context)
+        public WorkloadCalculationController(
+            DepartmentLoadDbContext context,
+            IAcademicPlanImportService academicPlanImportService)
         {
             _context = context;
+            _academicPlanImportService = academicPlanImportService;
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int? year)
         {
+            var selectedYear = year
+                               ?? await _academicPlanImportService.GetLatestYearAsync()
+                               ?? DateTime.Now.Year;
+
+            await _academicPlanImportService.EnsureYearImportedAsync(selectedYear);
+
             var rows = await _context.WorkloadRows
-                .OrderBy(x => x.Id)
+                .Where(x => x.PlanYear == selectedYear)
+                .OrderBy(x => x.Course)
+                .ThenBy(x => x.SemesterName)
+                .ThenBy(x => x.DisciplineName)
                 .ToListAsync();
 
             await Recalculate(rows);
+            await _context.SaveChangesAsync();
 
             return View(new WorkloadTablePageViewModel
             {
+                SelectedYear = selectedYear,
                 Rows = rows
             });
         }
@@ -35,7 +53,11 @@ namespace DepartmentLoadApp.Controllers
         {
             await Recalculate(model.Rows);
 
-            var dbRows = await _context.WorkloadRows.ToListAsync();
+            var ids = model.Rows.Select(x => x.Id).ToList();
+
+            var dbRows = await _context.WorkloadRows
+                .Where(x => ids.Contains(x.Id))
+                .ToListAsync();
 
             foreach (var row in model.Rows)
             {
@@ -47,20 +69,11 @@ namespace DepartmentLoadApp.Controllers
                 }
                 else
                 {
-                    dbRow.DirectionCode = row.DirectionCode;
-                    dbRow.DirectionName = row.DirectionName;
-                    dbRow.SemesterName = row.SemesterName;
-                    dbRow.Course = row.Course;
-                    dbRow.EducationForm = row.EducationForm;
+                    dbRow.FlowCount = row.FlowCount;
 
                     dbRow.StudentsCount = row.StudentsCount;
-                    dbRow.FlowCount = row.FlowCount;
                     dbRow.GroupCount = row.GroupCount;
                     dbRow.SubgroupCount = row.SubgroupCount;
-
-                    dbRow.LecturePlanHours = row.LecturePlanHours;
-                    dbRow.PracticePlanHours = row.PracticePlanHours;
-                    dbRow.LabPlanHours = row.LabPlanHours;
 
                     dbRow.LectureTotalHours = row.LectureTotalHours;
                     dbRow.PracticeTotalHours = row.PracticeTotalHours;
@@ -70,18 +83,19 @@ namespace DepartmentLoadApp.Controllers
 
             await _context.SaveChangesAsync();
 
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), new { year = model.SelectedYear });
         }
 
         private async Task Recalculate(List<WorkloadRow> rows)
         {
-            var normLecture = await GetNorm("Лекции");
-            var normPractice = await GetNorm("Практические занятия");
-            var normLab = await GetNorm("Лабораторные работы");
+            var lectureNorm = await GetNorm("Лекции");
+            var practiceNorm = await GetNorm("Практические занятия");
+            var labNorm = await GetNorm("Лабораторные работы");
 
             foreach (var row in rows)
             {
                 var cont = await _context.ContingentRows
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(x => x.DirectionCode == row.DirectionCode);
 
                 if (cont == null)
@@ -123,19 +137,42 @@ namespace DepartmentLoadApp.Controllers
                     _ => 0
                 };
 
-                row.LectureTotalHours = row.LecturePlanHours * row.FlowCount * normLecture;
-                row.PracticeTotalHours = row.PracticePlanHours * row.GroupCount * normPractice;
-                row.LabTotalHours = row.LabPlanHours * row.SubgroupCount * normLab;
+                row.LectureTotalHours = CalculatePlanBasedHours(row.LecturePlanHours, lectureNorm, row);
+                row.PracticeTotalHours = CalculatePlanBasedHours(row.PracticePlanHours, practiceNorm, row);
+                row.LabTotalHours = CalculatePlanBasedHours(row.LabPlanHours, labNorm, row);
             }
         }
 
-        private async Task<decimal> GetNorm(string workName)
+        private decimal CalculatePlanBasedHours(decimal planHours, NormTime? norm, WorkloadRow row)
         {
-            var norm = await _context.NormTimes
+            if (planHours <= 0 || norm == null)
+            {
+                return 0;
+            }
+
+            var multiplier = GetMultiplier(norm.CalculationBase, row);
+            return planHours * multiplier;
+        }
+
+        private decimal GetMultiplier(WorkCalculationBase calculationBase, WorkloadRow row)
+        {
+            return calculationBase switch
+            {
+                WorkCalculationBase.PerStream => row.FlowCount,
+                WorkCalculationBase.PerGroup => row.GroupCount,
+                WorkCalculationBase.PerSubgroup => row.SubgroupCount,
+                WorkCalculationBase.PerStudent => row.StudentsCount,
+                WorkCalculationBase.PerWork => 1,
+                WorkCalculationBase.FromLectureHoursTotal => 1,
+                _ => 1
+            };
+        }
+
+        private async Task<NormTime?> GetNorm(string workName)
+        {
+            return await _context.NormTimes
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.WorkName == workName);
-
-            return norm?.Hours ?? 1m;
         }
     }
 }

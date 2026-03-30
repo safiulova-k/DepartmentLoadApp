@@ -1,44 +1,29 @@
 ﻿@model DepartmentLoadApp.ViewModels.Workload.WorkloadTablePageViewModel
 
 @{
-    ViewData["Title"] = "Таблица расчета нагрузки";
+    ViewData["Title"] = "Расчет нагрузки";
 }
 
 <div class="container-fluid py-4">
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-white border-0 pb-0 d-flex justify-content-between align-items-start flex-wrap gap-3">
-            <div>
-                <h2 class="mb-1">Таблица расчета нагрузки</h2>
-                <p class="text-muted mb-3">Расчет часов на основе контингента и норм времени</p>
+    <div class="card shadow-sm border-0 rounded-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-start mb-4">
+                <div>
+                    <h1 class="h2 mb-2">Таблица расчета нагрузки</h1>
+                    <div class="text-muted">
+                        Расчет часов на основе контингента и норм времени
+                    </div>
+                </div>
             </div>
 
-            <form asp-controller="WorkloadCalculation" asp-action="AddRow" method="post" class="m-0">
-                @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-outline-primary">
-                    Добавить строку
-                </button>
-            </form>
-        </div>
-
-        <div class="card-body pt-0">
-
-            @if (TempData["SuccessMessage"] != null)
-            {
-                <div class="alert alert-success">@TempData["SuccessMessage"]</div>
-            }
-
-            @if (TempData["ErrorMessage"] != null)
-            {
-                <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
-            }
-
             <form asp-controller="WorkloadCalculation" asp-action="Save" method="post">
-                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="SelectedYear" />
 
                 <div class="table-responsive">
                     <table class="table table-bordered align-middle workload-table">
-                        <thead>
+                        <thead class="table-light">
                             <tr>
+                                <th>Дисциплина</th>
                                 <th>Семестр</th>
                                 <th>Форма</th>
                                 <th>Код направления</th>
@@ -56,115 +41,126 @@
                                 <th>Итого</th>
                             </tr>
                         </thead>
-
                         <tbody>
                             @for (int i = 0; i < Model.Rows.Count; i++)
                             {
+                                var row = Model.Rows[i];
+                                var rowTotal = row.LectureTotalHours + row.PracticeTotalHours + row.LabTotalHours;
+
                                 <tr>
                                     <td>
-                                        <input type="hidden" name="Rows[@i].Id" value="@Model.Rows[i].Id" />
+                                        <input type="hidden" asp-for="Rows[i].Id" />
+                                        <input type="hidden" asp-for="Rows[i].PlanYear" />
+                                        <input type="hidden" asp-for="Rows[i].AcademicPlanId" />
+                                        <input type="hidden" asp-for="Rows[i].AcademicPlanRecordId" />
+                                        <input type="hidden" asp-for="Rows[i].DisciplineId" />
+                                        <input type="hidden" asp-for="Rows[i].DisciplineName" />
+                                        <input type="hidden" asp-for="Rows[i].DirectionName" />
+                                        <input type="hidden" asp-for="Rows[i].StudentsCount" />
+                                        <input type="hidden" asp-for="Rows[i].GroupCount" />
+                                        <input type="hidden" asp-for="Rows[i].SubgroupCount" />
+                                        <input type="hidden" asp-for="Rows[i].LectureTotalHours" />
+                                        <input type="hidden" asp-for="Rows[i].PracticeTotalHours" />
+                                        <input type="hidden" asp-for="Rows[i].LabTotalHours" />
 
-                                        <select name="Rows[@i].SemesterName" class="form-select form-select-sm">
-                                            <option value="осень" selected="@(Model.Rows[i].SemesterName == "осень")">осень</option>
-                                            <option value="весна" selected="@(Model.Rows[i].SemesterName == "весна")">весна</option>
-                                        </select>
+                                        <div class="fw-semibold">@row.DisciplineName</div>
                                     </td>
 
                                     <td>
-                                        <input type="text" class="form-control form-control-sm text-center"
-                                               name="Rows[@i].EducationForm"
-                                               value="@Model.Rows[i].EducationForm" />
+                                        <input asp-for="Rows[i].SemesterName"
+                                               class="form-control form-control-sm text-center"
+                                               readonly />
                                     </td>
 
                                     <td>
-                                        <input type="text" class="form-control form-control-sm text-center"
-                                               name="Rows[@i].DirectionCode"
-                                               value="@Model.Rows[i].DirectionCode" />
+                                        <input asp-for="Rows[i].EducationForm"
+                                               class="form-control form-control-sm text-center"
+                                               readonly />
                                     </td>
 
                                     <td>
-                                        <input type="number" class="form-control form-control-sm text-center"
-                                               name="Rows[@i].Course"
-                                               value="@Model.Rows[i].Course" min="1" max="4" />
+                                        <input asp-for="Rows[i].DirectionCode"
+                                               class="form-control form-control-sm text-center"
+                                               readonly />
+                                    </td>
+
+                                    <td>
+                                        <input asp-for="Rows[i].Course"
+                                               class="form-control form-control-sm text-center"
+                                               readonly />
+                                    </td>
+
+                                    <td class="text-center">
+                                        @row.StudentsCount
+                                    </td>
+
+                                    <td>
+                                        <input asp-for="Rows[i].FlowCount"
+                                               class="form-control form-control-sm text-center"
+                                               type="number"
+                                               min="0" />
+                                    </td>
+
+                                    <td class="text-center">
+                                        @row.GroupCount
+                                    </td>
+
+                                    <td class="text-center">
+                                        @row.SubgroupCount
+                                    </td>
+
+                                    <td>
+                                        <input asp-for="Rows[i].LecturePlanHours"
+                                               class="form-control form-control-sm text-center"
+                                               readonly />
                                     </td>
 
                                     <td class="text-center fw-semibold">
-                                        @Model.Rows[i].StudentsCount
-                                        <input type="hidden" name="Rows[@i].StudentsCount" value="@Model.Rows[i].StudentsCount" />
+                                        @row.LectureTotalHours.ToString("0.##")
                                     </td>
 
                                     <td>
-                                        <input type="number" class="form-control form-control-sm text-center"
-                                               name="Rows[@i].FlowCount"
-                                               value="@Model.Rows[i].FlowCount" min="0" />
-                                    </td>
-
-                                    <td>
-                                        <input type="number" class="form-control form-control-sm text-center"
-                                               name="Rows[@i].GroupCount"
-                                               value="@Model.Rows[i].GroupCount" min="0" />
-                                    </td>
-
-                                    <td>
-                                        <input type="number" class="form-control form-control-sm text-center"
-                                               name="Rows[@i].SubgroupCount"
-                                               value="@Model.Rows[i].SubgroupCount" min="0" />
-                                    </td>
-
-                                    <td>
-                                        <input type="number" class="form-control form-control-sm text-center"
-                                               name="Rows[@i].LecturePlanHours"
-                                               value="@Model.Rows[i].LecturePlanHours" step="0.01" />
+                                        <input asp-for="Rows[i].PracticePlanHours"
+                                               class="form-control form-control-sm text-center"
+                                               readonly />
                                     </td>
 
                                     <td class="text-center fw-semibold">
-                                        @Model.Rows[i].LectureTotalHours.ToString("0.##")
-                                        <input type="hidden" name="Rows[@i].LectureTotalHours" value="@Model.Rows[i].LectureTotalHours" />
+                                        @row.PracticeTotalHours.ToString("0.##")
                                     </td>
 
                                     <td>
-                                        <input type="number" class="form-control form-control-sm text-center"
-                                               name="Rows[@i].PracticePlanHours"
-                                               value="@Model.Rows[i].PracticePlanHours" step="0.01" />
+                                        <input asp-for="Rows[i].LabPlanHours"
+                                               class="form-control form-control-sm text-center"
+                                               readonly />
                                     </td>
 
                                     <td class="text-center fw-semibold">
-                                        @Model.Rows[i].PracticeTotalHours.ToString("0.##")
-                                        <input type="hidden" name="Rows[@i].PracticeTotalHours" value="@Model.Rows[i].PracticeTotalHours" />
-                                    </td>
-
-                                    <td>
-                                        <input type="number" class="form-control form-control-sm text-center"
-                                               name="Rows[@i].LabPlanHours"
-                                               value="@Model.Rows[i].LabPlanHours" step="0.01" />
-                                    </td>
-
-                                    <td class="text-center fw-semibold">
-                                        @Model.Rows[i].LabTotalHours.ToString("0.##")
-                                        <input type="hidden" name="Rows[@i].LabTotalHours" value="@Model.Rows[i].LabTotalHours" />
+                                        @row.LabTotalHours.ToString("0.##")
                                     </td>
 
                                     <td class="text-center fw-bold">
-                                        @(Model.Rows[i].LectureTotalHours + Model.Rows[i].PracticeTotalHours + Model.Rows[i].LabTotalHours).ToString("0.##")
+                                        @rowTotal.ToString("0.##")
                                     </td>
                                 </tr>
                             }
-
-                            <tr class="summary-row total-row">
-                                <td colspan="9" class="text-end fw-bold">Итого</td>
-                                <td class="text-center fw-bold">@Model.TotalLectureHours.ToString("0.##")</td>
-                                <td></td>
-                                <td class="text-center fw-bold">@Model.TotalPracticeHours.ToString("0.##")</td>
-                                <td></td>
-                                <td class="text-center fw-bold">@Model.TotalLabHours.ToString("0.##")</td>
-                                <td class="text-center fw-bold">@Model.GrandTotalHours.ToString("0.##")</td>
-                            </tr>
-
                         </tbody>
+
+                        <tfoot class="table-light">
+                            <tr>
+                                <th colspan="10" class="text-end">Итого</th>
+                                <th class="text-center">@Model.TotalLectureHours.ToString("0.##")</th>
+                                <th></th>
+                                <th class="text-center">@Model.TotalPracticeHours.ToString("0.##")</th>
+                                <th></th>
+                                <th class="text-center">@Model.TotalLabHours.ToString("0.##")</th>
+                                <th class="text-center fw-bold">@Model.GrandTotalHours.ToString("0.##")</th>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
 
-                <div class="d-flex justify-content-end mt-3">
+                <div class="d-flex justify-content-end mt-4">
                     <button type="submit" class="btn btn-primary px-4">
                         Сохранить и пересчитать
                     </button>

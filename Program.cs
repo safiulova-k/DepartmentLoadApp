@@ -2,6 +2,7 @@ using DepartmentLoadApp.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using Microsoft.AspNetCore.Localization;
+using DepartmentLoadApp.Integration.PortalMock;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,8 @@ builder.Services.AddControllersWithViews();
 
 builder.Services.AddDbContext<DepartmentLoadDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<IAcademicPlanImportService, JsonAcademicPlanImportService>();
 
 var app = builder.Build();
 
