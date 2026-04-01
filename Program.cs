@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using Microsoft.AspNetCore.Localization;
 using DepartmentLoadApp.Integration.PortalMock;
+using DepartmentLoadApp.Integration.PracticeMock;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +13,7 @@ builder.Services.AddDbContext<DepartmentLoadDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IAcademicPlanImportService, JsonAcademicPlanImportService>();
+builder.Services.AddScoped<IPracticeWorkloadImportService, JsonPracticeWorkloadImportService>();
 
 var app = builder.Build();
 

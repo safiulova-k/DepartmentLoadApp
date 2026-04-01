@@ -1,9 +1,7 @@
-﻿namespace DepartmentLoadApp.Models.Practice
+﻿namespace DepartmentLoadApp.Integration.PracticeMock.Models
 {
-    public class PracticeWorkloadRow
+    public class PracticeWorkloadImportModel
     {
-        public int Id { get; set; }
-
         public int PlanYear { get; set; }
 
         public string PracticeName { get; set; } = string.Empty;
@@ -18,12 +16,6 @@
 
         public string EducationForm { get; set; } = string.Empty;
 
-        public int StudentsCount { get; set; }
-
-        public int GroupCount { get; set; }
-
         public int WeeksCount { get; set; }
-
-        public int TotalHours { get; set; }
     }
 }

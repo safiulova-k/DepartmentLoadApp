@@ -16,6 +16,22 @@
                 </div>
             </div>
 
+            <div class="d-flex gap-2 mb-4">
+                <a asp-controller="WorkloadCalculation"
+                   asp-action="Index"
+                   asp-route-year="@Model.SelectedYear"
+                   class="btn btn-primary">
+                    Дисциплины
+                </a>
+
+                <a asp-controller="PracticeCalculation"
+                   asp-action="Index"
+                   asp-route-year="@Model.SelectedYear"
+                   class="btn btn-outline-primary">
+                    Практики
+                </a>
+            </div>
+
             <form asp-controller="WorkloadCalculation" asp-action="Save" method="post">
                 <input type="hidden" asp-for="SelectedYear" />
 

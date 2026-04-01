@@ -3,6 +3,7 @@ using System;
 using DepartmentLoadApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DepartmentLoadApp.Migrations
 {
     [DbContext(typeof(DepartmentLoadDbContext))]
-    partial class DepartmentLoadDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260330192157_AddPracticeWorkload")]
+    partial class AddPracticeWorkload
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -512,14 +514,6 @@ namespace DepartmentLoadApp.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<string>("EducationForm")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int>("GroupCount")
-                        .HasColumnType("integer");
-
                     b.Property<int>("PlanYear")
                         .HasColumnType("integer");
 
@@ -528,19 +522,14 @@ namespace DepartmentLoadApp.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<string>("SemesterName")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
                     b.Property<int>("StudentsCount")
                         .HasColumnType("integer");
 
-                    b.Property<int>("TotalHours")
-                        .HasColumnType("integer");
+                    b.Property<decimal>("TotalHours")
+                        .HasColumnType("numeric(10,2)");
 
-                    b.Property<int>("WeeksCount")
-                        .HasColumnType("integer");
+                    b.Property<decimal>("WeeksCount")
+                        .HasColumnType("numeric(10,2)");
 
                     b.HasKey("Id");
 

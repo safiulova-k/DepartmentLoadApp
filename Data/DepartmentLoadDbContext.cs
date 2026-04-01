@@ -311,15 +311,24 @@ namespace DepartmentLoadApp.Data
                 entity.Property(x => x.Course)
                     .IsRequired();
 
+                entity.Property(x => x.SemesterName)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(x => x.EducationForm)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
                 entity.Property(x => x.StudentsCount)
                     .IsRequired();
 
+                entity.Property(x => x.GroupCount)
+                    .IsRequired();
+
                 entity.Property(x => x.WeeksCount)
-                    .HasColumnType("numeric(10,2)")
                     .IsRequired();
 
                 entity.Property(x => x.TotalHours)
-                    .HasColumnType("numeric(10,2)")
                     .IsRequired();
             });
         }

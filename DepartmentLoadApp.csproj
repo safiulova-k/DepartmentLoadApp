@@ -7,10 +7,22 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Views\AcademicYears\**" />
+    <Compile Remove="Views\IndividualPlans\**" />
+    <Compile Remove="Views\Streams\**" />
+    <Content Remove="Views\AcademicYears\**" />
+    <Content Remove="Views\IndividualPlans\**" />
+    <Content Remove="Views\Streams\**" />
+    <EmbeddedResource Remove="Views\AcademicYears\**" />
+    <EmbeddedResource Remove="Views\IndividualPlans\**" />
+    <EmbeddedResource Remove="Views\Streams\**" />
+    <None Remove="Views\AcademicYears\**" />
+    <None Remove="Views\IndividualPlans\**" />
+    <None Remove="Views\Streams\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Migrations\" />
-    <Folder Include="Views\AcademicYears\" />
-    <Folder Include="Views\Streams\" />
-    <Folder Include="Views\IndividualPlans\" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,5 +1,7 @@
 ﻿using DepartmentLoadApp.Data;
+using DepartmentLoadApp.Integration.PracticeMock;
 using DepartmentLoadApp.Models;
+using DepartmentLoadApp.Models.Enums;
 using DepartmentLoadApp.Models.Practice;
 using DepartmentLoadApp.ViewModels.Practice;
 using Microsoft.AspNetCore.Mvc;
@@ -10,10 +12,14 @@ namespace DepartmentLoadApp.Controllers
     public class PracticeCalculationController : Controller
     {
         private readonly DepartmentLoadDbContext _context;
+        private readonly IPracticeWorkloadImportService _practiceWorkloadImportService;
 
-        public PracticeCalculationController(DepartmentLoadDbContext context)
+        public PracticeCalculationController(
+            DepartmentLoadDbContext context,
+            IPracticeWorkloadImportService practiceWorkloadImportService)
         {
             _context = context;
+            _practiceWorkloadImportService = practiceWorkloadImportService;
         }
 
         [HttpGet]
@@ -21,7 +27,7 @@ namespace DepartmentLoadApp.Controllers
         {
             var selectedYear = year ?? DateTime.Now.Year;
 
-            await EnsureDefaultRowsAsync(selectedYear);
+            await _practiceWorkloadImportService.EnsureYearImportedAsync(selectedYear);
 
             var rows = await _context.PracticeWorkloadRows
                 .Where(x => x.PlanYear == selectedYear)
@@ -77,6 +83,7 @@ namespace DepartmentLoadApp.Controllers
                 if (cont == null)
                 {
                     row.StudentsCount = 0;
+                    row.GroupCount = 0;
                     row.TotalHours = 0;
                     continue;
                 }
@@ -90,10 +97,31 @@ namespace DepartmentLoadApp.Controllers
                     _ => 0
                 };
 
-                var norm = await GetNorm(row.PracticeName);
-                var coefficient = norm?.Hours ?? 0m;
+                row.GroupCount = row.Course switch
+                {
+                    1 => cont.Course1Groups,
+                    2 => cont.Course2Groups,
+                    3 => cont.Course3Groups,
+                    4 => cont.Course4Groups,
+                    _ => 0
+                };
 
-                row.TotalHours = row.WeeksCount * row.StudentsCount * coefficient;
+                var norm = await GetNorm(row.PracticeName);
+
+                if (norm == null)
+                {
+                    row.TotalHours = 0;
+                    continue;
+                }
+
+                var rawHours = norm.CalculationBase switch
+                {
+                    WorkCalculationBase.PerStudent => row.WeeksCount * row.StudentsCount * norm.Hours,
+                    WorkCalculationBase.PerGroup => row.WeeksCount * row.GroupCount * norm.Hours,
+                    _ => row.WeeksCount * row.StudentsCount * norm.Hours
+                };
+
+                row.TotalHours = (int)Math.Round(rawHours, MidpointRounding.AwayFromZero);
             }
         }
 
@@ -102,50 +130,6 @@ namespace DepartmentLoadApp.Controllers
             return await _context.NormTimes
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.WorkName == practiceName);
-        }
-
-        private async Task EnsureDefaultRowsAsync(int year)
-        {
-            var hasRows = await _context.PracticeWorkloadRows
-                .AnyAsync(x => x.PlanYear == year);
-
-            if (hasRows)
-            {
-                return;
-            }
-
-            var rows = new List<PracticeWorkloadRow>
-            {
-                new() { PlanYear = year, DirectionCode = "09.03.03", DirectionName = "09.03.03", Course = 4, PracticeName = "НИР", WeeksCount = 0, TotalHours = 0 },
-                new() { PlanYear = year, DirectionCode = "09.03.04", DirectionName = "09.03.04", Course = 4, PracticeName = "НИР", WeeksCount = 0, TotalHours = 0 },
-
-                new() { PlanYear = year, DirectionCode = "09.03.03", DirectionName = "09.03.03", Course = 1, PracticeName = "Учебная практика", WeeksCount = 0, TotalHours = 0 },
-                new() { PlanYear = year, DirectionCode = "09.03.04", DirectionName = "09.03.04", Course = 1, PracticeName = "Учебная практика", WeeksCount = 0, TotalHours = 0 },
-
-                new() { PlanYear = year, DirectionCode = "09.03.03", DirectionName = "09.03.03", Course = 3, PracticeName = "Научно-исследовательская работа", WeeksCount = 0, TotalHours = 0 },
-                new() { PlanYear = year, DirectionCode = "09.03.04", DirectionName = "09.03.04", Course = 3, PracticeName = "Научно-исследовательская работа", WeeksCount = 0, TotalHours = 0 },
-
-                new() { PlanYear = year, DirectionCode = "09.03.03", DirectionName = "09.03.03", Course = 4, PracticeName = "Технологическая практика", WeeksCount = 0, TotalHours = 0 },
-                new() { PlanYear = year, DirectionCode = "09.03.04", DirectionName = "09.03.04", Course = 4, PracticeName = "Технологическая практика", WeeksCount = 0, TotalHours = 0 },
-
-                new() { PlanYear = year, DirectionCode = "09.03.03", DirectionName = "09.03.03", Course = 4, PracticeName = "Преддипломная практика", WeeksCount = 0, TotalHours = 0 },
-                new() { PlanYear = year, DirectionCode = "09.03.04", DirectionName = "09.03.04", Course = 4, PracticeName = "Преддипломная практика", WeeksCount = 0, TotalHours = 0 },
-
-                new() { PlanYear = year, DirectionCode = "09.04.03 БИ", DirectionName = "09.04.03 БИ", Course = 1, PracticeName = "Ознакомительная практика", WeeksCount = 0, TotalHours = 0 },
-                new() { PlanYear = year, DirectionCode = "09.04.03 БИ", DirectionName = "09.04.03 БИ", Course = 2, PracticeName = "НИРМ", WeeksCount = 0, TotalHours = 0 },
-                new() { PlanYear = year, DirectionCode = "09.04.03 БИ", DirectionName = "09.04.03 БИ", Course = 2, PracticeName = "Преддипломная практика", WeeksCount = 0, TotalHours = 0 },
-
-                new() { PlanYear = year, DirectionCode = "09.04.03", DirectionName = "09.04.03", Course = 1, PracticeName = "Ознакомительная практика", WeeksCount = 0, TotalHours = 0 },
-                new() { PlanYear = year, DirectionCode = "09.04.03", DirectionName = "09.04.03", Course = 2, PracticeName = "НИРМ", WeeksCount = 0, TotalHours = 0 },
-                new() { PlanYear = year, DirectionCode = "09.04.03", DirectionName = "09.04.03", Course = 2, PracticeName = "Преддипломная практика", WeeksCount = 0, TotalHours = 0 },
-
-                new() { PlanYear = year, DirectionCode = "09.04.04", DirectionName = "09.04.04", Course = 1, PracticeName = "Ознакомительная практика", WeeksCount = 0, TotalHours = 0 },
-                new() { PlanYear = year, DirectionCode = "09.04.04", DirectionName = "09.04.04", Course = 2, PracticeName = "НИРМ", WeeksCount = 0, TotalHours = 0 },
-                new() { PlanYear = year, DirectionCode = "09.04.04", DirectionName = "09.04.04", Course = 2, PracticeName = "Преддипломная практика", WeeksCount = 0, TotalHours = 0 }
-            };
-
-            await _context.PracticeWorkloadRows.AddRangeAsync(rows);
-            await _context.SaveChangesAsync();
         }
     }
 }

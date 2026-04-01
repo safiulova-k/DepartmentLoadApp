@@ -1,0 +1,200 @@
+﻿{
+  "rows": [
+    {
+      "planYear": 2026,
+      "practiceName": "Учебная практика",
+      "directionCode": "09.03.03",
+      "directionName": "09.03.03",
+      "course": 1,
+      "semesterName": "2",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+    {
+      "planYear": 2026,
+      "practiceName": "Учебная практика",
+      "directionCode": "09.03.04",
+      "directionName": "09.03.04",
+      "course": 1,
+      "semesterName": "2",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+    {
+      "planYear": 2026,
+      "practiceName": "Технологическая практика",
+      "directionCode": "09.03.03",
+      "directionName": "09.03.03",
+      "course": 1,
+      "semesterName": "2",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+    {
+      "planYear": 2026,
+      "practiceName": "Технологическая практика",
+      "directionCode": "09.03.04",
+      "directionName": "09.03.04",
+      "course": 1,
+      "semesterName": "2",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+
+    {
+      "planYear": 2026,
+      "practiceName": "Ознакомительная практика",
+      "directionCode": "09.04.03",
+      "directionName": "09.04.03",
+      "course": 1,
+      "semesterName": "2",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+    {
+      "planYear": 2026,
+      "practiceName": "Ознакомительная практика",
+      "directionCode": "09.04.03 БИ",
+      "directionName": "09.04.03 БИ",
+      "course": 1,
+      "semesterName": "2",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+    {
+      "planYear": 2026,
+      "practiceName": "Ознакомительная практика",
+      "directionCode": "09.04.04",
+      "directionName": "09.04.04",
+      "course": 1,
+      "semesterName": "2",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+
+    {
+      "planYear": 2026,
+      "practiceName": "НИРМ",
+      "directionCode": "09.04.03",
+      "directionName": "09.04.03",
+      "course": 2,
+      "semesterName": "4",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+    {
+      "planYear": 2026,
+      "practiceName": "НИРМ",
+      "directionCode": "09.04.03 БИ",
+      "directionName": "09.04.03 БИ",
+      "course": 2,
+      "semesterName": "4",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+    {
+      "planYear": 2026,
+      "practiceName": "НИРМ",
+      "directionCode": "09.04.04",
+      "directionName": "09.04.04",
+      "course": 2,
+      "semesterName": "4",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+
+    {
+      "planYear": 2026,
+      "practiceName": "Преддипломная практика магистров",
+      "directionCode": "09.04.03",
+      "directionName": "09.04.03",
+      "course": 2,
+      "semesterName": "4",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+    {
+      "planYear": 2026,
+      "practiceName": "Преддипломная практика магистров",
+      "directionCode": "09.04.03 БИ",
+      "directionName": "09.04.03 БИ",
+      "course": 2,
+      "semesterName": "4",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+    {
+      "planYear": 2026,
+      "practiceName": "Преддипломная практика магистров",
+      "directionCode": "09.04.04",
+      "directionName": "09.04.04",
+      "course": 2,
+      "semesterName": "4",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+
+    {
+      "planYear": 2026,
+      "practiceName": "Научно-исследовательская работа",
+      "directionCode": "09.03.03",
+      "directionName": "09.03.03",
+      "course": 3,
+      "semesterName": "6",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+    {
+      "planYear": 2026,
+      "practiceName": "Научно-исследовательская работа",
+      "directionCode": "09.03.04",
+      "directionName": "09.03.04",
+      "course": 3,
+      "semesterName": "6",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+
+    {
+      "planYear": 2026,
+      "practiceName": "НИР",
+      "directionCode": "09.03.03",
+      "directionName": "09.03.03",
+      "course": 4,
+      "semesterName": "7",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+    {
+      "planYear": 2026,
+      "practiceName": "НИР",
+      "directionCode": "09.03.04",
+      "directionName": "09.03.04",
+      "course": 4,
+      "semesterName": "7",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+
+    {
+      "planYear": 2026,
+      "practiceName": "Преддипломная практика бакалавров",
+      "directionCode": "09.03.03",
+      "directionName": "09.03.03",
+      "course": 4,
+      "semesterName": "8",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    },
+    {
+      "planYear": 2026,
+      "practiceName": "Преддипломная практика бакалавров",
+      "directionCode": "09.03.04",
+      "directionName": "09.03.04",
+      "course": 4,
+      "semesterName": "8",
+      "educationForm": "Очная",
+      "weeksCount": 0
+    }
+  ]
+}
