@@ -41,7 +41,7 @@ namespace DepartmentLoadApp.Integration.PracticeMock
                     DirectionCode = x.DirectionCode,
                     DirectionName = x.DirectionName,
                     Course = x.Course,
-                    SemesterName = x.SemesterName,
+                    SemesterName = GetSemesterName(x.Semester),
                     EducationForm = x.EducationForm,
                     WeeksCount = x.WeeksCount,
                     StudentsCount = 0,
@@ -74,6 +74,13 @@ namespace DepartmentLoadApp.Integration.PracticeMock
             {
                 PropertyNameCaseInsensitive = true
             }) ?? new PracticeWorkloadImportFileModel();
+        }
+        private static string GetSemesterName(int semesterNumber)
+        {
+            if (semesterNumber <= 0)
+                return string.Empty;
+
+            return semesterNumber % 2 == 0 ? "весна" : "осень";
         }
     }
 }

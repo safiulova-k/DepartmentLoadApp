@@ -1,0 +1,70 @@
+﻿@model List<DepartmentLoadApp.Models.Gia.GiaWorkloadRow>
+
+@if (Model.Count == 0)
+{
+    <div class="alert alert-light border">Нет строк для отображения.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-bordered table-sm align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Семестр</th>
+                    <th>Форма обучения</th>
+                    <th>Код направления</th>
+                    <th>Вид работы</th>
+                    <th>Курс</th>
+                    <th>Групп</th>
+                    <th>Студентов</th>
+                    <th>Часы</th>
+                    <th>Итого</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < Model.Count; i++)
+                {
+                    <tr>
+                        <td>
+                            @Model[i].SemesterName
+                            <input type="hidden" name="Rows[@i].Id" value="@Model[i].Id" />
+                            <input type="hidden" name="Rows[@i].PlanYear" value="@Model[i].PlanYear" />
+                            <input type="hidden" name="Rows[@i].GiaSection" value="@Model[i].GiaSection" />
+                            <input type="hidden" name="Rows[@i].WorkName" value="@Model[i].WorkName" />
+                            <input type="hidden" name="Rows[@i].DirectionCode" value="@Model[i].DirectionCode" />
+                            <input type="hidden" name="Rows[@i].Course" value="@Model[i].Course" />
+                            <input type="hidden" name="Rows[@i].SemesterName" value="@Model[i].SemesterName" />
+                            <input type="hidden" name="Rows[@i].EducationForm" value="@Model[i].EducationForm" />
+                            <input type="hidden" name="Rows[@i].StudentsCount" value="@Model[i].StudentsCount" />
+                            <input type="hidden" name="Rows[@i].GroupCount" value="@Model[i].GroupCount" />
+                            <input type="hidden" name="Rows[@i].TotalHours" value="@Model[i].TotalHours" />
+                        </td>
+                        <td>@Model[i].EducationForm</td>
+                        <td>@Model[i].DirectionCode</td>
+                        <td>@Model[i].WorkName</td>
+                        <td>@Model[i].Course</td>
+                        <td>@Model[i].GroupCount</td>
+                        <td>@Model[i].StudentsCount</td>
+                        <td>
+                            @if (Model[i].WorkName == "Консультация к госэкзамену")
+                            {
+                                <input type="number"
+                                       step="1"
+                                       min="0"
+                                       name="Rows[@i].ManualHours"
+                                       value="@Math.Round(Model[i].ManualHours, 0, MidpointRounding.AwayFromZero)"
+                                       class="form-control form-control-sm" />
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                                <input type="hidden" name="Rows[@i].ManualHours" value="@Model[i].ManualHours.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                            }
+                        </td>
+                        <td>@Math.Round(Model[i].TotalHours, 0, MidpointRounding.AwayFromZero)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

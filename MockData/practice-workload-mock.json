@@ -6,7 +6,7 @@
       "directionCode": "09.03.03",
       "directionName": "09.03.03",
       "course": 1,
-      "semesterName": "2",
+      "semester": 2,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -16,7 +16,7 @@
       "directionCode": "09.03.04",
       "directionName": "09.03.04",
       "course": 1,
-      "semesterName": "2",
+      "semester": 2,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -26,7 +26,7 @@
       "directionCode": "09.03.03",
       "directionName": "09.03.03",
       "course": 1,
-      "semesterName": "2",
+      "semester": 2,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -36,7 +36,7 @@
       "directionCode": "09.03.04",
       "directionName": "09.03.04",
       "course": 1,
-      "semesterName": "2",
+      "semester": 2,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -47,7 +47,7 @@
       "directionCode": "09.04.03",
       "directionName": "09.04.03",
       "course": 1,
-      "semesterName": "2",
+      "semester": 2,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -57,7 +57,7 @@
       "directionCode": "09.04.03 БИ",
       "directionName": "09.04.03 БИ",
       "course": 1,
-      "semesterName": "2",
+      "semester": 2,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -67,7 +67,7 @@
       "directionCode": "09.04.04",
       "directionName": "09.04.04",
       "course": 1,
-      "semesterName": "2",
+      "semester": 2,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -78,7 +78,7 @@
       "directionCode": "09.04.03",
       "directionName": "09.04.03",
       "course": 2,
-      "semesterName": "4",
+      "semester": 4,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -88,7 +88,7 @@
       "directionCode": "09.04.03 БИ",
       "directionName": "09.04.03 БИ",
       "course": 2,
-      "semesterName": "4",
+      "semester": 4,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -98,7 +98,7 @@
       "directionCode": "09.04.04",
       "directionName": "09.04.04",
       "course": 2,
-      "semesterName": "4",
+      "semester": 4,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -109,7 +109,7 @@
       "directionCode": "09.04.03",
       "directionName": "09.04.03",
       "course": 2,
-      "semesterName": "4",
+      "semester": 4,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -119,7 +119,7 @@
       "directionCode": "09.04.03 БИ",
       "directionName": "09.04.03 БИ",
       "course": 2,
-      "semesterName": "4",
+      "semester": 4,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -129,7 +129,7 @@
       "directionCode": "09.04.04",
       "directionName": "09.04.04",
       "course": 2,
-      "semesterName": "4",
+      "semester": 4,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -140,7 +140,7 @@
       "directionCode": "09.03.03",
       "directionName": "09.03.03",
       "course": 3,
-      "semesterName": "6",
+      "semester": 6,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -150,7 +150,7 @@
       "directionCode": "09.03.04",
       "directionName": "09.03.04",
       "course": 3,
-      "semesterName": "6",
+      "semester": 6,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -161,7 +161,7 @@
       "directionCode": "09.03.03",
       "directionName": "09.03.03",
       "course": 4,
-      "semesterName": "7",
+      "semester": 7,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -171,7 +171,7 @@
       "directionCode": "09.03.04",
       "directionName": "09.03.04",
       "course": 4,
-      "semesterName": "7",
+      "semester": 7,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -182,7 +182,7 @@
       "directionCode": "09.03.03",
       "directionName": "09.03.03",
       "course": 4,
-      "semesterName": "8",
+      "semester": 8,
       "educationForm": "Очная",
       "weeksCount": 0
     },
@@ -192,7 +192,7 @@
       "directionCode": "09.03.04",
       "directionName": "09.03.04",
       "course": 4,
-      "semesterName": "8",
+      "semester": 8,
       "educationForm": "Очная",
       "weeksCount": 0
     }

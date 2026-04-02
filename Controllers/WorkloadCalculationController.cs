@@ -174,5 +174,12 @@ namespace DepartmentLoadApp.Controllers
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.WorkName == workName);
         }
+        private static string GetSemesterName(int semesterNumber)
+        {
+            if (semesterNumber <= 0)
+                return string.Empty;
+
+            return semesterNumber % 2 == 0 ? "весна" : "осень";
+        }
     }
 }

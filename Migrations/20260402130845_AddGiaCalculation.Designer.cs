@@ -3,6 +3,7 @@ using System;
 using DepartmentLoadApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DepartmentLoadApp.Migrations
 {
     [DbContext(typeof(DepartmentLoadDbContext))]
-    partial class DepartmentLoadDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260402130845_AddGiaCalculation")]
+    partial class AddGiaCalculation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -368,6 +370,197 @@ namespace DepartmentLoadApp.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("NormTimes", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CalculationBase = 0,
+                            CategoryName = "Аудиторная нагрузка",
+                            Hours = 1m,
+                            SortOrder = 1,
+                            WorkName = "Лекции"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CalculationBase = 1,
+                            CategoryName = "Аудиторная нагрузка",
+                            Hours = 1m,
+                            SortOrder = 2,
+                            WorkName = "Практические занятия"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CalculationBase = 2,
+                            CategoryName = "Аудиторная нагрузка",
+                            Hours = 1m,
+                            SortOrder = 3,
+                            WorkName = "Лабораторные работы"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CalculationBase = 3,
+                            CategoryName = "Контроль",
+                            Hours = 0.50m,
+                            SortOrder = 4,
+                            WorkName = "Экзамены"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CalculationBase = 3,
+                            CategoryName = "Контроль",
+                            Hours = 0.25m,
+                            SortOrder = 5,
+                            WorkName = "Зачеты"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CalculationBase = 4,
+                            CategoryName = "Контроль",
+                            Hours = 1m,
+                            SortOrder = 6,
+                            WorkName = "Курсовая работа"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            CalculationBase = 4,
+                            CategoryName = "Контроль",
+                            Hours = 1m,
+                            SortOrder = 7,
+                            WorkName = "Курсовой проект"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            CalculationBase = 4,
+                            CategoryName = "Контроль",
+                            Hours = 1m,
+                            SortOrder = 8,
+                            WorkName = "Рефераты и РГР"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            CalculationBase = 1,
+                            CategoryName = "Контроль",
+                            Hours = 1m,
+                            SortOrder = 9,
+                            WorkName = "Консультации"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            CalculationBase = 5,
+                            CategoryName = "Контроль",
+                            Hours = 1m,
+                            SortOrder = 10,
+                            WorkName = "Консультации перед экзаменом"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            CalculationBase = 3,
+                            CategoryName = "ГИА",
+                            Hours = 10.5m,
+                            SortOrder = 11,
+                            WorkName = "Руководство ВКР бакалавра"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            CalculationBase = 3,
+                            CategoryName = "ГИА",
+                            Hours = 30.5m,
+                            SortOrder = 12,
+                            WorkName = "Руководство ВКР магистра"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            CalculationBase = 3,
+                            CategoryName = "ГИА",
+                            Hours = 1m,
+                            SortOrder = 13,
+                            WorkName = "Нормоконтроль ВКР"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            CalculationBase = 3,
+                            CategoryName = "ГИА",
+                            Hours = 3.5m,
+                            SortOrder = 14,
+                            WorkName = "Госэкзамен"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            CalculationBase = 3,
+                            CategoryName = "ГИА",
+                            Hours = 3.5m,
+                            SortOrder = 21,
+                            WorkName = "Работа в ГЭК"
+                        },
+                        new
+                        {
+                            Id = 16,
+                            CalculationBase = 1,
+                            CategoryName = "Практика",
+                            Hours = 6m,
+                            SortOrder = 15,
+                            WorkName = "Учебная практика"
+                        },
+                        new
+                        {
+                            Id = 17,
+                            CalculationBase = 1,
+                            CategoryName = "Практика",
+                            Hours = 6m,
+                            SortOrder = 16,
+                            WorkName = "Производственная практика"
+                        },
+                        new
+                        {
+                            Id = 18,
+                            CalculationBase = 3,
+                            CategoryName = "Практика",
+                            Hours = 1m,
+                            SortOrder = 17,
+                            WorkName = "Преддипломная практика"
+                        },
+                        new
+                        {
+                            Id = 19,
+                            CalculationBase = 1,
+                            CategoryName = "Практика",
+                            Hours = 6m,
+                            SortOrder = 18,
+                            WorkName = "Ознакомительная практика"
+                        },
+                        new
+                        {
+                            Id = 20,
+                            CalculationBase = 3,
+                            CategoryName = "Научная работа",
+                            Hours = 1m,
+                            SortOrder = 19,
+                            WorkName = "НИР"
+                        },
+                        new
+                        {
+                            Id = 21,
+                            CalculationBase = 3,
+                            CategoryName = "Научная работа",
+                            Hours = 1m,
+                            SortOrder = 20,
+                            WorkName = "НИРМ"
+                        });
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.Practice.PracticeWorkloadRow", b =>
@@ -415,8 +608,8 @@ namespace DepartmentLoadApp.Migrations
                     b.Property<int>("StudentsCount")
                         .HasColumnType("integer");
 
-                    b.Property<decimal>("TotalHours")
-                        .HasColumnType("numeric(10,2)");
+                    b.Property<int>("TotalHours")
+                        .HasColumnType("integer");
 
                     b.Property<int>("WeeksCount")
                         .HasColumnType("integer");

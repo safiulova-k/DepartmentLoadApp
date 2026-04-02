@@ -1,0 +1,50 @@
+﻿@model DepartmentLoadApp.ViewModels.Gia.GiaWorkloadPageViewModel
+
+@{
+    ViewData["Title"] = "ГИА";
+
+    var stateExamRows = Model.Rows.Where(x => x.GiaSection == "Госэкзамен").ToList();
+    var vkrRows = Model.Rows.Where(x => x.GiaSection == "Дипломное проектирование").ToList();
+    var gecRows = Model.Rows.Where(x => x.GiaSection == "ГЭК").ToList();
+}
+
+<h1 class="mb-3">ГИА</h1>
+
+<p class="text-muted">
+    Количество студентов и групп берётся из контингента.
+    Если в учебном плане есть госэкзамен, создаются строки консультации и госэкзамена.
+    Если есть ВКР, создаются строки руководства ВКР, нормоконтроля и работы в ГЭК.
+</p>
+
+<div class="mb-3">
+    <a asp-controller="WorkloadCalculation" asp-action="Index" asp-route-year="@Model.SelectedYear" class="btn btn-outline-primary">
+        Дисциплины
+    </a>
+    <a asp-controller="PracticeCalculation" asp-action="Index" asp-route-year="@Model.SelectedYear" class="btn btn-outline-primary">
+        Практики
+    </a>
+    <a asp-controller="GiaCalculation" asp-action="Index" asp-route-year="@Model.SelectedYear" class="btn btn-primary">
+        ГИА
+    </a>
+</div>
+
+<form asp-action="Save" method="post">
+    <input type="hidden" asp-for="SelectedYear" />
+
+    <div class="mb-4">
+        <h3>Госэкзамен</h3>
+        @await Html.PartialAsync("_GiaTable", stateExamRows)
+    </div>
+
+    <div class="mb-4">
+        <h3>Дипломное проектирование</h3>
+        @await Html.PartialAsync("_GiaTable", vkrRows)
+    </div>
+
+    <div class="mb-4">
+        <h3>ГЭК</h3>
+        @await Html.PartialAsync("_GiaTable", gecRows)
+    </div>
+
+    <button type="submit" class="btn btn-success">Сохранить и пересчитать</button>
+</form>

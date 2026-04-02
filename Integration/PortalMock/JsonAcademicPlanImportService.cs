@@ -83,7 +83,6 @@ namespace DepartmentLoadApp.Integration.PortalMock
                 .ToList();
 
             await RemoveExistingYearAsync(year);
-
             await UpsertDisciplinesAsync(importedDisciplines);
             await InsertPlansAsync(importedPlans);
             await InsertRecordsAsync(importedRecords);
@@ -148,7 +147,7 @@ namespace DepartmentLoadApp.Integration.PortalMock
             await _context.SaveChangesAsync();
         }
 
-        private async Task UpsertDisciplinesAsync(List<DisciplineImportModel> disciplines)
+        private async Task UpsertDisciplinesAsync(List<Integration.PortalMock.Models.DisciplineImportModel> disciplines)
         {
             foreach (var item in disciplines)
             {
@@ -240,7 +239,7 @@ namespace DepartmentLoadApp.Integration.PortalMock
         private async Task BuildWorkloadRowsAsync(
             List<AcademicPlanImportModel> plans,
             List<AcademicPlanRecordImportModel> records,
-            List<DisciplineImportModel> disciplines,
+            List<Integration.PortalMock.Models.DisciplineImportModel> disciplines,
             List<AcademicPlanRecordElementImportModel> elements)
         {
             var disciplineMap = disciplines.ToDictionary(x => x.Id, x => x);
@@ -289,24 +288,19 @@ namespace DepartmentLoadApp.Integration.PortalMock
                     AcademicPlanRecordId = record.Id,
                     DisciplineId = discipline.Id,
                     DisciplineName = discipline.DisciplineName,
-
                     DirectionCode = FormatDirectionCode(plan.EducationDirectionId),
                     DirectionName = $"Направление {FormatDirectionCode(plan.EducationDirectionId)}",
-                    SemesterName = ((int)record.Semester).ToString(),
+                    SemesterName = GetSemesterName(record.Semester),
                     EducationForm = "Очная",
-                    Course = (int)plan.AcademicCourses,
-
+                    Course = plan.AcademicCourses,
                     StudentsCount = 0,
                     FlowCount = 1,
                     GroupCount = 0,
                     SubgroupCount = 0,
-
                     LecturePlanHours = lecturePlanHours,
                     LectureTotalHours = 0,
-
                     PracticePlanHours = practicePlanHours,
                     PracticeTotalHours = 0,
-
                     LabPlanHours = labPlanHours,
                     LabTotalHours = 0
                 });
@@ -322,8 +316,17 @@ namespace DepartmentLoadApp.Integration.PortalMock
         private static string FormatDirectionCode(int educationDirectionId)
         {
             var value = educationDirectionId.ToString().PadLeft(6, '0');
-
             return $"{value.Substring(0, 2)}.{value.Substring(2, 2)}.{value.Substring(4, 2)}";
+        }
+
+        private static string GetSemesterName(int semesterNumber)
+        {
+            if (semesterNumber <= 0)
+            {
+                return string.Empty;
+            }
+
+            return semesterNumber % 2 == 0 ? "весна" : "осень";
         }
 
         private async Task<AcademicPlanImportFileModel> LoadAsync()
@@ -337,10 +340,13 @@ namespace DepartmentLoadApp.Integration.PortalMock
 
             var json = await File.ReadAllTextAsync(filePath);
 
-            return JsonSerializer.Deserialize<AcademicPlanImportFileModel>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            }) ?? new AcademicPlanImportFileModel();
+            return JsonSerializer.Deserialize<AcademicPlanImportFileModel>(
+                       json,
+                       new JsonSerializerOptions
+                       {
+                           PropertyNameCaseInsensitive = true
+                       })
+                   ?? new AcademicPlanImportFileModel();
         }
     }
 }

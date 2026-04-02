@@ -29,6 +29,12 @@
                    class="btn btn-primary">
                     Практики
                 </a>
+                <a asp-controller="GiaCalculation"
+                   asp-action="Index" 
+                   asp-route-year="@Model.SelectedYear" 
+                   class="btn btn-outline-primary">
+                    ГИА
+                </a>
             </div>
 
             <form asp-controller="PracticeCalculation" asp-action="Save" method="post">
