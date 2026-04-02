@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Localization;
 using DepartmentLoadApp.Integration.PortalMock;
 using DepartmentLoadApp.Integration.PracticeMock;
 using DepartmentLoadApp.Integration.GiaMock;
+using DepartmentLoadApp.Integration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,7 @@ builder.Services.AddDbContext<DepartmentLoadDbContext>(options =>
 builder.Services.AddScoped<IAcademicPlanImportService, JsonAcademicPlanImportService>();
 builder.Services.AddScoped<IPracticeWorkloadImportService, JsonPracticeWorkloadImportService>();
 builder.Services.AddScoped<IGiaWorkloadImportService, JsonGiaWorkloadImportService>();
+builder.Services.AddScoped<ILecturerImportService, JsonLecturerImportService>();
 
 var app = builder.Build();
 

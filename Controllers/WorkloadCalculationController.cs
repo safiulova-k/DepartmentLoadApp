@@ -22,40 +22,61 @@ namespace DepartmentLoadApp.Controllers
             _academicPlanImportService = academicPlanImportService;
         }
 
+        // Метод для отображения страницы расчета нагрузки
         [HttpGet]
-        public async Task<IActionResult> Index(int? year)
+        public async Task<IActionResult> Index()
         {
-            var selectedYear = year ?? await _academicPlanImportService.GetLatestYearAsync() ?? DateTime.Now.Year;
-
-            await _academicPlanImportService.EnsureYearImportedAsync(selectedYear);
-
+            // Загружаем все данные без учета года
             var rows = await _context.WorkloadRows
-                .Where(x => x.PlanYear == selectedYear)
                 .OrderBy(x => x.Course)
                 .ThenBy(x => x.SemesterName)
                 .ThenBy(x => x.DisciplineName)
                 .ToListAsync();
 
-            await Recalculate(rows);
-            await _context.SaveChangesAsync();
-
             return View(new WorkloadTablePageViewModel
             {
-                SelectedYear = selectedYear,
                 Rows = rows
             });
         }
 
+        // Метод для импорта данных из учебного плана по учебному году
         [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ImportFromAcademicPlan(string year)
+        {
+            // Импортируем данные учебного плана за указанный год
+            await _academicPlanImportService.ImportYearAsync(year);
+
+            // Загружаем все строки расчета для этого года
+            var rows = await _context.WorkloadRows
+                .Where(x => x.AcademicYear == year.ToString())
+                .OrderBy(x => x.Course)
+                .ThenBy(x => x.SemesterName)
+                .ThenBy(x => x.DisciplineName)
+                .ToListAsync();
+
+            // Пересчитываем и сохраняем
+            await Recalculate(rows);
+            await _context.SaveChangesAsync();
+
+            // Перенаправляем на страницу с расчетом для этого года
+            return RedirectToAction(nameof(Index), new { year });
+        }
+
+        // Метод для сохранения данных расчетов
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Save(WorkloadTablePageViewModel model)
         {
             var ids = model.Rows.Select(x => x.Id).ToList();
 
+            // Загружаем данные из БД
             var dbRows = await _context.WorkloadRows
                 .Where(x => ids.Contains(x.Id))
                 .OrderBy(x => x.Id)
                 .ToListAsync();
 
+            // Обновляем данные
             foreach (var postedRow in model.Rows)
             {
                 var dbRow = dbRows.FirstOrDefault(x => x.Id == postedRow.Id);
@@ -70,12 +91,14 @@ namespace DepartmentLoadApp.Controllers
                 dbRow.HasCourseProject = postedRow.HasCourseProject;
             }
 
+            // Пересчитываем
             await Recalculate(dbRows);
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index), new { year = model.SelectedYear });
         }
 
+        // Метод для пересчета нагрузки
         private async Task Recalculate(List<WorkloadRow> rows)
         {
             var lectureNorm = await GetNormAsync("Лекции");
@@ -90,6 +113,7 @@ namespace DepartmentLoadApp.Controllers
             var courseWorkNorm = await GetNormAsync("Курсовая работа");
             var courseProjectNorm = await GetNormAsync("Курсовой проект");
 
+            // Проходим по каждой строке расчета
             foreach (var row in rows)
             {
                 var cont = await _context.ContingentRows
@@ -114,6 +138,7 @@ namespace DepartmentLoadApp.Controllers
                     continue;
                 }
 
+                // Заполнение значений студентов и групп
                 row.StudentsCount = row.Course switch
                 {
                     1 => cont.Course1Count,
@@ -141,6 +166,7 @@ namespace DepartmentLoadApp.Controllers
                     _ => 0
                 };
 
+                // Рассчитываем часы
                 row.LectureTotalHours = CalculatePlanBasedHours(row.LecturePlanHours, lectureNorm, row);
                 row.PracticeTotalHours = CalculatePlanBasedHours(row.PracticePlanHours, practiceNorm, row);
                 row.LabTotalHours = CalculatePlanBasedHours(row.LabPlanHours, labNorm, row);
@@ -157,6 +183,7 @@ namespace DepartmentLoadApp.Controllers
             }
         }
 
+        // Метод для расчета количества часов на основе плана
         private decimal CalculatePlanBasedHours(decimal planHours, NormTime? norm, WorkloadRow row)
         {
             if (planHours <= 0 || norm == null)
@@ -170,6 +197,7 @@ namespace DepartmentLoadApp.Controllers
             return Math.Round(result, 0, MidpointRounding.AwayFromZero);
         }
 
+        // Метод для расчета дополнительных часов
         private decimal CalculateOptionalHours(bool isEnabled, NormTime? norm, WorkloadRow row)
         {
             if (!isEnabled || norm == null)
@@ -183,6 +211,7 @@ namespace DepartmentLoadApp.Controllers
             return Math.Round(result, 0, MidpointRounding.AwayFromZero);
         }
 
+        // Метод для расчета консультаций
         private decimal CalculateConsultationHours(
             WorkloadRow row,
             NormTime? consultationNorm,
@@ -210,6 +239,7 @@ namespace DepartmentLoadApp.Controllers
             return Math.Round(result, 0, MidpointRounding.AwayFromZero);
         }
 
+        // Метод для получения значения на основе типа расчета
         private decimal GetBaseValue(WorkCalculationBase calculationBase, WorkloadRow row)
         {
             return calculationBase switch
@@ -224,6 +254,7 @@ namespace DepartmentLoadApp.Controllers
             };
         }
 
+        // Метод для получения нормы по названию работы
         private async Task<NormTime?> GetNormAsync(string workName)
         {
             return await _context.NormTimes

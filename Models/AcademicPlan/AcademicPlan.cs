@@ -10,7 +10,7 @@ namespace DepartmentLoadApp.Models.AcademicPlan
 
         public AcademicCourse AcademicCourses { get; set; }
 
-        public int Year { get; set; }
+        public string Year { get; set; }
 
         public List<AcademicPlanRecord> AcademicPlanRecords { get; set; } = new();
     }

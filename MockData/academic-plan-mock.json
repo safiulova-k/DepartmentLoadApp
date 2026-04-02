@@ -1,60 +1,16 @@
 ﻿{
   "academicPlans": [
     {
-      "id": 1,
-      "educationDirectionId": 90304,
-      "academicCourses": 1,
-      "year": 2026
+      "year": "2025-2026",
+      "id": 1
     },
     {
-      "id": 2,
-      "educationDirectionId": 90304,
-      "academicCourses": 2,
-      "year": 2026
-    }
-  ],
-  "academicPlanRecords": [
-    {
-      "id": 101,
-      "academicPlanId": 1,
-      "disciplineId": 1001,
-      "academicPlanRecordParentId": null,
-      "inDepartment": true,
-      "semester": 1,
-      "zet": 4,
-      "isParent": false,
-      "isChild": false,
-      "isFacultative": false,
-      "isUseInWorkload": true,
-      "isActiveSemester": true
+      "year": "2026-2027",
+      "id": 2
     },
     {
-      "id": 102,
-      "academicPlanId": 1,
-      "disciplineId": 1002,
-      "academicPlanRecordParentId": null,
-      "inDepartment": true,
-      "semester": 2,
-      "zet": 3,
-      "isParent": false,
-      "isChild": false,
-      "isFacultative": false,
-      "isUseInWorkload": true,
-      "isActiveSemester": true
-    },
-    {
-      "id": 201,
-      "academicPlanId": 2,
-      "disciplineId": 1003,
-      "academicPlanRecordParentId": null,
-      "inDepartment": true,
-      "semester": 3,
-      "zet": 5,
-      "isParent": false,
-      "isChild": false,
-      "isFacultative": false,
-      "isUseInWorkload": true,
-      "isActiveSemester": true
+      "year": "2027-2028",
+      "id": 3
     }
   ],
   "disciplines": [

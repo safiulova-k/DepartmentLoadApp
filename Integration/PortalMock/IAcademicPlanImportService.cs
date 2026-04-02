@@ -2,10 +2,8 @@
 {
     public interface IAcademicPlanImportService
     {
+        Task ImportYearAsync(string year);
         Task<int?> GetLatestYearAsync();
-
-        Task EnsureYearImportedAsync(int year);
-
-        Task ImportYearAsync(int year);
+        Task EnsureYearImportedAsync(string year);
     }
 }

@@ -29,10 +29,6 @@
 <form asp-action="Save" method="post">
     <input type="hidden" asp-for="SelectedYear" />
 
-    <div class="mb-3">
-        <button type="submit" class="btn btn-primary">Сохранить и пересчитать</button>
-    </div>
-
     <div class="table-responsive">
         <table class="table table-bordered table-sm align-middle">
             <thead class="table-light">
@@ -80,7 +76,7 @@
                             @row.DisciplineName
 
                             <input type="hidden" asp-for="Rows[i].Id" />
-                            <input type="hidden" asp-for="Rows[i].PlanYear" />
+                            <input type="hidden" asp-for="Rows[i].AcademicYear" />
                             <input type="hidden" asp-for="Rows[i].AcademicPlanId" />
                             <input type="hidden" asp-for="Rows[i].AcademicPlanRecordId" />
                             <input type="hidden" asp-for="Rows[i].DisciplineId" />

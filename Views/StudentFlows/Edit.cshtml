@@ -1,0 +1,52 @@
+﻿@model DepartmentLoadApp.Models.StudentFlow
+
+@{
+    ViewData["Title"] = "Изменить поток";
+}
+
+<h1>Изменить поток</h1>
+
+<form asp-action="Edit" method="post">
+    <input asp-for="Id" type="hidden" />
+
+    <div class="mb-3">
+        <label asp-for="AcademicYear" class="form-label">Учебный год</label>
+        <input asp-for="AcademicYear" class="form-control" placeholder="2025-2026" />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="FlowName" class="form-label">Название потока</label>
+        <input asp-for="FlowName" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="DirectionCode" class="form-label">Код направления</label>
+        <input asp-for="DirectionCode" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Course" class="form-label">Курс</label>
+        <input asp-for="Course" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="EducationLevel" class="form-label">Уровень образования</label>
+        <select asp-for="EducationLevel" class="form-select">
+            <option value="Бакалавриат">Бакалавриат</option>
+            <option value="Магистратура">Магистратура</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="GroupNames" class="form-label">Группы</label>
+        <textarea asp-for="GroupNames" class="form-control"></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="StudentsCount" class="form-label">Количество студентов</label>
+        <input asp-for="StudentsCount" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn btn-success">Сохранить</button>
+    <a asp-action="Index" class="btn btn-secondary">Назад</a>
+</form>

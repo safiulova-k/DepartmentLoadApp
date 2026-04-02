@@ -3,6 +3,7 @@ using System;
 using DepartmentLoadApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DepartmentLoadApp.Migrations
 {
     [DbContext(typeof(DepartmentLoadDbContext))]
-    partial class DepartmentLoadDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260402194127_AddSemesters")]
+    partial class AddSemesters
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -36,9 +38,8 @@ namespace DepartmentLoadApp.Migrations
                     b.Property<int>("EducationDirectionId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Year")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -57,9 +58,6 @@ namespace DepartmentLoadApp.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int?>("AcademicPlanRecordParentId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("DisciplineBlockId")
                         .HasColumnType("integer");
 
                     b.Property<int>("DisciplineId")
@@ -467,10 +465,8 @@ namespace DepartmentLoadApp.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("AcademicYear")
-                        .IsRequired()
-                        .HasMaxLength(9)
-                        .HasColumnType("character varying(9)");
+                    b.Property<int>("AcademicYear")
+                        .HasColumnType("integer");
 
                     b.Property<int>("Course")
                         .HasColumnType("integer");
@@ -546,11 +542,6 @@ namespace DepartmentLoadApp.Migrations
                     b.Property<int>("AcademicPlanRecordId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("AcademicYear")
-                        .IsRequired()
-                        .HasMaxLength(9)
-                        .HasColumnType("character varying(9)");
-
                     b.Property<decimal>("ConsultationHours")
                         .HasColumnType("numeric(10,2)");
 
@@ -621,6 +612,9 @@ namespace DepartmentLoadApp.Migrations
 
                     b.Property<decimal>("LectureTotalHours")
                         .HasColumnType("numeric(10,2)");
+
+                    b.Property<int>("PlanYear")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("PracticePlanHours")
                         .HasColumnType("numeric(10,2)");

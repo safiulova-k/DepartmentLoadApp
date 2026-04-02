@@ -1,10 +1,14 @@
-﻿namespace DepartmentLoadApp.Models.Workload
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace DepartmentLoadApp.Models.Workload
 {
     public class WorkloadRow
     {
         public int Id { get; set; }
 
-        public int PlanYear { get; set; }
+        [Required]
+        [StringLength(9)]
+        public string AcademicYear { get; set; }
         public int AcademicPlanId { get; set; }
         public int AcademicPlanRecordId { get; set; }
         public int DisciplineId { get; set; }

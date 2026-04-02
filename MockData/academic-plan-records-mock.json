@@ -1,0 +1,36 @@
+﻿{
+  "planRecords": [
+    {
+      "academicPlanId": 1,
+      "disciplineId": 101,
+      "semester": 1,
+      "zet": 5,
+      "isActiveSemester": true,
+      "disciplineBlockId": 1
+    },
+    {
+      "academicPlanId": 1,
+      "disciplineId": 102,
+      "semester": 2,
+      "zet": 6,
+      "isActiveSemester": true,
+      "disciplineBlockId": 2
+    },
+    {
+      "academicPlanId": 2,
+      "disciplineId": 201,
+      "semester": 1,
+      "zet": 5,
+      "isActiveSemester": true,
+      "disciplineBlockId": 1
+    },
+    {
+      "academicPlanId": 2,
+      "disciplineId": 202,
+      "semester": 2,
+      "zet": 6,
+      "isActiveSemester": true,
+      "disciplineBlockId": 2
+    }
+  ]
+}

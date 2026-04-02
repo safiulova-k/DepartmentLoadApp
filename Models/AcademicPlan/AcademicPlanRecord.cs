@@ -37,5 +37,6 @@ namespace DepartmentLoadApp.Models.AcademicPlan
         public List<AcademicPlanRecord> ChildRecords { get; set; } = new();
 
         public List<AcademicPlanRecordElement> Elements { get; set; } = new();
+        public int DisciplineBlockId { get; set; }
     }
 }
