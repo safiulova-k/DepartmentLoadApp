@@ -47,4 +47,11 @@
     </div>
 
     <button type="submit" class="btn btn-success">Сохранить и пересчитать</button>
+
+    <a asp-action="ExportToExcel"
+       asp-route-year="@Model.SelectedYear"
+       class="btn btn-success">
+        Выгрузить в Excel
+    </a>
+
 </form>

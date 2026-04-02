@@ -5,6 +5,7 @@ using DepartmentLoadApp.Models.Contingent;
 using DepartmentLoadApp.Models.Enums;
 using DepartmentLoadApp.Models.Gia;
 using DepartmentLoadApp.ViewModels.Gia;
+using DepartmentLoadApp.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -206,6 +207,32 @@ namespace DepartmentLoadApp.Controllers
                 4 => contingent.Course4Groups,
                 _ => 0
             };
+        }
+        [HttpGet]
+        public async Task<IActionResult> ExportToExcel(int? year)
+        {
+            var selectedYear = year ?? DateTime.Now.Year;
+
+            await _giaWorkloadImportService.EnsureYearImportedAsync(selectedYear);
+
+            var rows = await _context.GiaWorkloadRows
+                .AsNoTracking()
+                .Where(x => x.PlanYear == selectedYear)
+                .OrderBy(x => x.Course)
+                .ThenBy(x => x.DirectionCode)
+                .ThenBy(x => x.GiaSection)
+                .ThenBy(x => x.WorkName)
+                .ToListAsync();
+
+            await RecalculateAsync(rows);
+
+            var content = ExcelExportHelper.ExportGia(rows);
+            var fileName = $"Расчет_ГИА_{selectedYear}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+            return File(
+                content,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
         }
     }
 }

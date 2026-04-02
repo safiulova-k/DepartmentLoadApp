@@ -4,6 +4,7 @@ using DepartmentLoadApp.Models;
 using DepartmentLoadApp.Models.Enums;
 using DepartmentLoadApp.Models.Workload;
 using DepartmentLoadApp.ViewModels.Workload;
+using DepartmentLoadApp.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -260,6 +261,26 @@ namespace DepartmentLoadApp.Controllers
             return await _context.NormTimes
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.WorkName == workName);
+        }
+        [HttpGet]
+        public async Task<IActionResult> ExportToExcel()
+        {
+            var rows = await _context.WorkloadRows
+                .AsNoTracking()
+                .OrderBy(x => x.Course)
+                .ThenBy(x => x.SemesterName)
+                .ThenBy(x => x.DisciplineName)
+                .ToListAsync();
+
+            await Recalculate(rows);
+
+            var content = ExcelExportHelper.ExportWorkload(rows);
+            var fileName = $"Расчет_дисциплин_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+            return File(
+                content,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
         }
     }
 }

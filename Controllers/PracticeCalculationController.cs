@@ -5,6 +5,7 @@ using DepartmentLoadApp.Models.Contingent;
 using DepartmentLoadApp.Models.Enums;
 using DepartmentLoadApp.Models.Practice;
 using DepartmentLoadApp.ViewModels.Practice;
+using DepartmentLoadApp.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -177,6 +178,31 @@ namespace DepartmentLoadApp.Controllers
         private static decimal RoundHours(decimal value)
         {
             return Math.Round(value, 0, MidpointRounding.AwayFromZero);
+        }
+        [HttpGet]
+        public async Task<IActionResult> ExportToExcel(int? year)
+        {
+            var selectedYear = year ?? DateTime.Now.Year;
+
+            await _practiceWorkloadImportService.EnsureYearImportedAsync(selectedYear);
+
+            var rows = await _context.PracticeWorkloadRows
+                .AsNoTracking()
+                .Where(x => x.PlanYear == selectedYear)
+                .OrderBy(x => x.Course)
+                .ThenBy(x => x.DirectionCode)
+                .ThenBy(x => x.PracticeName)
+                .ToListAsync();
+
+            await RecalculateAsync(rows);
+
+            var content = ExcelExportHelper.ExportPractice(rows);
+            var fileName = $"Расчет_практик_{selectedYear}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+            return File(
+                content,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
         }
     }
 }
