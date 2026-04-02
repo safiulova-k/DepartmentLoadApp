@@ -3,6 +3,7 @@ using System;
 using DepartmentLoadApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DepartmentLoadApp.Migrations
 {
     [DbContext(typeof(DepartmentLoadDbContext))]
-    partial class DepartmentLoadDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260402165814_AddControlAndTotalHours")]
+    partial class AddControlAndTotalHours
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -466,20 +468,26 @@ namespace DepartmentLoadApp.Migrations
                     b.Property<int>("AcademicPlanRecordId")
                         .HasColumnType("integer");
 
-                    b.Property<decimal>("ConsultationHours")
-                        .HasColumnType("numeric(10,2)");
-
                     b.Property<int>("Course")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("CourseProjectCredits")
+                        .HasColumnType("integer");
+
                     b.Property<decimal>("CourseProjectHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
+
+                    b.Property<int?>("CourseWorkCredits")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("CourseWorkHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
+
+                    b.Property<int?>("CreditCredits")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("CreditHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<string>("DirectionCode")
                         .IsRequired()
@@ -504,26 +512,20 @@ namespace DepartmentLoadApp.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<decimal>("ExamConsultationHours")
+                        .HasColumnType("numeric");
+
+                    b.Property<int?>("ExamCredits")
+                        .HasColumnType("integer");
+
                     b.Property<decimal>("ExamHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<int>("FlowCount")
                         .HasColumnType("integer");
 
                     b.Property<int>("GroupCount")
                         .HasColumnType("integer");
-
-                    b.Property<bool>("HasCourseProject")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("HasCourseWork")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("HasCredit")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("HasExam")
-                        .HasColumnType("boolean");
 
                     b.Property<decimal>("LabPlanHours")
                         .HasColumnType("numeric(10,2)");
@@ -556,6 +558,9 @@ namespace DepartmentLoadApp.Migrations
 
                     b.Property<int>("SubgroupCount")
                         .HasColumnType("integer");
+
+                    b.Property<decimal>("TotalHours")
+                        .HasColumnType("numeric");
 
                     b.HasKey("Id");
 

@@ -64,7 +64,11 @@
       "disciplineName": "Программирование",
       "disciplineShortName": "Прогр.",
       "disciplineDescription": "Основы программирования",
-      "disciplineBlockBlueAsteriskName": "Блок 1"
+      "disciplineBlockBlueAsteriskName": "Блок 1",
+      "hasExam": true,
+      "hasCredit": false,
+      "hasCourseWork": true,
+      "hasCourseProject": false
     },
     {
       "id": 1002,
@@ -72,7 +76,11 @@
       "disciplineName": "Базы данных",
       "disciplineShortName": "БД",
       "disciplineDescription": "Проектирование баз данных",
-      "disciplineBlockBlueAsteriskName": "Блок 1"
+      "disciplineBlockBlueAsteriskName": "Блок 1",
+      "hasExam": false,
+      "hasCredit": true,
+      "hasCourseWork": false,
+      "hasCourseProject": true
     },
     {
       "id": 1003,
@@ -80,7 +88,11 @@
       "disciplineName": "Операционные системы",
       "disciplineShortName": "ОС",
       "disciplineDescription": "Основы операционных систем",
-      "disciplineBlockBlueAsteriskName": "Блок 2"
+      "disciplineBlockBlueAsteriskName": "Блок 2",
+      "hasExam": true,
+      "hasCredit": false,
+      "hasCourseWork": false,
+      "hasCourseProject": false
     }
   ],
   "academicPlanRecordElements": [

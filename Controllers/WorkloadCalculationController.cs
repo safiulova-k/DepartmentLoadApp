@@ -25,9 +25,7 @@ namespace DepartmentLoadApp.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(int? year)
         {
-            var selectedYear = year
-                               ?? await _academicPlanImportService.GetLatestYearAsync()
-                               ?? DateTime.Now.Year;
+            var selectedYear = year ?? await _academicPlanImportService.GetLatestYearAsync() ?? DateTime.Now.Year;
 
             await _academicPlanImportService.EnsureYearImportedAsync(selectedYear);
 
@@ -51,36 +49,28 @@ namespace DepartmentLoadApp.Controllers
         [HttpPost]
         public async Task<IActionResult> Save(WorkloadTablePageViewModel model)
         {
-            await Recalculate(model.Rows);
-
             var ids = model.Rows.Select(x => x.Id).ToList();
 
             var dbRows = await _context.WorkloadRows
                 .Where(x => ids.Contains(x.Id))
+                .OrderBy(x => x.Id)
                 .ToListAsync();
 
-            foreach (var row in model.Rows)
+            foreach (var postedRow in model.Rows)
             {
-                var dbRow = dbRows.FirstOrDefault(x => x.Id == row.Id);
-
+                var dbRow = dbRows.FirstOrDefault(x => x.Id == postedRow.Id);
                 if (dbRow == null)
                 {
-                    _context.WorkloadRows.Add(row);
+                    continue;
                 }
-                else
-                {
-                    dbRow.FlowCount = row.FlowCount;
 
-                    dbRow.StudentsCount = row.StudentsCount;
-                    dbRow.GroupCount = row.GroupCount;
-                    dbRow.SubgroupCount = row.SubgroupCount;
-
-                    dbRow.LectureTotalHours = row.LectureTotalHours;
-                    dbRow.PracticeTotalHours = row.PracticeTotalHours;
-                    dbRow.LabTotalHours = row.LabTotalHours;
-                }
+                dbRow.HasExam = postedRow.HasExam;
+                dbRow.HasCredit = postedRow.HasCredit;
+                dbRow.HasCourseWork = postedRow.HasCourseWork;
+                dbRow.HasCourseProject = postedRow.HasCourseProject;
             }
 
+            await Recalculate(dbRows);
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index), new { year = model.SelectedYear });
@@ -88,9 +78,17 @@ namespace DepartmentLoadApp.Controllers
 
         private async Task Recalculate(List<WorkloadRow> rows)
         {
-            var lectureNorm = await GetNorm("Лекции");
-            var practiceNorm = await GetNorm("Практические занятия");
-            var labNorm = await GetNorm("Лабораторные работы");
+            var lectureNorm = await GetNormAsync("Лекции");
+            var practiceNorm = await GetNormAsync("Практические занятия");
+            var labNorm = await GetNormAsync("Лабораторные работы");
+
+            var consultationNorm = await GetNormAsync("Консультации");
+            var consultationExamExtraNorm = await GetNormAsync("Доп. консультация к экзамену");
+
+            var examNorm = await GetNormAsync("Экзамен");
+            var creditNorm = await GetNormAsync("Зачет");
+            var courseWorkNorm = await GetNormAsync("Курсовая работа");
+            var courseProjectNorm = await GetNormAsync("Курсовой проект");
 
             foreach (var row in rows)
             {
@@ -107,6 +105,12 @@ namespace DepartmentLoadApp.Controllers
                     row.LectureTotalHours = 0;
                     row.PracticeTotalHours = 0;
                     row.LabTotalHours = 0;
+                    row.ConsultationHours = 0;
+                    row.ExamHours = 0;
+                    row.CreditHours = 0;
+                    row.CourseWorkHours = 0;
+                    row.CourseProjectHours = 0;
+
                     continue;
                 }
 
@@ -140,6 +144,16 @@ namespace DepartmentLoadApp.Controllers
                 row.LectureTotalHours = CalculatePlanBasedHours(row.LecturePlanHours, lectureNorm, row);
                 row.PracticeTotalHours = CalculatePlanBasedHours(row.PracticePlanHours, practiceNorm, row);
                 row.LabTotalHours = CalculatePlanBasedHours(row.LabPlanHours, labNorm, row);
+
+                row.ExamHours = CalculateOptionalHours(row.HasExam, examNorm, row);
+                row.CreditHours = CalculateOptionalHours(row.HasCredit, creditNorm, row);
+                row.CourseWorkHours = CalculateOptionalHours(row.HasCourseWork, courseWorkNorm, row);
+                row.CourseProjectHours = CalculateOptionalHours(row.HasCourseProject, courseProjectNorm, row);
+
+                row.ConsultationHours = CalculateConsultationHours(
+                    row,
+                    consultationNorm,
+                    consultationExamExtraNorm);
             }
         }
 
@@ -150,11 +164,53 @@ namespace DepartmentLoadApp.Controllers
                 return 0;
             }
 
-            var multiplier = GetMultiplier(norm.CalculationBase, row);
-            return planHours * multiplier;
+            var multiplier = GetBaseValue(norm.CalculationBase, row);
+            var result = planHours * multiplier * norm.Hours;
+
+            return Math.Round(result, 0, MidpointRounding.AwayFromZero);
         }
 
-        private decimal GetMultiplier(WorkCalculationBase calculationBase, WorkloadRow row)
+        private decimal CalculateOptionalHours(bool isEnabled, NormTime? norm, WorkloadRow row)
+        {
+            if (!isEnabled || norm == null)
+            {
+                return 0;
+            }
+
+            var baseValue = GetBaseValue(norm.CalculationBase, row);
+            var result = baseValue * norm.Hours;
+
+            return Math.Round(result, 0, MidpointRounding.AwayFromZero);
+        }
+
+        private decimal CalculateConsultationHours(
+            WorkloadRow row,
+            NormTime? consultationNorm,
+            NormTime? consultationExamExtraNorm)
+        {
+            decimal result = 0;
+
+            if (consultationNorm != null)
+            {
+                decimal consultationBase = consultationNorm.CalculationBase switch
+                {
+                    WorkCalculationBase.FromLectureHoursTotal => row.GroupCount * row.LecturePlanHours,
+                    _ => GetBaseValue(consultationNorm.CalculationBase, row)
+                };
+
+                result += consultationBase * consultationNorm.Hours;
+            }
+
+            if (row.HasExam && consultationExamExtraNorm != null)
+            {
+                var extraBase = GetBaseValue(consultationExamExtraNorm.CalculationBase, row);
+                result += extraBase * consultationExamExtraNorm.Hours;
+            }
+
+            return Math.Round(result, 0, MidpointRounding.AwayFromZero);
+        }
+
+        private decimal GetBaseValue(WorkCalculationBase calculationBase, WorkloadRow row)
         {
             return calculationBase switch
             {
@@ -163,23 +219,16 @@ namespace DepartmentLoadApp.Controllers
                 WorkCalculationBase.PerSubgroup => row.SubgroupCount,
                 WorkCalculationBase.PerStudent => row.StudentsCount,
                 WorkCalculationBase.PerWork => 1,
-                WorkCalculationBase.FromLectureHoursTotal => 1,
+                WorkCalculationBase.FromLectureHoursTotal => row.GroupCount * row.LecturePlanHours,
                 _ => 1
             };
         }
 
-        private async Task<NormTime?> GetNorm(string workName)
+        private async Task<NormTime?> GetNormAsync(string workName)
         {
             return await _context.NormTimes
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.WorkName == workName);
-        }
-        private static string GetSemesterName(int semesterNumber)
-        {
-            if (semesterNumber <= 0)
-                return string.Empty;
-
-            return semesterNumber % 2 == 0 ? "весна" : "осень";
         }
     }
 }

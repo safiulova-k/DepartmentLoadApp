@@ -182,15 +182,11 @@ namespace DepartmentLoadApp.Data
             modelBuilder.Entity<WorkloadRow>(entity =>
             {
                 entity.ToTable("WorkloadRows");
-
                 entity.HasKey(x => x.Id);
 
                 entity.Property(x => x.PlanYear);
-
                 entity.Property(x => x.AcademicPlanId);
-
                 entity.Property(x => x.AcademicPlanRecordId);
-
                 entity.Property(x => x.DisciplineId);
 
                 entity.Property(x => x.DisciplineName)
@@ -228,6 +224,38 @@ namespace DepartmentLoadApp.Data
 
                 entity.Property(x => x.LabTotalHours)
                     .HasColumnType("numeric(10,2)");
+
+                entity.Property(x => x.HasExam)
+                    .IsRequired();
+
+                entity.Property(x => x.HasCredit)
+                    .IsRequired();
+
+                entity.Property(x => x.HasCourseWork)
+                    .IsRequired();
+
+                entity.Property(x => x.HasCourseProject)
+                    .IsRequired();
+
+                entity.Property(x => x.ConsultationHours)
+                    .HasColumnType("numeric(10,2)")
+                    .IsRequired();
+
+                entity.Property(x => x.ExamHours)
+                    .HasColumnType("numeric(10,2)")
+                    .IsRequired();
+
+                entity.Property(x => x.CreditHours)
+                    .HasColumnType("numeric(10,2)")
+                    .IsRequired();
+
+                entity.Property(x => x.CourseWorkHours)
+                    .HasColumnType("numeric(10,2)")
+                    .IsRequired();
+
+                entity.Property(x => x.CourseProjectHours)
+                    .HasColumnType("numeric(10,2)")
+                    .IsRequired();
             });
 
             modelBuilder.Entity<LoadCalculation>(entity =>
