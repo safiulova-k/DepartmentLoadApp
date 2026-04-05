@@ -8,7 +8,7 @@ namespace DepartmentLoadApp.Models.Workload
 
         [Required]
         [StringLength(9)]
-        public string AcademicYear { get; set; }
+        public string AcademicYear { get; set; } = string.Empty;
         public int AcademicPlanId { get; set; }
         public int AcademicPlanRecordId { get; set; }
         public int DisciplineId { get; set; }

@@ -2,8 +2,12 @@
 
 @{
     ViewData["Title"] = "Дисциплины";
-    int latestYear = ViewBag.LatestYear ?? DateTime.Now.Year;
 }
+@{
+    var currentStartYear = DateTime.Now.Month >= 9 ? DateTime.Now.Year : DateTime.Now.Year - 1;
+    string latestYear = ViewBag.LatestYear as string ?? $"{currentStartYear}-{currentStartYear + 1}";
+}
+
 
 <h1>Дисциплины</h1>
 

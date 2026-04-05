@@ -38,6 +38,7 @@
             </div>
 
             <form asp-controller="PracticeCalculation" asp-action="Save" method="post">
+                @Html.AntiForgeryToken()
                 <input type="hidden" asp-for="SelectedYear" />
 
                 <div class="table-responsive">

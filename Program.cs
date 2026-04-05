@@ -2,9 +2,9 @@ using DepartmentLoadApp.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using Microsoft.AspNetCore.Localization;
-using DepartmentLoadApp.Integration.PortalMock;
-using DepartmentLoadApp.Integration.PracticeMock;
-using DepartmentLoadApp.Integration.GiaMock;
+using DepartmentLoadApp.Integration.AcademicPlanImport;
+using DepartmentLoadApp.Integration.PracticeImport;
+using DepartmentLoadApp.Integration.GiaImport;
 using DepartmentLoadApp.Integration;
 
 var builder = WebApplication.CreateBuilder(args);

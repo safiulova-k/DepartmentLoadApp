@@ -1,5 +1,6 @@
 ﻿using DepartmentLoadApp.Data;
-using DepartmentLoadApp.Integration.PortalMock;
+using DepartmentLoadApp.Helpers;
+using DepartmentLoadApp.Integration.AcademicPlanImport;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -39,7 +40,8 @@ namespace DepartmentLoadApp.Controllers
                 .ToListAsync();
 
             ViewBag.Search = search;
-            ViewBag.LatestYear = await _academicPlanImportService.GetLatestYearAsync() ?? DateTime.Now.Year;
+            ViewBag.LatestYear = await _academicPlanImportService.GetLatestYearAsync()
+                                 ?? AcademicYearHelper.GetCurrentAcademicYear();
 
             return View(items);
         }

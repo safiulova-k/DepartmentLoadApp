@@ -1,5 +1,5 @@
 ﻿using DepartmentLoadApp.Data;
-using DepartmentLoadApp.Integration.PortalMock;
+using DepartmentLoadApp.Integration.AcademicPlanImport;
 using DepartmentLoadApp.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

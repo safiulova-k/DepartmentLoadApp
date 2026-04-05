@@ -29,6 +29,7 @@
 </div>
 
 <form asp-action="Save" method="post">
+    @Html.AntiForgeryToken()
     <input type="hidden" asp-for="SelectedYear" />
 
     <div class="mb-4">

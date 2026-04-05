@@ -1,11 +1,10 @@
 ﻿using DepartmentLoadApp.Data;
-using DepartmentLoadApp.Integration.GiaMock;
+using DepartmentLoadApp.Helpers;
+using DepartmentLoadApp.Integration.GiaImport;
 using DepartmentLoadApp.Models;
 using DepartmentLoadApp.Models.Contingent;
-using DepartmentLoadApp.Models.Enums;
 using DepartmentLoadApp.Models.Gia;
 using DepartmentLoadApp.ViewModels.Gia;
-using DepartmentLoadApp.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,19 +24,37 @@ namespace DepartmentLoadApp.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(int? year)
+        public async Task<IActionResult> Index(string? year)
         {
-            var selectedYear = year ?? DateTime.Now.Year;
+            List<GiaWorkloadRow> rows;
+            string selectedYear;
 
-            await _giaWorkloadImportService.EnsureYearImportedAsync(selectedYear);
+            if (string.IsNullOrWhiteSpace(year))
+            {
+                rows = await _context.GiaWorkloadRows
+                    .OrderBy(x => x.Course)
+                    .ThenBy(x => x.DirectionCode)
+                    .ThenBy(x => x.GiaSection)
+                    .ThenBy(x => x.WorkName)
+                    .ToListAsync();
 
-            var rows = await _context.GiaWorkloadRows
-                .Where(x => x.PlanYear == selectedYear)
-                .OrderBy(x => x.Course)
-                .ThenBy(x => x.DirectionCode)
-                .ThenBy(x => x.GiaSection)
-                .ThenBy(x => x.WorkName)
-                .ToListAsync();
+                selectedYear = rows.FirstOrDefault()?.PlanYear
+                               ?? AcademicYearHelper.GetCurrentAcademicYear();
+            }
+            else
+            {
+                selectedYear = year;
+
+                await _giaWorkloadImportService.EnsureYearImportedAsync(selectedYear);
+
+                rows = await _context.GiaWorkloadRows
+                    .Where(x => x.PlanYear == selectedYear)
+                    .OrderBy(x => x.Course)
+                    .ThenBy(x => x.DirectionCode)
+                    .ThenBy(x => x.GiaSection)
+                    .ThenBy(x => x.WorkName)
+                    .ToListAsync();
+            }
 
             await RecalculateAsync(rows);
             await _context.SaveChangesAsync();
@@ -50,6 +67,7 @@ namespace DepartmentLoadApp.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Save(GiaWorkloadPageViewModel model)
         {
             var ids = model.Rows.Select(x => x.Id).ToList();
@@ -70,7 +88,6 @@ namespace DepartmentLoadApp.Controllers
                     continue;
                 }
 
-                // Пока вручную редактируются только консультации к госэкзамену
                 if (dbRow.WorkName == "Консультация к госэкзамену")
                 {
                     dbRow.ManualHours = row.ManualHours;
@@ -90,13 +107,13 @@ namespace DepartmentLoadApp.Controllers
                 .Where(x => x.CategoryName == "ГИА")
                 .ToListAsync();
 
+            var contingentMap = await _context.ContingentRows
+                .AsNoTracking()
+                .ToDictionaryAsync(x => x.DirectionCode);
+
             foreach (var row in rows)
             {
-                var contingent = await _context.ContingentRows
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.DirectionCode == row.DirectionCode);
-
-                if (contingent == null)
+                if (!contingentMap.TryGetValue(row.DirectionCode, out var contingent))
                 {
                     row.StudentsCount = 0;
                     row.GroupCount = 0;
@@ -104,8 +121,8 @@ namespace DepartmentLoadApp.Controllers
                     continue;
                 }
 
-                row.StudentsCount = GetStudentsByCourse(contingent, row.Course);
-                row.GroupCount = GetGroupsByCourse(contingent, row.Course);
+                row.StudentsCount = CalculationHelper.GetStudentsByCourse(contingent, row.Course);
+                row.GroupCount = CalculationHelper.GetGroupsByCourse(contingent, row.Course);
 
                 NormalizeGiaWorkNameByQualification(row, contingent);
 
@@ -120,22 +137,16 @@ namespace DepartmentLoadApp.Controllers
                 return;
             }
 
-            if (contingent.IsMaster)
-            {
-                row.WorkName = "Руководство ВКР магистра";
-            }
-            else
-            {
-                row.WorkName = "Руководство ВКР бакалавра";
-            }
+            row.WorkName = contingent.IsMaster
+                ? "Руководство ВКР магистра"
+                : "Руководство ВКР бакалавра";
         }
 
         private decimal CalculateGiaHours(GiaWorkloadRow row, List<NormTime> norms)
         {
-            // Спецслучай: консультация к госэкзамену пока задаётся вручную / из JSON
             if (row.WorkName == "Консультация к госэкзамену")
             {
-                return RoundHours(row.ManualHours);
+                return CalculationHelper.RoundHours(row.ManualHours);
             }
 
             var norm = norms.FirstOrDefault(x => x.WorkName == row.WorkName);
@@ -144,74 +155,21 @@ namespace DepartmentLoadApp.Controllers
                 return 0;
             }
 
-            var result = CalculateByNorm(
+            var result = CalculationHelper.CalculateByNorm(
                 calculationBase: norm.CalculationBase,
                 coefficient: norm.Hours,
                 studentsCount: row.StudentsCount,
-                groupCount: row.GroupCount,
-                subgroupCount: 0,
-                streamCount: 0,
-                planHours: 0);
+                groupCount: row.GroupCount);
 
-            return RoundHours(result);
+            return CalculationHelper.RoundHours(result);
         }
 
-        private static decimal CalculateByNorm(
-            WorkCalculationBase calculationBase,
-            decimal coefficient,
-            int studentsCount,
-            int groupCount,
-            int subgroupCount,
-            int streamCount,
-            decimal planHours)
-        {
-            return calculationBase switch
-            {
-                WorkCalculationBase.PerStudent => studentsCount * coefficient,
-                WorkCalculationBase.PerGroup => groupCount * coefficient,
-                WorkCalculationBase.PerSubgroup => subgroupCount * coefficient,
-                WorkCalculationBase.PerStream => streamCount * coefficient,
-
-                // Если у тебя в enum уже есть такая основа, оставь.
-                // Если нет — просто удали этот case.
-                WorkCalculationBase.FromLectureHoursTotal => planHours * coefficient,
-
-                _ => 0
-            };
-        }
-
-        private static decimal RoundHours(decimal value)
-        {
-            return Math.Round(value, 0, MidpointRounding.AwayFromZero);
-        }
-
-        private static int GetStudentsByCourse(ContingentRow contingent, int course)
-        {
-            return course switch
-            {
-                1 => contingent.Course1Count,
-                2 => contingent.Course2Count,
-                3 => contingent.Course3Count,
-                4 => contingent.Course4Count,
-                _ => 0
-            };
-        }
-
-        private static int GetGroupsByCourse(ContingentRow contingent, int course)
-        {
-            return course switch
-            {
-                1 => contingent.Course1Groups,
-                2 => contingent.Course2Groups,
-                3 => contingent.Course3Groups,
-                4 => contingent.Course4Groups,
-                _ => 0
-            };
-        }
         [HttpGet]
-        public async Task<IActionResult> ExportToExcel(int? year)
+        public async Task<IActionResult> ExportToExcel(string? year)
         {
-            var selectedYear = year ?? DateTime.Now.Year;
+            var selectedYear = string.IsNullOrWhiteSpace(year)
+                ? AcademicYearHelper.GetCurrentAcademicYear()
+                : year;
 
             await _giaWorkloadImportService.EnsureYearImportedAsync(selectedYear);
 

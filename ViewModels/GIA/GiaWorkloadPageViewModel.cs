@@ -4,7 +4,7 @@ namespace DepartmentLoadApp.ViewModels.Gia
 {
     public class GiaWorkloadPageViewModel
     {
-        public int SelectedYear { get; set; }
+        public string SelectedYear { get; set; } = string.Empty;
         public List<GiaWorkloadRow> Rows { get; set; } = new();
     }
 }

@@ -1,6 +1,4 @@
-﻿using System.Drawing;
-using System.IO;
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using DepartmentLoadApp.Models.Gia;
 using DepartmentLoadApp.Models.Practice;
 using DepartmentLoadApp.Models.Workload;

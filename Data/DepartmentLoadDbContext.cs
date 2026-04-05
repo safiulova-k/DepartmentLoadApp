@@ -1,7 +1,6 @@
 ﻿using DepartmentLoadApp.Models;
 using DepartmentLoadApp.Models.AcademicPlan;
 using DepartmentLoadApp.Models.Contingent;
-using DepartmentLoadApp.Models.Enums;
 using DepartmentLoadApp.Models.Gia;
 using DepartmentLoadApp.Models.Practice;
 using DepartmentLoadApp.Models.Workload;
@@ -11,7 +10,8 @@ namespace DepartmentLoadApp.Data
 {
     public class DepartmentLoadDbContext : DbContext
     {
-        public DepartmentLoadDbContext(DbContextOptions<DepartmentLoadDbContext> options) : base(options)
+        public DepartmentLoadDbContext(DbContextOptions<DepartmentLoadDbContext> options)
+            : base(options)
         {
         }
 
@@ -88,9 +88,15 @@ namespace DepartmentLoadApp.Data
                 entity.ToTable("AcademicPlans");
                 entity.HasKey(x => x.Id);
 
-                entity.Property(x => x.EducationDirectionId).IsRequired();
-                entity.Property(x => x.AcademicCourses).IsRequired();
-                entity.Property(x => x.Year).IsRequired();
+                entity.Property(x => x.EducationDirectionId)
+                    .IsRequired();
+
+                entity.Property(x => x.AcademicCourses)
+                    .IsRequired();
+
+                entity.Property(x => x.Year)
+                    .IsRequired()
+                    .HasMaxLength(9);
             });
 
             modelBuilder.Entity<Discipline>(entity =>
@@ -98,7 +104,8 @@ namespace DepartmentLoadApp.Data
                 entity.ToTable("Disciplines");
                 entity.HasKey(x => x.Id);
 
-                entity.Property(x => x.DisciplineBlockId).IsRequired();
+                entity.Property(x => x.DisciplineBlockId)
+                    .IsRequired();
 
                 entity.Property(x => x.DisciplineName)
                     .IsRequired()
@@ -119,8 +126,14 @@ namespace DepartmentLoadApp.Data
                 entity.ToTable("AcademicPlanRecords");
                 entity.HasKey(x => x.Id);
 
-                entity.Property(x => x.Semester).IsRequired();
-                entity.Property(x => x.Zet).IsRequired();
+                entity.Property(x => x.Semester)
+                    .IsRequired();
+
+                entity.Property(x => x.Zet)
+                    .IsRequired();
+
+                entity.Property(x => x.DisciplineBlockId)
+                    .IsRequired();
 
                 entity.HasOne(x => x.AcademicPlan)
                     .WithMany(x => x.AcademicPlanRecords)
@@ -166,7 +179,10 @@ namespace DepartmentLoadApp.Data
                 entity.ToTable("WorkloadRows");
                 entity.HasKey(x => x.Id);
 
-                entity.Property(x => x.AcademicYear);
+                entity.Property(x => x.AcademicYear)
+                    .IsRequired()
+                    .HasMaxLength(9);
+
                 entity.Property(x => x.AcademicPlanId);
                 entity.Property(x => x.AcademicPlanRecordId);
                 entity.Property(x => x.DisciplineId);
@@ -175,8 +191,11 @@ namespace DepartmentLoadApp.Data
                     .IsRequired()
                     .HasMaxLength(300);
 
-                entity.Property(x => x.DirectionCode).HasMaxLength(50);
-                entity.Property(x => x.DirectionName).HasMaxLength(200);
+                entity.Property(x => x.DirectionCode)
+                    .HasMaxLength(50);
+
+                entity.Property(x => x.DirectionName)
+                    .HasMaxLength(200);
 
                 entity.Property(x => x.SemesterName)
                     .IsRequired()
@@ -186,23 +205,48 @@ namespace DepartmentLoadApp.Data
                     .IsRequired()
                     .HasMaxLength(50);
 
-                entity.Property(x => x.LecturePlanHours).HasColumnType("numeric(10,2)");
-                entity.Property(x => x.LectureTotalHours).HasColumnType("numeric(10,2)");
-                entity.Property(x => x.PracticePlanHours).HasColumnType("numeric(10,2)");
-                entity.Property(x => x.PracticeTotalHours).HasColumnType("numeric(10,2)");
-                entity.Property(x => x.LabPlanHours).HasColumnType("numeric(10,2)");
-                entity.Property(x => x.LabTotalHours).HasColumnType("numeric(10,2)");
+                entity.Property(x => x.LecturePlanHours)
+                    .HasColumnType("numeric(10,2)");
+
+                entity.Property(x => x.LectureTotalHours)
+                    .HasColumnType("numeric(10,2)");
+
+                entity.Property(x => x.PracticePlanHours)
+                    .HasColumnType("numeric(10,2)");
+
+                entity.Property(x => x.PracticeTotalHours)
+                    .HasColumnType("numeric(10,2)");
+
+                entity.Property(x => x.LabPlanHours)
+                    .HasColumnType("numeric(10,2)");
+
+                entity.Property(x => x.LabTotalHours)
+                    .HasColumnType("numeric(10,2)");
 
                 entity.Property(x => x.HasExam).IsRequired();
                 entity.Property(x => x.HasCredit).IsRequired();
                 entity.Property(x => x.HasCourseWork).IsRequired();
                 entity.Property(x => x.HasCourseProject).IsRequired();
 
-                entity.Property(x => x.ConsultationHours).HasColumnType("numeric(10,2)").IsRequired();
-                entity.Property(x => x.ExamHours).HasColumnType("numeric(10,2)").IsRequired();
-                entity.Property(x => x.CreditHours).HasColumnType("numeric(10,2)").IsRequired();
-                entity.Property(x => x.CourseWorkHours).HasColumnType("numeric(10,2)").IsRequired();
-                entity.Property(x => x.CourseProjectHours).HasColumnType("numeric(10,2)").IsRequired();
+                entity.Property(x => x.ConsultationHours)
+                    .HasColumnType("numeric(10,2)")
+                    .IsRequired();
+
+                entity.Property(x => x.ExamHours)
+                    .HasColumnType("numeric(10,2)")
+                    .IsRequired();
+
+                entity.Property(x => x.CreditHours)
+                    .HasColumnType("numeric(10,2)")
+                    .IsRequired();
+
+                entity.Property(x => x.CourseWorkHours)
+                    .HasColumnType("numeric(10,2)")
+                    .IsRequired();
+
+                entity.Property(x => x.CourseProjectHours)
+                    .HasColumnType("numeric(10,2)")
+                    .IsRequired();
             });
 
             modelBuilder.Entity<LoadCalculation>(entity =>
@@ -242,7 +286,9 @@ namespace DepartmentLoadApp.Data
                 entity.ToTable("PracticeWorkloadRows");
                 entity.HasKey(x => x.Id);
 
-                entity.Property(x => x.PlanYear).IsRequired();
+                entity.Property(x => x.PlanYear)
+                    .IsRequired()
+                    .HasMaxLength(9);
 
                 entity.Property(x => x.PracticeName)
                     .IsRequired()
@@ -252,8 +298,11 @@ namespace DepartmentLoadApp.Data
                     .IsRequired()
                     .HasMaxLength(50);
 
-                entity.Property(x => x.DirectionName).HasMaxLength(200);
-                entity.Property(x => x.Course).IsRequired();
+                entity.Property(x => x.DirectionName)
+                    .HasMaxLength(200);
+
+                entity.Property(x => x.Course)
+                    .IsRequired();
 
                 entity.Property(x => x.SemesterName)
                     .IsRequired()
@@ -277,7 +326,9 @@ namespace DepartmentLoadApp.Data
                 entity.ToTable("GiaWorkloadRows");
                 entity.HasKey(x => x.Id);
 
-                entity.Property(x => x.PlanYear).IsRequired();
+                entity.Property(x => x.PlanYear)
+                    .IsRequired()
+                    .HasMaxLength(9);
 
                 entity.Property(x => x.GiaSection)
                     .IsRequired()
@@ -291,8 +342,11 @@ namespace DepartmentLoadApp.Data
                     .IsRequired()
                     .HasMaxLength(50);
 
-                entity.Property(x => x.DirectionName).HasMaxLength(200);
-                entity.Property(x => x.Course).IsRequired();
+                entity.Property(x => x.DirectionName)
+                    .HasMaxLength(200);
+
+                entity.Property(x => x.Course)
+                    .IsRequired();
 
                 entity.Property(x => x.SemesterName)
                     .IsRequired()
@@ -327,8 +381,11 @@ namespace DepartmentLoadApp.Data
                     .IsRequired()
                     .HasMaxLength(20);
 
-                entity.Property(x => x.StartDate).IsRequired();
-                entity.Property(x => x.EndDate).IsRequired();
+                entity.Property(x => x.StartDate)
+                    .IsRequired();
+
+                entity.Property(x => x.EndDate)
+                    .IsRequired();
             });
 
             modelBuilder.Entity<StudentFlow>(entity =>
@@ -348,7 +405,8 @@ namespace DepartmentLoadApp.Data
                     .IsRequired()
                     .HasMaxLength(50);
 
-                entity.Property(x => x.Course).IsRequired();
+                entity.Property(x => x.Course)
+                    .IsRequired();
 
                 entity.Property(x => x.EducationLevel)
                     .IsRequired()
@@ -357,8 +415,11 @@ namespace DepartmentLoadApp.Data
                 entity.Property(x => x.GroupNames)
                     .HasMaxLength(500);
 
-                entity.Property(x => x.StudentsCount).IsRequired();
-                entity.Property(x => x.GroupsCount).IsRequired();
+                entity.Property(x => x.StudentsCount)
+                    .IsRequired();
+
+                entity.Property(x => x.GroupsCount)
+                    .IsRequired();
             });
         }
     }
