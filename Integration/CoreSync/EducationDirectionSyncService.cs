@@ -1,12 +1,13 @@
 ﻿using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Dtos.Core;
 using DepartmentLoadApp.Integration.CoreApi;
+using DepartmentLoadApp.Integration.CoreSync.Interfaces;
 using DepartmentLoadApp.Models.Core;
 using Microsoft.EntityFrameworkCore;
 
 namespace DepartmentLoadApp.Integration.CoreSync;
 
-public class EducationDirectionSyncService
+public class EducationDirectionSyncService : IEducationDirectionSyncService
 {
     private readonly CoreApiService _api;
     private readonly DepartmentLoadDbContext _db;
@@ -23,12 +24,12 @@ public class EducationDirectionSyncService
 
         foreach (var dto in items)
         {
-            var entity = await _db.Set<EducationDirection>()
+            var entity = await _db.EducationDirections
                 .FirstOrDefaultAsync(x => x.CoreId == dto.Id);
 
             if (entity == null)
             {
-                _db.Add(new EducationDirection
+                entity = new EducationDirection
                 {
                     CoreId = dto.Id,
                     Cipher = dto.Cipher,
@@ -37,7 +38,9 @@ public class EducationDirectionSyncService
                     Qualification = dto.Qualification,
                     Profile = dto.Profile,
                     Description = dto.Description
-                });
+                };
+
+                _db.EducationDirections.Add(entity);
             }
             else
             {

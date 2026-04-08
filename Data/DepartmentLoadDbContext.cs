@@ -16,106 +16,146 @@ public class DepartmentLoadDbContext : DbContext
     {
     }
 
-    // CORE
-    public DbSet<EducationDirection> EducationDirections { get; set; }
-    public DbSet<Lecturer> Lecturers { get; set; }
-    public DbSet<StudentGroup> StudentGroupsCore { get; set; }
-    public DbSet<AcademicPlan> AcademicPlansCore { get; set; }
-    public DbSet<AcademicPlanRecord> AcademicPlanRecordsCore { get; set; }
-    public DbSet<LecturerStudyPost> LecturerStudyPosts { get; set; }
-    public DbSet<LecturerDepartmentPost> LecturerDepartmentPosts { get; set; }
+    // Core
+    public DbSet<EducationDirection> EducationDirections { get; set; } = null!;
+    public DbSet<Lecturer> Lecturers { get; set; } = null!;
+    public DbSet<StudentGroup> StudentGroupsCore { get; set; } = null!;
+    public DbSet<AcademicPlan> AcademicPlansCore { get; set; } = null!;
+    public DbSet<AcademicPlanRecord> AcademicPlanRecordsCore { get; set; } = null!;
+    public DbSet<LecturerStudyPost> LecturerStudyPosts { get; set; } = null!;
+    public DbSet<LecturerDepartmentPost> LecturerDepartmentPosts { get; set; } = null!;
 
-    // ТВОЙ МОДУЛЬ
-    public DbSet<ContingentRow> ContingentRows { get; set; }
-    public DbSet<NormTime> NormTimes { get; set; }
-    public DbSet<Discipline> Disciplines { get; set; }
-    public DbSet<WorkloadRow> WorkloadRows { get; set; }
-    public DbSet<LoadCalculation> LoadCalculations { get; set; }
-    public DbSet<LoadDistribution> LoadDistributions { get; set; }
-    public DbSet<PracticeWorkloadRow> PracticeWorkloadRows { get; set; }
-    public DbSet<GiaWorkloadRow> GiaWorkloadRows { get; set; }
-    public DbSet<SemesterPeriod> SemesterPeriods { get; set; }
-    public DbSet<StudentFlow> StudentFlows { get; set; }
+    // Твой модуль
+    public DbSet<ContingentRow> ContingentRows { get; set; } = null!;
+    public DbSet<NormTime> NormTimes { get; set; } = null!;
+    public DbSet<Discipline> Disciplines { get; set; } = null!;
+    public DbSet<WorkloadRow> WorkloadRows { get; set; } = null!;
+    public DbSet<LoadCalculation> LoadCalculations { get; set; } = null!;
+    public DbSet<LoadDistribution> LoadDistributions { get; set; } = null!;
+    public DbSet<PracticeWorkloadRow> PracticeWorkloadRows { get; set; } = null!;
+    public DbSet<GiaWorkloadRow> GiaWorkloadRows { get; set; } = null!;
+    public DbSet<SemesterPeriod> SemesterPeriods { get; set; } = null!;
+    public DbSet<StudentFlow> StudentFlows { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<EducationDirection>()
-            .HasIndex(x => x.CoreId)
-            .IsUnique();
+        // ---------- CORE ----------
 
-        modelBuilder.Entity<LecturerStudyPost>()
-            .HasIndex(x => x.CoreId)
-            .IsUnique();
+        modelBuilder.Entity<EducationDirection>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.CoreId).IsUnique();
 
-        modelBuilder.Entity<LecturerDepartmentPost>()
-            .HasIndex(x => x.CoreId)
-            .IsUnique();
+            entity.Property(x => x.Cipher).IsRequired();
+            entity.Property(x => x.ShortName).IsRequired();
+            entity.Property(x => x.Title).IsRequired();
+            entity.Property(x => x.Profile).IsRequired();
+            entity.Property(x => x.Description).IsRequired();
+        });
 
-        modelBuilder.Entity<Lecturer>()
-            .HasIndex(x => x.CoreId)
-            .IsUnique();
+        modelBuilder.Entity<LecturerStudyPost>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.CoreId).IsUnique();
 
-        modelBuilder.Entity<StudentGroup>()
-            .HasIndex(x => x.CoreId)
-            .IsUnique();
+            entity.Property(x => x.StudyPostTitle).IsRequired();
+        });
 
-        modelBuilder.Entity<AcademicPlan>()
-            .HasIndex(x => x.CoreId)
-            .IsUnique();
+        modelBuilder.Entity<LecturerDepartmentPost>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.CoreId).IsUnique();
 
-        modelBuilder.Entity<AcademicPlanRecord>()
-            .HasIndex(x => x.CoreId)
-            .IsUnique();
+            entity.Property(x => x.DepartmentPostTitle).IsRequired();
+        });
 
-        modelBuilder.Entity<Lecturer>()
-            .HasOne(l => l.StudyPost)
-            .WithMany()
-            .HasForeignKey(l => l.LecturerStudyPostId)
-            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Lecturer>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.CoreId).IsUnique();
 
-        modelBuilder.Entity<Lecturer>()
-            .HasOne(l => l.DepartmentPost)
-            .WithMany()
-            .HasForeignKey(l => l.LecturerDepartmentPostId)
-            .OnDelete(DeleteBehavior.Restrict);
+            entity.Property(x => x.FirstName).IsRequired();
+            entity.Property(x => x.LastName).IsRequired();
+            entity.Property(x => x.Patronymic).IsRequired();
+            entity.Property(x => x.Abbreviation).IsRequired();
+            entity.Property(x => x.Address).IsRequired();
+            entity.Property(x => x.Email).IsRequired();
+            entity.Property(x => x.MobileNumber).IsRequired();
+            entity.Property(x => x.HomeNumber).IsRequired();
+            entity.Property(x => x.Description).IsRequired();
 
-        modelBuilder.Entity<StudentGroup>()
-            .HasOne(g => g.EducationDirection)
-            .WithMany()
-            .HasForeignKey(g => g.EducationDirectionId)
-            .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<LecturerStudyPost>()
+                .WithMany()
+                .HasForeignKey(x => x.LecturerStudyPostId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<StudentGroup>()
-            .HasOne(g => g.Curator)
-            .WithMany()
-            .HasForeignKey(g => g.CuratorId)
-            .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne<LecturerDepartmentPost>()
+                .WithMany()
+                .HasForeignKey(x => x.LecturerDepartmentPostId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
 
-        modelBuilder.Entity<AcademicPlan>()
-            .HasOne(p => p.EducationDirection)
-            .WithMany()
-            .HasForeignKey(p => p.EducationDirectionId)
-            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<StudentGroup>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.CoreId).IsUnique();
 
-        modelBuilder.Entity<AcademicPlanRecord>()
-            .HasOne(r => r.AcademicPlan)
-            .WithMany(p => p.Records)
-            .HasForeignKey(r => r.AcademicPlanId)
-            .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(x => x.GroupName).IsRequired();
 
-        modelBuilder.Entity<LoadDistribution>()
-            .HasOne(ld => ld.Lecturer)
-            .WithMany()
-            .HasForeignKey(ld => ld.LecturerId)
-            .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<EducationDirection>()
+                .WithMany()
+                .HasForeignKey(x => x.EducationDirectionId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<LoadDistribution>()
-            .HasOne(ld => ld.LoadCalculation)
-            .WithMany()
-            .HasForeignKey(ld => ld.LoadCalculationId)
-            .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Lecturer>()
+                .WithMany()
+                .HasForeignKey(x => x.CuratorId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<AcademicPlan>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.CoreId).IsUnique();
+
+            entity.Property(x => x.Year).IsRequired();
+
+            entity.HasOne<EducationDirection>()
+                .WithMany()
+                .HasForeignKey(x => x.EducationDirectionId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AcademicPlanRecord>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.CoreId).IsUnique();
+
+            entity.Property(x => x.Index).IsRequired();
+            entity.Property(x => x.Name).IsRequired();
+
+            entity.HasOne<AcademicPlan>()
+                .WithMany()
+                .HasForeignKey(x => x.AcademicPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ---------- ТВОЙ МОДУЛЬ ----------
+
+        modelBuilder.Entity<LoadDistribution>(entity =>
+        {
+            entity.HasOne(x => x.Lecturer)
+                .WithMany()
+                .HasForeignKey(x => x.LecturerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.LoadCalculation)
+                .WithMany()
+                .HasForeignKey(x => x.LoadCalculationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
 
         modelBuilder.Entity<SemesterPeriod>()
             .Property(x => x.AcademicYear)

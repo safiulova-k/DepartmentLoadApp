@@ -1,12 +1,13 @@
 ﻿using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Dtos.Core;
 using DepartmentLoadApp.Integration.CoreApi;
+using DepartmentLoadApp.Integration.CoreSync.Interfaces;
 using DepartmentLoadApp.Models.Core;
 using Microsoft.EntityFrameworkCore;
 
 namespace DepartmentLoadApp.Integration.CoreSync;
 
-public class AcademicPlanSyncService
+public class AcademicPlanSyncService : IAcademicPlanSyncService
 {
     private readonly CoreApiService _api;
     private readonly DepartmentLoadDbContext _db;
@@ -23,26 +24,39 @@ public class AcademicPlanSyncService
 
         foreach (var dto in items)
         {
-            var entity = await _db.Set<AcademicPlan>()
+            var entity = await _db.AcademicPlansCore
                 .FirstOrDefaultAsync(x => x.CoreId == dto.Id);
 
-            var direction = await _db.Set<EducationDirection>()
-                .FirstOrDefaultAsync(x => x.CoreId == dto.EducationDirectionId);
+            int? localEducationDirectionId = null;
+            if (dto.EducationDirectionId.HasValue)
+            {
+                var direction = await _db.EducationDirections
+                    .FirstOrDefaultAsync(x => x.CoreId == dto.EducationDirectionId.Value);
+
+                if (direction == null)
+                {
+                    continue;
+                }
+
+                localEducationDirectionId = direction.Id;
+            }
 
             if (entity == null)
             {
-                _db.Add(new AcademicPlan
+                entity = new AcademicPlan
                 {
                     CoreId = dto.Id,
-                    EducationDirectionId = direction!.Id,
+                    EducationDirectionId = localEducationDirectionId,
                     EducationForm = dto.EducationForm,
                     AcademicCourses = dto.AcademicCourses,
                     Year = dto.Year
-                });
+                };
+
+                _db.AcademicPlansCore.Add(entity);
             }
             else
             {
-                entity.EducationDirectionId = direction!.Id;
+                entity.EducationDirectionId = localEducationDirectionId;
                 entity.EducationForm = dto.EducationForm;
                 entity.AcademicCourses = dto.AcademicCourses;
                 entity.Year = dto.Year;

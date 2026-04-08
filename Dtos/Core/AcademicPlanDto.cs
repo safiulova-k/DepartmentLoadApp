@@ -1,12 +1,15 @@
-﻿namespace DepartmentLoadApp.Dtos.Core;
+﻿using DepartmentLoadApp.Models.Core.Enums;
+
+namespace DepartmentLoadApp.Dtos.Core;
 
 public class AcademicPlanDto
 {
     public int Id { get; set; }
 
-    public int EducationDirectionId { get; set; }
+    public int? EducationDirectionId { get; set; }
 
-    public string EducationForm { get; set; } = null!;
-    public int AcademicCourses { get; set; }
-    public int Year { get; set; }
+    public EducationForm EducationForm { get; set; }
+    public AcademicCourse AcademicCourses { get; set; }
+
+    public string Year { get; set; } = null!;
 }

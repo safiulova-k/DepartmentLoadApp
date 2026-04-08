@@ -4,6 +4,6 @@ public class LecturerDepartmentPostDto
 {
     public int Id { get; set; }
 
-    public string Title { get; set; } = null!;
+    public string DepartmentPostTitle { get; set; } = null!;
     public int Order { get; set; }
 }

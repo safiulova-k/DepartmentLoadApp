@@ -1,12 +1,13 @@
 ﻿using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Dtos.Core;
 using DepartmentLoadApp.Integration.CoreApi;
+using DepartmentLoadApp.Integration.CoreSync.Interfaces;
 using DepartmentLoadApp.Models.Core;
 using Microsoft.EntityFrameworkCore;
 
 namespace DepartmentLoadApp.Integration.CoreSync;
 
-public class LecturerStudyPostSyncService
+public class LecturerStudyPostSyncService : ILecturerStudyPostSyncService
 {
     private readonly CoreApiService _api;
     private readonly DepartmentLoadDbContext _db;
@@ -23,21 +24,23 @@ public class LecturerStudyPostSyncService
 
         foreach (var dto in items)
         {
-            var entity = await _db.Set<LecturerStudyPost>()
+            var entity = await _db.LecturerStudyPosts
                 .FirstOrDefaultAsync(x => x.CoreId == dto.Id);
 
             if (entity == null)
             {
-                _db.Add(new LecturerStudyPost
+                entity = new LecturerStudyPost
                 {
                     CoreId = dto.Id,
-                    Title = dto.Title,
+                    StudyPostTitle = dto.StudyPostTitle,
                     Hours = dto.Hours
-                });
+                };
+
+                _db.LecturerStudyPosts.Add(entity);
             }
             else
             {
-                entity.Title = dto.Title;
+                entity.StudyPostTitle = dto.StudyPostTitle;
                 entity.Hours = dto.Hours;
             }
         }

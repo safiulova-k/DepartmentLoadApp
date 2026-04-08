@@ -1,4 +1,6 @@
-﻿namespace DepartmentLoadApp.Dtos.Core;
+﻿using DepartmentLoadApp.Models.Core.Enums;
+
+namespace DepartmentLoadApp.Dtos.Core;
 
 public class StudentGroupDto
 {
@@ -8,5 +10,5 @@ public class StudentGroupDto
     public int? CuratorId { get; set; }
 
     public string GroupName { get; set; } = null!;
-    public int Course { get; set; }
+    public AcademicCourse Course { get; set; }
 }

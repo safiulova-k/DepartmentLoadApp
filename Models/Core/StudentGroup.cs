@@ -1,4 +1,7 @@
-﻿namespace DepartmentLoadApp.Models.Core;
+﻿using DepartmentLoadApp.Models.Core.Enums;
+using DepartmentLoadApp.Models.Enums;
+
+namespace DepartmentLoadApp.Models.Core;
 
 public class StudentGroup
 {
@@ -9,8 +12,5 @@ public class StudentGroup
     public int? CuratorId { get; set; }
 
     public string GroupName { get; set; } = null!;
-    public int Course { get; set; }
-
-    public EducationDirection? EducationDirection { get; set; }
-    public Lecturer? Curator { get; set; }
+    public AcademicCourse Course { get; set; }
 }

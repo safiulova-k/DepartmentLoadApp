@@ -2,6 +2,7 @@ using System.Globalization;
 using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Integration.CoreApi;
 using DepartmentLoadApp.Integration.CoreSync;
+using DepartmentLoadApp.Integration.CoreSync.Interfaces;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,13 +18,13 @@ builder.Services.AddHttpClient<CoreApiService>(client =>
     client.BaseAddress = new Uri("http://core-api:8080/api/");
 });
 
-builder.Services.AddScoped<EducationDirectionSyncService>();
-builder.Services.AddScoped<LecturerStudyPostSyncService>();
-builder.Services.AddScoped<LecturerDepartmentPostSyncService>();
-builder.Services.AddScoped<LecturerSyncService>();
-builder.Services.AddScoped<StudentGroupSyncService>();
-builder.Services.AddScoped<AcademicPlanSyncService>();
-builder.Services.AddScoped<AcademicPlanRecordSyncService>();
+builder.Services.AddScoped<IEducationDirectionSyncService, EducationDirectionSyncService>();
+builder.Services.AddScoped<ILecturerStudyPostSyncService, LecturerStudyPostSyncService>();
+builder.Services.AddScoped<ILecturerDepartmentPostSyncService, LecturerDepartmentPostSyncService>();
+builder.Services.AddScoped<ILecturerSyncService, LecturerSyncService>();
+builder.Services.AddScoped<IStudentGroupSyncService, StudentGroupSyncService>();
+builder.Services.AddScoped<IAcademicPlanSyncService, AcademicPlanSyncService>();
+builder.Services.AddScoped<IAcademicPlanRecordSyncService, AcademicPlanRecordSyncService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

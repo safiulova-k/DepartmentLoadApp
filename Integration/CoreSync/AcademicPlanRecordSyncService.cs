@@ -1,12 +1,13 @@
 ﻿using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Dtos.Core;
 using DepartmentLoadApp.Integration.CoreApi;
+using DepartmentLoadApp.Integration.CoreSync.Interfaces;
 using DepartmentLoadApp.Models.Core;
 using Microsoft.EntityFrameworkCore;
 
 namespace DepartmentLoadApp.Integration.CoreSync;
 
-public class AcademicPlanRecordSyncService
+public class AcademicPlanRecordSyncService : IAcademicPlanRecordSyncService
 {
     private readonly CoreApiService _api;
     private readonly DepartmentLoadDbContext _db;
@@ -23,18 +24,23 @@ public class AcademicPlanRecordSyncService
 
         foreach (var dto in items)
         {
-            var entity = await _db.Set<AcademicPlanRecord>()
+            var entity = await _db.AcademicPlanRecordsCore
                 .FirstOrDefaultAsync(x => x.CoreId == dto.Id);
 
-            var plan = await _db.Set<AcademicPlan>()
+            var academicPlan = await _db.AcademicPlansCore
                 .FirstOrDefaultAsync(x => x.CoreId == dto.AcademicPlanId);
+
+            if (academicPlan == null)
+            {
+                continue;
+            }
 
             if (entity == null)
             {
-                _db.Add(new AcademicPlanRecord
+                entity = new AcademicPlanRecord
                 {
                     CoreId = dto.Id,
-                    AcademicPlanId = plan!.Id,
+                    AcademicPlanId = academicPlan.Id,
                     Index = dto.Index,
                     Name = dto.Name,
                     Semester = dto.Semester,
@@ -49,11 +55,13 @@ public class AcademicPlanRecordSyncService
                     Lectures = dto.Lectures,
                     LaboratoryHours = dto.LaboratoryHours,
                     PracticalHours = dto.PracticalHours
-                });
+                };
+
+                _db.AcademicPlanRecordsCore.Add(entity);
             }
             else
             {
-                entity.AcademicPlanId = plan!.Id;
+                entity.AcademicPlanId = academicPlan.Id;
                 entity.Index = dto.Index;
                 entity.Name = dto.Name;
                 entity.Semester = dto.Semester;

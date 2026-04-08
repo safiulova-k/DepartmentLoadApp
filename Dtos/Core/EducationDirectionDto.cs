@@ -1,4 +1,6 @@
-﻿namespace DepartmentLoadApp.Dtos.Core;
+﻿using DepartmentLoadApp.Models.Core.Enums;
+
+namespace DepartmentLoadApp.Dtos.Core;
 
 public class EducationDirectionDto
 {
@@ -7,7 +9,9 @@ public class EducationDirectionDto
     public string Cipher { get; set; } = null!;
     public string ShortName { get; set; } = null!;
     public string Title { get; set; } = null!;
-    public string Qualification { get; set; } = null!;
+
+    public EducationDirectionQualification Qualification { get; set; }
+
     public string Profile { get; set; } = null!;
-    public string? Description { get; set; }
+    public string Description { get; set; } = null!;
 }

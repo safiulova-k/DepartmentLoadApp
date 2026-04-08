@@ -24,6 +24,4 @@ public class AcademicPlanRecord
     public int? Lectures { get; set; }
     public int? LaboratoryHours { get; set; }
     public int? PracticalHours { get; set; }
-
-    public AcademicPlan? AcademicPlan { get; set; }
 }

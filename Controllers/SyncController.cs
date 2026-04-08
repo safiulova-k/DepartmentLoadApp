@@ -1,4 +1,4 @@
-﻿using DepartmentLoadApp.Integration.CoreSync;
+﻿using DepartmentLoadApp.Integration.CoreSync.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DepartmentLoadApp.Controllers;
@@ -7,30 +7,30 @@ namespace DepartmentLoadApp.Controllers;
 [Route("api/sync")]
 public class SyncController : ControllerBase
 {
-    private readonly EducationDirectionSyncService _education;
-    private readonly LecturerStudyPostSyncService _studyPost;
-    private readonly LecturerDepartmentPostSyncService _departmentPost;
-    private readonly LecturerSyncService _lecturer;
-    private readonly StudentGroupSyncService _studentGroup;
-    private readonly AcademicPlanSyncService _academicPlan;
-    private readonly AcademicPlanRecordSyncService _academicPlanRecord;
+    private readonly IEducationDirectionSyncService _educationDirectionSyncService;
+    private readonly ILecturerStudyPostSyncService _lecturerStudyPostSyncService;
+    private readonly ILecturerDepartmentPostSyncService _lecturerDepartmentPostSyncService;
+    private readonly ILecturerSyncService _lecturerSyncService;
+    private readonly IStudentGroupSyncService _studentGroupSyncService;
+    private readonly IAcademicPlanSyncService _academicPlanSyncService;
+    private readonly IAcademicPlanRecordSyncService _academicPlanRecordSyncService;
 
     public SyncController(
-        EducationDirectionSyncService education,
-        LecturerStudyPostSyncService studyPost,
-        LecturerDepartmentPostSyncService departmentPost,
-        LecturerSyncService lecturer,
-        StudentGroupSyncService studentGroup,
-        AcademicPlanSyncService academicPlan,
-        AcademicPlanRecordSyncService academicPlanRecord)
+        IEducationDirectionSyncService educationDirectionSyncService,
+        ILecturerStudyPostSyncService lecturerStudyPostSyncService,
+        ILecturerDepartmentPostSyncService lecturerDepartmentPostSyncService,
+        ILecturerSyncService lecturerSyncService,
+        IStudentGroupSyncService studentGroupSyncService,
+        IAcademicPlanSyncService academicPlanSyncService,
+        IAcademicPlanRecordSyncService academicPlanRecordSyncService)
     {
-        _education = education;
-        _studyPost = studyPost;
-        _departmentPost = departmentPost;
-        _lecturer = lecturer;
-        _studentGroup = studentGroup;
-        _academicPlan = academicPlan;
-        _academicPlanRecord = academicPlanRecord;
+        _educationDirectionSyncService = educationDirectionSyncService;
+        _lecturerStudyPostSyncService = lecturerStudyPostSyncService;
+        _lecturerDepartmentPostSyncService = lecturerDepartmentPostSyncService;
+        _lecturerSyncService = lecturerSyncService;
+        _studentGroupSyncService = studentGroupSyncService;
+        _academicPlanSyncService = academicPlanSyncService;
+        _academicPlanRecordSyncService = academicPlanRecordSyncService;
     }
 
     [HttpGet("ping")]
@@ -44,8 +44,8 @@ public class SyncController : ControllerBase
     {
         try
         {
-            await _education.Sync();
-            return Ok("Education directions synced");
+            await _educationDirectionSyncService.Sync();
+            return Ok("EducationDirections synced");
         }
         catch (Exception ex)
         {
@@ -58,8 +58,8 @@ public class SyncController : ControllerBase
     {
         try
         {
-            await _studyPost.Sync();
-            return Ok("Lecturer study posts synced");
+            await _lecturerStudyPostSyncService.Sync();
+            return Ok("LecturerStudyPosts synced");
         }
         catch (Exception ex)
         {
@@ -72,8 +72,8 @@ public class SyncController : ControllerBase
     {
         try
         {
-            await _departmentPost.Sync();
-            return Ok("Lecturer department posts synced");
+            await _lecturerDepartmentPostSyncService.Sync();
+            return Ok("LecturerDepartmentPosts synced");
         }
         catch (Exception ex)
         {
@@ -86,7 +86,7 @@ public class SyncController : ControllerBase
     {
         try
         {
-            await _lecturer.Sync();
+            await _lecturerSyncService.Sync();
             return Ok("Lecturers synced");
         }
         catch (Exception ex)
@@ -100,8 +100,8 @@ public class SyncController : ControllerBase
     {
         try
         {
-            await _studentGroup.Sync();
-            return Ok("Student groups synced");
+            await _studentGroupSyncService.Sync();
+            return Ok("StudentGroups synced");
         }
         catch (Exception ex)
         {
@@ -114,8 +114,8 @@ public class SyncController : ControllerBase
     {
         try
         {
-            await _academicPlan.Sync();
-            return Ok("Academic plans synced");
+            await _academicPlanSyncService.Sync();
+            return Ok("AcademicPlans synced");
         }
         catch (Exception ex)
         {
@@ -128,8 +128,8 @@ public class SyncController : ControllerBase
     {
         try
         {
-            await _academicPlanRecord.Sync();
-            return Ok("Academic plan records synced");
+            await _academicPlanRecordSyncService.Sync();
+            return Ok("AcademicPlanRecords synced");
         }
         catch (Exception ex)
         {
@@ -142,15 +142,15 @@ public class SyncController : ControllerBase
     {
         try
         {
-            await _education.Sync();
-            await _studyPost.Sync();
-            await _departmentPost.Sync();
-            await _lecturer.Sync();
-            await _studentGroup.Sync();
-            await _academicPlan.Sync();
-            await _academicPlanRecord.Sync();
+            await _educationDirectionSyncService.Sync();
+            await _lecturerStudyPostSyncService.Sync();
+            await _lecturerDepartmentPostSyncService.Sync();
+            await _lecturerSyncService.Sync();
+            await _studentGroupSyncService.Sync();
+            await _academicPlanSyncService.Sync();
+            await _academicPlanRecordSyncService.Sync();
 
-            return Ok("Sync completed");
+            return Ok("Core sync completed");
         }
         catch (Exception ex)
         {
