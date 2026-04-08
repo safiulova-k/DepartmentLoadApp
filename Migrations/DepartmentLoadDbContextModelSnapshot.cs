@@ -22,42 +22,6 @@ namespace DepartmentLoadApp.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("DepartmentLoadApp.Models.AcademicPlan.Discipline", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("DisciplineBlockBlueAsteriskName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int>("DisciplineBlockId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("DisciplineDescription")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("DisciplineName")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("DisciplineShortName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Disciplines");
-                });
-
             modelBuilder.Entity("DepartmentLoadApp.Models.Contingent.ContingentRow", b =>
                 {
                     b.Property<int>("Id")
@@ -134,15 +98,15 @@ namespace DepartmentLoadApp.Migrations
                     b.Property<int>("CoreId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("EducationDirectionId")
+                    b.Property<int?>("EducationDirectionId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("EducationForm")
+                    b.Property<int>("EducationForm")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Year")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -175,9 +139,6 @@ namespace DepartmentLoadApp.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int?>("CourseWork")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("DisciplineId")
                         .HasColumnType("integer");
 
                     b.Property<int?>("Exam")
@@ -222,8 +183,6 @@ namespace DepartmentLoadApp.Migrations
                     b.HasIndex("CoreId")
                         .IsUnique();
 
-                    b.HasIndex("DisciplineId");
-
                     b.ToTable("AcademicPlanRecordsCore");
                 });
 
@@ -243,15 +202,15 @@ namespace DepartmentLoadApp.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("Description")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Profile")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Qualification")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("Qualification")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ShortName")
                         .IsRequired()
@@ -277,10 +236,33 @@ namespace DepartmentLoadApp.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Abbreviation")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("CoreId")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime>("DateBirth")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("HomeNumber")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -291,12 +273,28 @@ namespace DepartmentLoadApp.Migrations
                     b.Property<int>("LecturerDepartmentPostId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("LecturerStudyPostId")
+                    b.Property<int?>("LecturerStudyPostId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("MiddleName")
+                    b.Property<string>("MobileNumber")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("OnlyForPrivate")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Patronymic")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<byte[]>("Photo")
+                        .HasColumnType("bytea");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Rank2")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -321,12 +319,12 @@ namespace DepartmentLoadApp.Migrations
                     b.Property<int>("CoreId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("Order")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Title")
+                    b.Property<string>("DepartmentPostTitle")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -347,10 +345,10 @@ namespace DepartmentLoadApp.Migrations
                     b.Property<int>("CoreId")
                         .HasColumnType("integer");
 
-                    b.Property<double>("Hours")
-                        .HasColumnType("double precision");
+                    b.Property<int>("Hours")
+                        .HasColumnType("integer");
 
-                    b.Property<string>("Title")
+                    b.Property<string>("StudyPostTitle")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -497,7 +495,7 @@ namespace DepartmentLoadApp.Migrations
                     b.Property<int>("LoadCalculationId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("TeacherId")
+                    b.Property<int?>("LoadCalculationId1")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -505,6 +503,8 @@ namespace DepartmentLoadApp.Migrations
                     b.HasIndex("LecturerId");
 
                     b.HasIndex("LoadCalculationId");
+
+                    b.HasIndex("LoadCalculationId1");
 
                     b.ToTable("LoadDistributions");
                 });
@@ -776,65 +776,47 @@ namespace DepartmentLoadApp.Migrations
 
             modelBuilder.Entity("DepartmentLoadApp.Models.Core.AcademicPlan", b =>
                 {
-                    b.HasOne("DepartmentLoadApp.Models.Core.EducationDirection", "EducationDirection")
+                    b.HasOne("DepartmentLoadApp.Models.Core.EducationDirection", null)
                         .WithMany()
                         .HasForeignKey("EducationDirectionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("EducationDirection");
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.Core.AcademicPlanRecord", b =>
                 {
-                    b.HasOne("DepartmentLoadApp.Models.Core.AcademicPlan", "AcademicPlan")
-                        .WithMany("Records")
+                    b.HasOne("DepartmentLoadApp.Models.Core.AcademicPlan", null)
+                        .WithMany()
                         .HasForeignKey("AcademicPlanId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("DepartmentLoadApp.Models.AcademicPlan.Discipline", null)
-                        .WithMany("AcademicPlanRecords")
-                        .HasForeignKey("DisciplineId");
-
-                    b.Navigation("AcademicPlan");
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.Core.Lecturer", b =>
                 {
-                    b.HasOne("DepartmentLoadApp.Models.Core.LecturerDepartmentPost", "DepartmentPost")
+                    b.HasOne("DepartmentLoadApp.Models.Core.LecturerDepartmentPost", null)
                         .WithMany()
                         .HasForeignKey("LecturerDepartmentPostId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("DepartmentLoadApp.Models.Core.LecturerStudyPost", "StudyPost")
+                    b.HasOne("DepartmentLoadApp.Models.Core.LecturerStudyPost", null)
                         .WithMany()
                         .HasForeignKey("LecturerStudyPostId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("DepartmentPost");
-
-                    b.Navigation("StudyPost");
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.Core.StudentGroup", b =>
                 {
-                    b.HasOne("DepartmentLoadApp.Models.Core.Lecturer", "Curator")
+                    b.HasOne("DepartmentLoadApp.Models.Core.Lecturer", null)
                         .WithMany()
                         .HasForeignKey("CuratorId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("DepartmentLoadApp.Models.Core.EducationDirection", "EducationDirection")
+                    b.HasOne("DepartmentLoadApp.Models.Core.EducationDirection", null)
                         .WithMany()
                         .HasForeignKey("EducationDirectionId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("Curator");
-
-                    b.Navigation("EducationDirection");
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.LoadDistribution", b =>
@@ -842,28 +824,22 @@ namespace DepartmentLoadApp.Migrations
                     b.HasOne("DepartmentLoadApp.Models.Core.Lecturer", "Lecturer")
                         .WithMany()
                         .HasForeignKey("LecturerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("DepartmentLoadApp.Models.LoadCalculation", "LoadCalculation")
-                        .WithMany("LoadDistributions")
+                        .WithMany()
                         .HasForeignKey("LoadCalculationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("DepartmentLoadApp.Models.LoadCalculation", null)
+                        .WithMany("LoadDistributions")
+                        .HasForeignKey("LoadCalculationId1");
+
                     b.Navigation("Lecturer");
 
                     b.Navigation("LoadCalculation");
-                });
-
-            modelBuilder.Entity("DepartmentLoadApp.Models.AcademicPlan.Discipline", b =>
-                {
-                    b.Navigation("AcademicPlanRecords");
-                });
-
-            modelBuilder.Entity("DepartmentLoadApp.Models.Core.AcademicPlan", b =>
-                {
-                    b.Navigation("Records");
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.LoadCalculation", b =>

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DepartmentLoadApp.Migrations
 {
     [DbContext(typeof(DepartmentLoadDbContext))]
-    [Migration("20260402194127_AddSemesters")]
-    partial class AddSemesters
+    [Migration("20260408150150_InitialCreate")]
+    partial class InitialCreate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -23,145 +23,6 @@ namespace DepartmentLoadApp.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("DepartmentLoadApp.Models.AcademicPlan.AcademicPlan", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AcademicCourses")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("EducationDirectionId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("AcademicPlans", (string)null);
-                });
-
-            modelBuilder.Entity("DepartmentLoadApp.Models.AcademicPlan.AcademicPlanRecord", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AcademicPlanId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("AcademicPlanRecordParentId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("DisciplineId")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("InDepartment")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsActiveSemester")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsChild")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsFacultative")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsParent")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsUseInWorkload")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("Semester")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Zet")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AcademicPlanId");
-
-                    b.HasIndex("AcademicPlanRecordParentId");
-
-                    b.HasIndex("DisciplineId");
-
-                    b.ToTable("AcademicPlanRecords", (string)null);
-                });
-
-            modelBuilder.Entity("DepartmentLoadApp.Models.AcademicPlan.AcademicPlanRecordElement", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AcademicPlanRecordId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ActivityType")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<decimal>("FactHours")
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<decimal>("PlanHours")
-                        .HasColumnType("numeric(10,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AcademicPlanRecordId");
-
-                    b.ToTable("AcademicPlanRecordElements", (string)null);
-                });
-
-            modelBuilder.Entity("DepartmentLoadApp.Models.AcademicPlan.Discipline", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("DisciplineBlockBlueAsteriskName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int>("DisciplineBlockId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("DisciplineDescription")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("DisciplineName")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("DisciplineShortName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Disciplines", (string)null);
-                });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.Contingent.ContingentRow", b =>
                 {
@@ -209,8 +70,7 @@ namespace DepartmentLoadApp.Migrations
 
                     b.Property<string>("DirectionCode")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsBachelor")
                         .HasColumnType("boolean");
@@ -223,7 +83,319 @@ namespace DepartmentLoadApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ContingentRows", (string)null);
+                    b.ToTable("ContingentRows");
+                });
+
+            modelBuilder.Entity("DepartmentLoadApp.Models.Core.AcademicPlan", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AcademicCourses")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CoreId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("EducationDirectionId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("EducationForm")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Year")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CoreId")
+                        .IsUnique();
+
+                    b.HasIndex("EducationDirectionId");
+
+                    b.ToTable("AcademicPlansCore");
+                });
+
+            modelBuilder.Entity("DepartmentLoadApp.Models.Core.AcademicPlanRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AcademicHours")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("AcademicPlanId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CoreId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CourseProject")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CourseWork")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Exam")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("GradedPass")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Index")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("LaboratoryHours")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Lectures")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("Pass")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("PracticalHours")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Rgr")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Semester")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Zet")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcademicPlanId");
+
+                    b.HasIndex("CoreId")
+                        .IsUnique();
+
+                    b.ToTable("AcademicPlanRecordsCore");
+                });
+
+            modelBuilder.Entity("DepartmentLoadApp.Models.Core.EducationDirection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Cipher")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("CoreId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Profile")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Qualification")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ShortName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CoreId")
+                        .IsUnique();
+
+                    b.ToTable("EducationDirections");
+                });
+
+            modelBuilder.Entity("DepartmentLoadApp.Models.Core.Lecturer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Abbreviation")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("CoreId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("DateBirth")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("HomeNumber")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("LecturerDepartmentPostId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("LecturerStudyPostId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("MobileNumber")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("OnlyForPrivate")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Patronymic")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<byte[]>("Photo")
+                        .HasColumnType("bytea");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Rank2")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CoreId")
+                        .IsUnique();
+
+                    b.HasIndex("LecturerDepartmentPostId");
+
+                    b.HasIndex("LecturerStudyPostId");
+
+                    b.ToTable("Lecturers");
+                });
+
+            modelBuilder.Entity("DepartmentLoadApp.Models.Core.LecturerDepartmentPost", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CoreId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DepartmentPostTitle")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CoreId")
+                        .IsUnique();
+
+                    b.ToTable("LecturerDepartmentPosts");
+                });
+
+            modelBuilder.Entity("DepartmentLoadApp.Models.Core.LecturerStudyPost", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CoreId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Hours")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("StudyPostTitle")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CoreId")
+                        .IsUnique();
+
+                    b.ToTable("LecturerStudyPosts");
+                });
+
+            modelBuilder.Entity("DepartmentLoadApp.Models.Core.StudentGroup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CoreId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Course")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CuratorId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("EducationDirectionId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("GroupName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CoreId")
+                        .IsUnique();
+
+                    b.HasIndex("CuratorId");
+
+                    b.HasIndex("EducationDirectionId");
+
+                    b.ToTable("StudentGroupsCore");
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.Gia.GiaWorkloadRow", b =>
@@ -239,52 +411,47 @@ namespace DepartmentLoadApp.Migrations
 
                     b.Property<string>("DirectionCode")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DirectionName")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("text");
 
                     b.Property<string>("EducationForm")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
                     b.Property<string>("GiaSection")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("text");
 
                     b.Property<int>("GroupCount")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("ManualHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
-                    b.Property<int>("PlanYear")
-                        .HasColumnType("integer");
+                    b.Property<string>("PlanYear")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("SemesterName")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
                     b.Property<int>("StudentsCount")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("TotalHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<string>("WorkName")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.ToTable("GiaWorkloadRows", (string)null);
+                    b.ToTable("GiaWorkloadRows");
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.LoadCalculation", b =>
@@ -300,18 +467,17 @@ namespace DepartmentLoadApp.Migrations
 
                     b.Property<string>("LoadType")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("text");
 
                     b.Property<int>("StudentCount")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("TotalHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
                     b.HasKey("Id");
 
-                    b.ToTable("LoadCalculations", (string)null);
+                    b.ToTable("LoadCalculations");
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.LoadDistribution", b =>
@@ -323,21 +489,26 @@ namespace DepartmentLoadApp.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Hours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("LecturerId")
+                        .HasColumnType("integer");
 
                     b.Property<int>("LoadCalculationId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("TeacherId")
+                    b.Property<int?>("LoadCalculationId1")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("LecturerId");
+
                     b.HasIndex("LoadCalculationId");
 
-                    b.HasIndex("TeacherId");
+                    b.HasIndex("LoadCalculationId1");
 
-                    b.ToTable("LoadDistributions", (string)null);
+                    b.ToTable("LoadDistributions");
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.NormTime", b =>
@@ -353,23 +524,21 @@ namespace DepartmentLoadApp.Migrations
 
                     b.Property<string>("CategoryName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("text");
 
                     b.Property<decimal>("Hours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
 
                     b.Property<string>("WorkName")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.ToTable("NormTimes", (string)null);
+                    b.ToTable("NormTimes");
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.Practice.PracticeWorkloadRow", b =>
@@ -385,47 +554,43 @@ namespace DepartmentLoadApp.Migrations
 
                     b.Property<string>("DirectionCode")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DirectionName")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("text");
 
                     b.Property<string>("EducationForm")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
                     b.Property<int>("GroupCount")
                         .HasColumnType("integer");
 
-                    b.Property<int>("PlanYear")
-                        .HasColumnType("integer");
+                    b.Property<string>("PlanYear")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("PracticeName")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("text");
 
                     b.Property<string>("SemesterName")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
                     b.Property<int>("StudentsCount")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("TotalHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<int>("WeeksCount")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.ToTable("PracticeWorkloadRows", (string)null);
+                    b.ToTable("PracticeWorkloadRows");
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.SemesterPeriod", b =>
@@ -454,7 +619,7 @@ namespace DepartmentLoadApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SemesterPeriods", (string)null);
+                    b.ToTable("SemesterPeriods");
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.StudentFlow", b =>
@@ -465,8 +630,10 @@ namespace DepartmentLoadApp.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("AcademicYear")
-                        .HasColumnType("integer");
+                    b.Property<string>("AcademicYear")
+                        .IsRequired()
+                        .HasMaxLength(9)
+                        .HasColumnType("character varying(9)");
 
                     b.Property<int>("Course")
                         .HasColumnType("integer");
@@ -499,33 +666,7 @@ namespace DepartmentLoadApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("StudentFlows", (string)null);
-                });
-
-            modelBuilder.Entity("DepartmentLoadApp.Models.Teacher", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("ExternalLecturerId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Position")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Teachers", (string)null);
+                    b.ToTable("StudentFlows");
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.Workload.WorkloadRow", b =>
@@ -542,46 +683,47 @@ namespace DepartmentLoadApp.Migrations
                     b.Property<int>("AcademicPlanRecordId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("AcademicYear")
+                        .IsRequired()
+                        .HasMaxLength(9)
+                        .HasColumnType("character varying(9)");
+
                     b.Property<decimal>("ConsultationHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<int>("Course")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("CourseProjectHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<decimal>("CourseWorkHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<decimal>("CreditHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<string>("DirectionCode")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
                     b.Property<string>("DirectionName")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("text");
 
                     b.Property<int>("DisciplineId")
                         .HasColumnType("integer");
 
                     b.Property<string>("DisciplineName")
                         .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
+                        .HasColumnType("text");
 
                     b.Property<string>("EducationForm")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
                     b.Property<decimal>("ExamHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<int>("FlowCount")
                         .HasColumnType("integer");
@@ -602,30 +744,26 @@ namespace DepartmentLoadApp.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<decimal>("LabPlanHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<decimal>("LabTotalHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<decimal>("LecturePlanHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<decimal>("LectureTotalHours")
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<int>("PlanYear")
-                        .HasColumnType("integer");
+                        .HasColumnType("numeric");
 
                     b.Property<decimal>("PracticePlanHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<decimal>("PracticeTotalHours")
-                        .HasColumnType("numeric(10,2)");
+                        .HasColumnType("numeric");
 
                     b.Property<string>("SemesterName")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("text");
 
                     b.Property<int>("StudentsCount")
                         .HasColumnType("integer");
@@ -635,88 +773,78 @@ namespace DepartmentLoadApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("WorkloadRows", (string)null);
+                    b.ToTable("WorkloadRows");
                 });
 
-            modelBuilder.Entity("DepartmentLoadApp.Models.AcademicPlan.AcademicPlanRecord", b =>
+            modelBuilder.Entity("DepartmentLoadApp.Models.Core.AcademicPlan", b =>
                 {
-                    b.HasOne("DepartmentLoadApp.Models.AcademicPlan.AcademicPlan", "AcademicPlan")
-                        .WithMany("AcademicPlanRecords")
+                    b.HasOne("DepartmentLoadApp.Models.Core.EducationDirection", null)
+                        .WithMany()
+                        .HasForeignKey("EducationDirectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("DepartmentLoadApp.Models.Core.AcademicPlanRecord", b =>
+                {
+                    b.HasOne("DepartmentLoadApp.Models.Core.AcademicPlan", null)
+                        .WithMany()
                         .HasForeignKey("AcademicPlanId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
 
-                    b.HasOne("DepartmentLoadApp.Models.AcademicPlan.AcademicPlanRecord", "ParentRecord")
-                        .WithMany("ChildRecords")
-                        .HasForeignKey("AcademicPlanRecordParentId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("DepartmentLoadApp.Models.AcademicPlan.Discipline", "Discipline")
-                        .WithMany("AcademicPlanRecords")
-                        .HasForeignKey("DisciplineId")
+            modelBuilder.Entity("DepartmentLoadApp.Models.Core.Lecturer", b =>
+                {
+                    b.HasOne("DepartmentLoadApp.Models.Core.LecturerDepartmentPost", null)
+                        .WithMany()
+                        .HasForeignKey("LecturerDepartmentPostId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("AcademicPlan");
-
-                    b.Navigation("Discipline");
-
-                    b.Navigation("ParentRecord");
+                    b.HasOne("DepartmentLoadApp.Models.Core.LecturerStudyPost", null)
+                        .WithMany()
+                        .HasForeignKey("LecturerStudyPostId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
-            modelBuilder.Entity("DepartmentLoadApp.Models.AcademicPlan.AcademicPlanRecordElement", b =>
+            modelBuilder.Entity("DepartmentLoadApp.Models.Core.StudentGroup", b =>
                 {
-                    b.HasOne("DepartmentLoadApp.Models.AcademicPlan.AcademicPlanRecord", "AcademicPlanRecord")
-                        .WithMany("Elements")
-                        .HasForeignKey("AcademicPlanRecordId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.HasOne("DepartmentLoadApp.Models.Core.Lecturer", null)
+                        .WithMany()
+                        .HasForeignKey("CuratorId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
-                    b.Navigation("AcademicPlanRecord");
+                    b.HasOne("DepartmentLoadApp.Models.Core.EducationDirection", null)
+                        .WithMany()
+                        .HasForeignKey("EducationDirectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.LoadDistribution", b =>
                 {
+                    b.HasOne("DepartmentLoadApp.Models.Core.Lecturer", "Lecturer")
+                        .WithMany()
+                        .HasForeignKey("LecturerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("DepartmentLoadApp.Models.LoadCalculation", "LoadCalculation")
-                        .WithMany("LoadDistributions")
+                        .WithMany()
                         .HasForeignKey("LoadCalculationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("DepartmentLoadApp.Models.Teacher", "Teacher")
+                    b.HasOne("DepartmentLoadApp.Models.LoadCalculation", null)
                         .WithMany("LoadDistributions")
-                        .HasForeignKey("TeacherId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .HasForeignKey("LoadCalculationId1");
+
+                    b.Navigation("Lecturer");
 
                     b.Navigation("LoadCalculation");
-
-                    b.Navigation("Teacher");
-                });
-
-            modelBuilder.Entity("DepartmentLoadApp.Models.AcademicPlan.AcademicPlan", b =>
-                {
-                    b.Navigation("AcademicPlanRecords");
-                });
-
-            modelBuilder.Entity("DepartmentLoadApp.Models.AcademicPlan.AcademicPlanRecord", b =>
-                {
-                    b.Navigation("ChildRecords");
-
-                    b.Navigation("Elements");
-                });
-
-            modelBuilder.Entity("DepartmentLoadApp.Models.AcademicPlan.Discipline", b =>
-                {
-                    b.Navigation("AcademicPlanRecords");
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.LoadCalculation", b =>
-                {
-                    b.Navigation("LoadDistributions");
-                });
-
-            modelBuilder.Entity("DepartmentLoadApp.Models.Teacher", b =>
                 {
                     b.Navigation("LoadDistributions");
                 });
