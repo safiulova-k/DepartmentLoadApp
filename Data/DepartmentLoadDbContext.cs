@@ -1,5 +1,4 @@
 ﻿using DepartmentLoadApp.Models;
-using DepartmentLoadApp.Models.AcademicPlan;
 using DepartmentLoadApp.Models.Contingent;
 using DepartmentLoadApp.Models.Core;
 using DepartmentLoadApp.Models.Gia;
@@ -28,7 +27,6 @@ public class DepartmentLoadDbContext : DbContext
     // Твой модуль
     public DbSet<ContingentRow> ContingentRows { get; set; } = null!;
     public DbSet<NormTime> NormTimes { get; set; } = null!;
-    public DbSet<Discipline> Disciplines { get; set; } = null!;
     public DbSet<WorkloadRow> WorkloadRows { get; set; } = null!;
     public DbSet<LoadCalculation> LoadCalculations { get; set; } = null!;
     public DbSet<LoadDistribution> LoadDistributions { get; set; } = null!;
