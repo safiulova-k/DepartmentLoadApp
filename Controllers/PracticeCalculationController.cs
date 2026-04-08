@@ -1,6 +1,5 @@
 ﻿using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Helpers;
-using DepartmentLoadApp.Integration.PracticeImport;
 using DepartmentLoadApp.Models;
 using DepartmentLoadApp.Models.Practice;
 using DepartmentLoadApp.ViewModels.Practice;
@@ -12,14 +11,11 @@ namespace DepartmentLoadApp.Controllers
     public class PracticeCalculationController : Controller
     {
         private readonly DepartmentLoadDbContext _context;
-        private readonly IPracticeWorkloadImportService _practiceWorkloadImportService;
 
         public PracticeCalculationController(
-            DepartmentLoadDbContext context,
-            IPracticeWorkloadImportService practiceWorkloadImportService)
+            DepartmentLoadDbContext context)
         {
             _context = context;
-            _practiceWorkloadImportService = practiceWorkloadImportService;
         }
 
         [HttpGet]
@@ -43,7 +39,6 @@ namespace DepartmentLoadApp.Controllers
             {
                 selectedYear = year;
 
-                await _practiceWorkloadImportService.EnsureYearImportedAsync(selectedYear);
 
                 rows = await _context.PracticeWorkloadRows
                     .Where(x => x.PlanYear == selectedYear)
@@ -142,7 +137,6 @@ namespace DepartmentLoadApp.Controllers
                 ? AcademicYearHelper.GetCurrentAcademicYear()
                 : year;
 
-            await _practiceWorkloadImportService.EnsureYearImportedAsync(selectedYear);
 
             var rows = await _context.PracticeWorkloadRows
                 .AsNoTracking()

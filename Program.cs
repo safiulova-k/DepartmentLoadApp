@@ -2,10 +2,8 @@ using DepartmentLoadApp.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
 using Microsoft.AspNetCore.Localization;
-using DepartmentLoadApp.Integration.AcademicPlanImport;
-using DepartmentLoadApp.Integration.PracticeImport;
-using DepartmentLoadApp.Integration.GiaImport;
-using DepartmentLoadApp.Integration;
+using DepartmentLoadApp.Integration.CoreApi;
+using DepartmentLoadApp.Integration.CoreSync;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,10 +12,18 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<DepartmentLoadDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddScoped<IAcademicPlanImportService, JsonAcademicPlanImportService>();
-builder.Services.AddScoped<IPracticeWorkloadImportService, JsonPracticeWorkloadImportService>();
-builder.Services.AddScoped<IGiaWorkloadImportService, JsonGiaWorkloadImportService>();
-builder.Services.AddScoped<ILecturerImportService, JsonLecturerImportService>();
+builder.Services.AddHttpClient<CoreApiService>(client =>
+{
+    client.BaseAddress = new Uri("http://core-api:8080/api/");
+});
+
+builder.Services.AddScoped<EducationDirectionSyncService>();
+builder.Services.AddScoped<LecturerStudyPostSyncService>();
+builder.Services.AddScoped<LecturerDepartmentPostSyncService>();
+builder.Services.AddScoped<LecturerSyncService>();
+builder.Services.AddScoped<StudentGroupSyncService>();
+builder.Services.AddScoped<AcademicPlanSyncService>();
+builder.Services.AddScoped<AcademicPlanRecordSyncService>();
 
 var app = builder.Build();
 

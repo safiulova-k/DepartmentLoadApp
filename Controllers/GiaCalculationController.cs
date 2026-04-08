@@ -1,6 +1,5 @@
 ﻿using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Helpers;
-using DepartmentLoadApp.Integration.GiaImport;
 using DepartmentLoadApp.Models;
 using DepartmentLoadApp.Models.Contingent;
 using DepartmentLoadApp.Models.Gia;
@@ -13,14 +12,11 @@ namespace DepartmentLoadApp.Controllers
     public class GiaCalculationController : Controller
     {
         private readonly DepartmentLoadDbContext _context;
-        private readonly IGiaWorkloadImportService _giaWorkloadImportService;
 
         public GiaCalculationController(
-            DepartmentLoadDbContext context,
-            IGiaWorkloadImportService giaWorkloadImportService)
+            DepartmentLoadDbContext context)
         {
             _context = context;
-            _giaWorkloadImportService = giaWorkloadImportService;
         }
 
         [HttpGet]
@@ -45,7 +41,6 @@ namespace DepartmentLoadApp.Controllers
             {
                 selectedYear = year;
 
-                await _giaWorkloadImportService.EnsureYearImportedAsync(selectedYear);
 
                 rows = await _context.GiaWorkloadRows
                     .Where(x => x.PlanYear == selectedYear)
@@ -171,7 +166,6 @@ namespace DepartmentLoadApp.Controllers
                 ? AcademicYearHelper.GetCurrentAcademicYear()
                 : year;
 
-            await _giaWorkloadImportService.EnsureYearImportedAsync(selectedYear);
 
             var rows = await _context.GiaWorkloadRows
                 .AsNoTracking()

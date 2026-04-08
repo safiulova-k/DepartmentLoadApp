@@ -5,7 +5,7 @@
         public int Id { get; set; }
 
         public int TeacherId { get; set; }
-        public Teacher? Teacher { get; set; }
+        public Models.Core.Lecturer Lecturer { get; set; }
 
         public int LoadCalculationId { get; set; }
         public LoadCalculation? LoadCalculation { get; set; }

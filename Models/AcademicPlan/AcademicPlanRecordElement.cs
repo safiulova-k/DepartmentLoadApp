@@ -1,4 +1,6 @@
-﻿namespace DepartmentLoadApp.Models.AcademicPlan
+﻿using DepartmentLoadApp.Models.Core;
+
+namespace DepartmentLoadApp.Models.AcademicPlan
 {
     public class AcademicPlanRecordElement
     {

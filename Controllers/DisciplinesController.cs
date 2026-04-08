@@ -1,6 +1,5 @@
 ﻿using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Helpers;
-using DepartmentLoadApp.Integration.AcademicPlanImport;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,14 +8,11 @@ namespace DepartmentLoadApp.Controllers
     public class DisciplinesController : Controller
     {
         private readonly DepartmentLoadDbContext _context;
-        private readonly IAcademicPlanImportService _academicPlanImportService;
 
         public DisciplinesController(
-            DepartmentLoadDbContext context,
-            IAcademicPlanImportService academicPlanImportService)
+            DepartmentLoadDbContext context)
         {
             _context = context;
-            _academicPlanImportService = academicPlanImportService;
         }
 
         [HttpGet]
@@ -40,8 +36,6 @@ namespace DepartmentLoadApp.Controllers
                 .ToListAsync();
 
             ViewBag.Search = search;
-            ViewBag.LatestYear = await _academicPlanImportService.GetLatestYearAsync()
-                                 ?? AcademicYearHelper.GetCurrentAcademicYear();
 
             return View(items);
         }
@@ -50,7 +44,6 @@ namespace DepartmentLoadApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ImportFromAcademicPlan(string year)
         {
-            await _academicPlanImportService.ImportYearAsync(year);
             return RedirectToAction(nameof(Index));
         }
     }

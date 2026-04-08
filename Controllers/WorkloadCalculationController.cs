@@ -1,6 +1,5 @@
 ﻿using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Helpers;
-using DepartmentLoadApp.Integration.AcademicPlanImport;
 using DepartmentLoadApp.Models;
 using DepartmentLoadApp.Models.Enums;
 using DepartmentLoadApp.Models.Workload;
@@ -13,14 +12,11 @@ namespace DepartmentLoadApp.Controllers
     public class WorkloadCalculationController : Controller
     {
         private readonly DepartmentLoadDbContext _context;
-        private readonly IAcademicPlanImportService _academicPlanImportService;
 
         public WorkloadCalculationController(
-            DepartmentLoadDbContext context,
-            IAcademicPlanImportService academicPlanImportService)
+            DepartmentLoadDbContext context)
         {
             _context = context;
-            _academicPlanImportService = academicPlanImportService;
         }
 
         [HttpGet]
@@ -68,7 +64,6 @@ namespace DepartmentLoadApp.Controllers
                 year = AcademicYearHelper.GetCurrentAcademicYear();
             }
 
-            await _academicPlanImportService.ImportYearAsync(year);
 
             var rows = await _context.WorkloadRows
                 .Where(x => x.AcademicYear == year)

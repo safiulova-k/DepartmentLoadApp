@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using DepartmentLoadApp.Models.Core;
+using System.ComponentModel.DataAnnotations;
 
 namespace DepartmentLoadApp.Models.AcademicPlan
 {
