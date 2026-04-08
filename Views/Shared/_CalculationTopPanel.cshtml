@@ -1,0 +1,52 @@
+﻿@model DepartmentLoadApp.ViewModels.Shared.CalculationTopPanelViewModel
+@using DepartmentLoadApp.Helpers
+
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-body p-4">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-auto">
+                <label for="startYear" class="form-label">Год начала расчета</label>
+                <select id="startYear" name="startYear" class="form-select">
+                    @foreach (var year in Model.AvailableYearStarts)
+                    {
+                        <option value="@year" selected="@(year == Model.SelectedYearStart)">
+                            @AcademicYearResolver.BuildAcademicYear(year)
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-auto">
+                <label class="form-label">Учебный год</label>
+                <input class="form-control" value="@Model.SelectedYear" readonly />
+            </div>
+
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Показать</button>
+            </div>
+        </form>
+
+        <div class="d-flex gap-2 mt-3">
+            <a asp-controller="WorkloadCalculation"
+               asp-action="Index"
+               asp-route-startYear="@Model.SelectedYearStart"
+               class="btn @(Model.ActiveTab == "workload" ? "btn-primary" : "btn-outline-primary")">
+                Дисциплины
+            </a>
+
+            <a asp-controller="PracticeCalculation"
+               asp-action="Index"
+               asp-route-startYear="@Model.SelectedYearStart"
+               class="btn @(Model.ActiveTab == "practice" ? "btn-primary" : "btn-outline-primary")">
+                Практики
+            </a>
+
+            <a asp-controller="GiaCalculation"
+               asp-action="Index"
+               asp-route-startYear="@Model.SelectedYearStart"
+               class="btn @(Model.ActiveTab == "gia" ? "btn-primary" : "btn-outline-primary")">
+                ГИА
+            </a>
+        </div>
+    </div>
+</div>

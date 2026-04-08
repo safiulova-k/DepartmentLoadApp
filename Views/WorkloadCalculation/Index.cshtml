@@ -4,88 +4,129 @@
     ViewData["Title"] = "Расчет нагрузки по дисциплинам";
 }
 
-<h1 class="mb-3">Расчет нагрузки по дисциплинам</h1>
+<h1 class="mb-4">Расчет нагрузки по дисциплинам</h1>
 
-<div class="mb-3 d-flex gap-2">
-    <a asp-controller="WorkloadCalculation" asp-action="Index" class="btn btn-primary">Дисциплины</a>
-    <a asp-controller="PracticeCalculation" asp-action="Index" class="btn btn-outline-primary">Практики</a>
-    <a asp-controller="GiaCalculation" asp-action="Index" class="btn btn-outline-primary">ГИА</a>
-</div>
-
-<form asp-action="ImportFromAcademicPlan" method="post" class="mb-3">
+<form asp-action="ImportFromAcademicPlan" method="post" class="row g-3 align-items-end mb-4">
     @Html.AntiForgeryToken()
-    <div class="d-flex gap-2 align-items-center">
-        <label class="form-label mb-0">Учебный год</label>
-        <input type="text" name="year" value="@Model.SelectedYear" class="form-control" style="max-width: 180px;" />
-        <button type="submit" class="btn btn-success">Импортировать и пересчитать</button>
-        <a asp-action="ExportToExcel" asp-route-year="@Model.SelectedYear" class="btn btn-outline-success">Выгрузить в Excel</a>
+
+    <div class="col-auto">
+        <label class="form-label">Год начала расчета</label>
+        <select name="startYear" class="form-select">
+            @foreach (var year in Model.AvailableYearStarts)
+            {
+                if (year == Model.SelectedYearStart)
+                {
+                    <option value="@year" selected>@year</option>
+                }
+                else
+                {
+                    <option value="@year">@year</option>
+                }
+            }
+        </select>
+    </div>
+
+    <div class="col-auto">
+        <label class="form-label">Учебный год</label>
+        <input class="form-control" value="@Model.SelectedYear" readonly />
+    </div>
+
+    <div class="col-auto d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Рассчитать</button>
+
+        <a asp-action="ExportToExcel"
+           asp-route-startYear="@Model.SelectedYearStart"
+           class="btn btn-outline-success">
+            Выгрузить в Excel
+        </a>
     </div>
 </form>
 
-<form asp-action="Save" method="post">
-    @Html.AntiForgeryToken()
-    <input type="hidden" asp-for="SelectedYear" />
+<div class="mb-3 d-flex gap-2">
+    <a asp-controller="WorkloadCalculation"
+       asp-action="Index"
+       asp-route-startYear="@Model.SelectedYearStart"
+       class="btn btn-primary">
+        Дисциплины
+    </a>
 
-    <div class="table-responsive">
-        <table class="table table-bordered table-striped align-middle">
-            <thead class="table-light text-center align-middle">
+    <a asp-controller="PracticeCalculation"
+       asp-action="Index"
+       asp-route-startYear="@Model.SelectedYearStart"
+       class="btn btn-outline-primary">
+        Практики
+    </a>
+
+    <a asp-controller="GiaCalculation"
+       asp-action="Index"
+       asp-route-startYear="@Model.SelectedYearStart"
+       class="btn btn-outline-primary">
+        ГИА
+    </a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-bordered table-striped align-middle workload-table">
+        <thead class="table-light text-center align-middle">
+            <tr>
+                <th rowspan="2">Семестр</th>
+                <th rowspan="2">Форма обучения</th>
+                <th rowspan="2">Код направления</th>
+                <th rowspan="2">Наименование дисциплины</th>
+                <th rowspan="2">Курс</th>
+                <th rowspan="2">Студентов</th>
+                <th rowspan="2">Потоков</th>
+                <th rowspan="2">Групп</th>
+                <th rowspan="2">Подгрупп</th>
+
+                <th colspan="2">Лекции</th>
+                <th colspan="2">Практические занятия</th>
+                <th colspan="2">Лабораторные занятия</th>
+
+                <th colspan="5">Формы контроля</th>
+                <th colspan="5">Часы по формам контроля</th>
+
+                <th rowspan="2">Консультации</th>
+                <th rowspan="2">Итого</th>
+            </tr>
+            <tr>
+                <th>По плану</th>
+                <th>Всего</th>
+
+                <th>По плану</th>
+                <th>Всего</th>
+
+                <th>По плану</th>
+                <th>Всего</th>
+
+                <th>Экзамен</th>
+                <th>Зачет</th>
+                <th>Курсовая работа</th>
+                <th>Курсовой проект</th>
+                <th>РГР</th>
+
+                <th>Экзамен</th>
+                <th>Зачет</th>
+                <th>Курсовая работа</th>
+                <th>Курсовой проект</th>
+                <th>РГР</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Rows == null || !Model.Rows.Any())
+            {
                 <tr>
-                    <th rowspan="2">Семестр</th>
-                    <th rowspan="2">Форма обучения</th>
-                    <th rowspan="2">Код направления</th>
-                    <th rowspan="2">Наименование дисциплины</th>
-                    <th rowspan="2">Курс</th>
-                    <th rowspan="2">Студентов</th>
-                    <th rowspan="2">Потоков</th>
-                    <th rowspan="2">Групп</th>
-                    <th rowspan="2">Подгрупп</th>
-
-                    <th colspan="2">Лекции</th>
-                    <th colspan="2">Практические занятия</th>
-                    <th colspan="2">Лабораторные занятия</th>
-
-                    <th colspan="5">Формы контроля</th>
-                    <th colspan="5">Часы по формам контроля</th>
-
-                    <th rowspan="2">Консультации</th>
-                    <th rowspan="2">Итого</th>
+                    <td colspan="27" class="text-center text-muted py-4">
+                        По выбранному учебному году данных пока нет
+                    </td>
                 </tr>
-                <tr>
-                    <!-- Лекции -->
-                    <th>По плану</th>
-                    <th>Всего</th>
-
-                    <!-- Практика -->
-                    <th>По плану</th>
-                    <th>Всего</th>
-
-                    <!-- Лабы -->
-                    <th>По плану</th>
-                    <th>Всего</th>
-
-                    <!-- ФОРМЫ КОНТРОЛЯ -->
-                    <th>Экзамен</th>
-                    <th>Зачет</th>
-                    <th>Курсовая работа</th>
-                    <th>Курсовой проект</th>
-                    <th>РГР</th>
-
-                    <!-- ЧАСЫ -->
-                    <th>Экзамен</th>
-                    <th>Зачет</th>
-                    <th>Курсовая работа</th>
-                    <th>Курсовой проект</th>
-                    <th>РГР</th>
-                </tr>
-            </thead>
-            <tbody>
+            }
+            else
+            {
                 @for (int i = 0; i < Model.Rows.Count; i++)
                 {
                     <tr>
-                        <td>
-                            @Model.Rows[i].SemesterName
-                            <input type="hidden" asp-for="Rows[@i].Id" />
-                        </td>
+                        <td>@Model.Rows[i].SemesterName</td>
                         <td>@Model.Rows[i].EducationForm</td>
                         <td>@Model.Rows[i].DirectionCode</td>
                         <td>@Model.Rows[i].DisciplineName</td>
@@ -115,13 +156,24 @@
                         <td>@Model.Rows[i].CourseWorkHours.ToString("0.##")</td>
                         <td>@Model.Rows[i].CourseProjectHours.ToString("0.##")</td>
                         <td>@Model.Rows[i].RgrHours.ToString("0.##")</td>
+
                         <td>@Model.Rows[i].ConsultationHours.ToString("0.##")</td>
                         <td>@Model.Rows[i].TotalHours.ToString("0.##")</td>
                     </tr>
                 }
-            </tbody>
-        </table>
-    </div>
+            }
+        </tbody>
+    </table>
+</div>
 
-    <button type="submit" class="btn btn-primary">Сохранить и пересчитать</button>
-</form>
+<style>
+    .workload-table th {
+        text-align: center;
+        vertical-align: middle !important;
+        white-space: normal;
+    }
+
+    .workload-table td {
+        vertical-align: middle;
+    }
+</style>

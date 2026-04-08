@@ -7,7 +7,15 @@
     var vkrRows = Model.Rows.Where(x => x.GiaSection == "Дипломное проектирование").ToList();
     var gecRows = Model.Rows.Where(x => x.GiaSection == "ГЭК").ToList();
 }
-
+@await Html.PartialAsync(
+        "_CalculationTopPanel",
+        new DepartmentLoadApp.ViewModels.Shared.CalculationTopPanelViewModel
+    {
+        SelectedYear = Model.SelectedYear,
+        SelectedYearStart = Model.SelectedYearStart,
+        AvailableYearStarts = Model.AvailableYearStarts,
+        ActiveTab = "gia"
+    })
 <h1 class="mb-3">ГИА</h1>
 
 <p class="text-muted">
@@ -15,18 +23,6 @@
     Если в учебном плане есть госэкзамен, создаются строки консультации и госэкзамена.
     Если есть ВКР, создаются строки руководства ВКР, нормоконтроля и работы в ГЭК.
 </p>
-
-<div class="mb-3">
-    <a asp-controller="WorkloadCalculation" asp-action="Index" asp-route-year="@Model.SelectedYear" class="btn btn-outline-primary">
-        Дисциплины
-    </a>
-    <a asp-controller="PracticeCalculation" asp-action="Index" asp-route-year="@Model.SelectedYear" class="btn btn-outline-primary">
-        Практики
-    </a>
-    <a asp-controller="GiaCalculation" asp-action="Index" asp-route-year="@Model.SelectedYear" class="btn btn-primary">
-        ГИА
-    </a>
-</div>
 
 <form asp-action="Save" method="post">
     @Html.AntiForgeryToken()

@@ -20,36 +20,19 @@ namespace DepartmentLoadApp.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(string? year)
+        [HttpGet]
+        public async Task<IActionResult> Index(int? startYear)
         {
-            List<GiaWorkloadRow> rows;
-            string selectedYear;
+            var selectedYearStart = AcademicYearResolver.NormalizeStartYear(startYear);
+            var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
-            if (string.IsNullOrWhiteSpace(year))
-            {
-                rows = await _context.GiaWorkloadRows
-                    .OrderBy(x => x.Course)
-                    .ThenBy(x => x.DirectionCode)
-                    .ThenBy(x => x.GiaSection)
-                    .ThenBy(x => x.WorkName)
-                    .ToListAsync();
-
-                selectedYear = rows.FirstOrDefault()?.PlanYear
-                               ?? AcademicYearHelper.GetCurrentAcademicYear();
-            }
-            else
-            {
-                selectedYear = year;
-
-
-                rows = await _context.GiaWorkloadRows
-                    .Where(x => x.PlanYear == selectedYear)
-                    .OrderBy(x => x.Course)
-                    .ThenBy(x => x.DirectionCode)
-                    .ThenBy(x => x.GiaSection)
-                    .ThenBy(x => x.WorkName)
-                    .ToListAsync();
-            }
+            var rows = await _context.GiaWorkloadRows
+                .Where(x => x.PlanYear == selectedYear)
+                .OrderBy(x => x.Course)
+                .ThenBy(x => x.DirectionCode)
+                .ThenBy(x => x.GiaSection)
+                .ThenBy(x => x.WorkName)
+                .ToListAsync();
 
             await RecalculateAsync(rows);
             await _context.SaveChangesAsync();
@@ -57,6 +40,8 @@ namespace DepartmentLoadApp.Controllers
             return View(new GiaWorkloadPageViewModel
             {
                 SelectedYear = selectedYear,
+                SelectedYearStart = selectedYearStart,
+                AvailableYearStarts = AcademicYearResolver.BuildAvailableStartYears(selectedYearStart),
                 Rows = rows
             });
         }

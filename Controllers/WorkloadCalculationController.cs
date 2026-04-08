@@ -1,8 +1,6 @@
 ﻿using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Helpers;
 using DepartmentLoadApp.Models;
-using DepartmentLoadApp.Models.Contingent;
-using DepartmentLoadApp.Models.Core;
 using DepartmentLoadApp.Models.Workload;
 using DepartmentLoadApp.ViewModels.Workload;
 using Microsoft.AspNetCore.Mvc;
@@ -20,43 +18,35 @@ namespace DepartmentLoadApp.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(string? year)
+        public async Task<IActionResult> Index(int? startYear)
         {
-            var selectedYear = string.IsNullOrWhiteSpace(year)
-                ? await GetDefaultYearAsync()
-                : year.Trim();
+            var selectedYearStart = AcademicYearResolver.NormalizeStartYear(startYear);
+            var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
             var rows = await LoadRowsAsync(selectedYear);
+
             await RecalculateAsync(rows);
             await _context.SaveChangesAsync();
 
             return View(new WorkloadTablePageViewModel
             {
+                SelectedYearStart = selectedYearStart,
                 SelectedYear = selectedYear,
+                AvailableYearStarts = AcademicYearResolver.BuildAvailableStartYears(selectedYearStart),
                 Rows = rows
             });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ImportFromAcademicPlan(string year)
+        public async Task<IActionResult> ImportFromAcademicPlan(int? startYear)
         {
-            if (string.IsNullOrWhiteSpace(year))
-            {
-                year = AcademicYearHelper.GetCurrentAcademicYear();
-            }
-
-            year = year.Trim();
+            var selectedYearStart = AcademicYearResolver.NormalizeStartYear(startYear);
+            var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
             var plans = await _context.AcademicPlansCore
                 .AsNoTracking()
-                .Where(x => x.Year == year)
                 .ToListAsync();
-
-            if (!plans.Any())
-            {
-                return RedirectToAction(nameof(Index), new { year });
-            }
 
             var planIds = plans.Select(x => x.Id).ToList();
 
@@ -70,7 +60,7 @@ namespace DepartmentLoadApp.Controllers
                 .ToDictionaryAsync(x => x.Id);
 
             var existingRows = await _context.WorkloadRows
-                .Where(x => x.AcademicYear == year)
+                .Where(x => x.AcademicYear == selectedYear)
                 .ToListAsync();
 
             if (existingRows.Any())
@@ -84,49 +74,49 @@ namespace DepartmentLoadApp.Controllers
             foreach (var plan in plans)
             {
                 if (plan.EducationDirectionId == null)
-                {
                     continue;
-                }
 
                 if (!directions.TryGetValue(plan.EducationDirectionId.Value, out var direction))
-                {
                     continue;
-                }
+
+                if (!AcademicYearResolver.TryResolveCourseAndSemesters(
+                        plan.Year,
+                        selectedYearStart,
+                        out var course,
+                        out var semesters))
+                    continue;
 
                 var planRecords = records
                     .Where(x => x.AcademicPlanId == plan.Id)
+                    .Where(x => semesters.Contains(x.Semester))
                     .Where(x => IsDisciplineRecord(x.Index))
                     .ToList();
 
                 foreach (var record in planRecords)
                 {
-                    var row = new WorkloadRow
+                    importedRows.Add(new WorkloadRow
                     {
-                        AcademicYear = year,
-
-                        // если эти поля уже есть в твоей модели — оставляй
+                        AcademicYear = selectedYear,
                         AcademicPlanId = plan.Id,
                         AcademicPlanRecordId = record.Id,
 
                         DirectionCode = direction.Cipher,
+                        DirectionName = direction.Title,
                         DisciplineName = record.Name ?? string.Empty,
-                        SemesterName = GetSemesterName(record.Semester),
-                        Course = GetCourseFromSemester(record.Semester),
-
+                        SemesterName = AcademicYearResolver.GetSemesterName(record.Semester),
                         EducationForm = GetEducationFormName(plan),
+                        Course = course,
 
-                        LecturePlanHours = GetDecimal(record.Lectures),
-                        PracticePlanHours = GetDecimal(record.PracticalHours),
-                        LabPlanHours = GetDecimal(record.LaboratoryHours),
+                        LecturePlanHours = record.Lectures ?? 0,
+                        PracticePlanHours = record.PracticalHours ?? 0,
+                        LabPlanHours = record.LaboratoryHours ?? 0,
 
-                        HasExam = HasValue(record.Exam),
-                        HasCredit = HasValue(record.Pass) || HasValue(record.GradedPass),
-                        HasCourseWork = HasValue(record.CourseWork),
-                        HasCourseProject = HasValue(record.CourseProject),
-                        HasRgr = HasValue(record.Rgr)
-                    };
-
-                    importedRows.Add(row);
+                        HasExam = (record.Exam ?? 0) > 0,
+                        HasCredit = (record.Pass ?? 0) > 0 || (record.GradedPass ?? 0) > 0,
+                        HasCourseWork = (record.CourseWork ?? 0) > 0,
+                        HasCourseProject = (record.CourseProject ?? 0) > 0,
+                        HasRgr = (record.Rgr ?? 0) > 0
+                    });
                 }
             }
 
@@ -139,7 +129,7 @@ namespace DepartmentLoadApp.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            return RedirectToAction(nameof(Index), new { year });
+            return RedirectToAction(nameof(Index), new { startYear = selectedYearStart });
         }
 
         [HttpPost]
@@ -158,15 +148,14 @@ namespace DepartmentLoadApp.Controllers
             await RecalculateAsync(dbRows);
             await _context.SaveChangesAsync();
 
-            return RedirectToAction(nameof(Index), new { year = model.SelectedYear });
+            return RedirectToAction(nameof(Index), new { startYear = model.SelectedYearStart });
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExportToExcel(string? year)
+        public async Task<IActionResult> ExportToExcel(int? startYear)
         {
-            var selectedYear = string.IsNullOrWhiteSpace(year)
-                ? await GetDefaultYearAsync()
-                : year.Trim();
+            var selectedYearStart = AcademicYearResolver.NormalizeStartYear(startYear);
+            var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
             var rows = await LoadRowsAsync(selectedYear);
             await RecalculateAsync(rows);
@@ -188,14 +177,6 @@ namespace DepartmentLoadApp.Controllers
                 .ThenBy(x => x.SemesterName)
                 .ThenBy(x => x.DisciplineName)
                 .ToListAsync();
-        }
-
-        private async Task<string> GetDefaultYearAsync()
-        {
-            return await _context.WorkloadRows
-                       .Select(x => x.AcademicYear)
-                       .FirstOrDefaultAsync()
-                   ?? AcademicYearHelper.GetCurrentAcademicYear();
         }
 
         private async Task RecalculateAsync(List<WorkloadRow> rows)
@@ -231,11 +212,10 @@ namespace DepartmentLoadApp.Controllers
                 row.GroupCount = CalculationHelper.GetGroupsByCourse(contingent, row.Course);
                 row.SubgroupCount = CalculationHelper.GetSubgroupsByCourse(contingent, row.Course);
 
-                row.FlowCount = flows
-                    .Count(x =>
-                        x.AcademicYear == row.AcademicYear &&
-                        x.DirectionCode == row.DirectionCode &&
-                        x.Course == row.Course);
+                row.FlowCount = flows.Count(x =>
+                    x.AcademicYear == row.AcademicYear &&
+                    x.DirectionCode == row.DirectionCode &&
+                    x.Course == row.Course);
 
                 if (row.FlowCount <= 0)
                 {
@@ -265,11 +245,9 @@ namespace DepartmentLoadApp.Controllers
             row.FlowCount = 0;
             row.GroupCount = 0;
             row.SubgroupCount = 0;
-
             row.LectureTotalHours = 0;
             row.PracticeTotalHours = 0;
             row.LabTotalHours = 0;
-
             row.ConsultationHours = 0;
             row.ExamHours = 0;
             row.CreditHours = 0;
@@ -288,48 +266,15 @@ namespace DepartmentLoadApp.Controllers
         private static bool IsDisciplineRecord(string? index)
         {
             if (string.IsNullOrWhiteSpace(index))
-            {
                 return false;
-            }
 
             var normalized = index.Trim().ToUpperInvariant();
 
-            if (normalized.StartsWith("ФТД"))
-            {
-                return true;
-            }
-
-            return normalized.StartsWith("Б1.");
+            return normalized.StartsWith("Б1.") || normalized.StartsWith("ФТД");
         }
 
-        private static bool HasValue(int? value)
+        private static string GetEducationFormName(DepartmentLoadApp.Models.Core.AcademicPlan plan)
         {
-            return value.HasValue && value.Value > 0;
-        }
-
-        private static decimal GetDecimal(int? value)
-        {
-            return value.HasValue ? value.Value : 0;
-        }
-
-        private static string GetSemesterName(int semester)
-        {
-            return semester % 2 == 0 ? "Весенний" : "Осенний";
-        }
-
-        private static int GetCourseFromSemester(int semester)
-        {
-            if (semester <= 0)
-            {
-                return 0;
-            }
-
-            return (semester + 1) / 2;
-        }
-
-        private static string GetEducationFormName(Models.Core.AcademicPlan plan)
-        {
-            // Подстрой под свои реальные значения enum/свойства, если названия отличаются
             return plan.EducationForm.ToString();
         }
     }

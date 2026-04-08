@@ -19,34 +19,18 @@ namespace DepartmentLoadApp.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(string? year)
+        [HttpGet]
+        public async Task<IActionResult> Index(int? startYear)
         {
-            List<PracticeWorkloadRow> rows;
-            string selectedYear;
+            var selectedYearStart = AcademicYearResolver.NormalizeStartYear(startYear);
+            var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
-            if (string.IsNullOrWhiteSpace(year))
-            {
-                rows = await _context.PracticeWorkloadRows
-                    .OrderBy(x => x.Course)
-                    .ThenBy(x => x.DirectionCode)
-                    .ThenBy(x => x.PracticeName)
-                    .ToListAsync();
-
-                selectedYear = rows.FirstOrDefault()?.PlanYear
-                               ?? AcademicYearHelper.GetCurrentAcademicYear();
-            }
-            else
-            {
-                selectedYear = year;
-
-
-                rows = await _context.PracticeWorkloadRows
-                    .Where(x => x.PlanYear == selectedYear)
-                    .OrderBy(x => x.Course)
-                    .ThenBy(x => x.DirectionCode)
-                    .ThenBy(x => x.PracticeName)
-                    .ToListAsync();
-            }
+            var rows = await _context.PracticeWorkloadRows
+                .Where(x => x.PlanYear == selectedYear)
+                .OrderBy(x => x.Course)
+                .ThenBy(x => x.DirectionCode)
+                .ThenBy(x => x.PracticeName)
+                .ToListAsync();
 
             await RecalculateAsync(rows);
             await _context.SaveChangesAsync();
@@ -54,6 +38,8 @@ namespace DepartmentLoadApp.Controllers
             return View(new PracticeWorkloadPageViewModel
             {
                 SelectedYear = selectedYear,
+                SelectedYearStart = selectedYearStart,
+                AvailableYearStarts = AcademicYearResolver.BuildAvailableStartYears(selectedYearStart),
                 Rows = rows
             });
         }
