@@ -1,9 +1,9 @@
-using DepartmentLoadApp.Data;
-using Microsoft.EntityFrameworkCore;
 using System.Globalization;
-using Microsoft.AspNetCore.Localization;
+using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Integration.CoreApi;
 using DepartmentLoadApp.Integration.CoreSync;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,16 +33,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-app.UseRouting();
-
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
-
 var culture = new CultureInfo("ru-RU");
-
 var localizationOptions = new RequestLocalizationOptions
 {
     DefaultRequestCulture = new RequestCulture(culture),
@@ -51,5 +42,14 @@ var localizationOptions = new RequestLocalizationOptions
 };
 
 app.UseRequestLocalization(localizationOptions);
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
