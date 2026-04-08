@@ -20,7 +20,7 @@ public class EducationDirectionSyncService : IEducationDirectionSyncService
 
     public async Task Sync()
     {
-        var items = await _api.GetListAsync<EducationDirectionDto>("EducationDirections/get-all");
+        var items = await _api.GetListAsync<EducationDirectionDto>("EducationDirections/GetEducationDirectionList");
 
         foreach (var dto in items)
         {

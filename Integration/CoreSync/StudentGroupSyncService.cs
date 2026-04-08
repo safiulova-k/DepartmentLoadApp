@@ -20,7 +20,7 @@ public class StudentGroupSyncService : IStudentGroupSyncService
 
     public async Task Sync()
     {
-        var items = await _api.GetListAsync<StudentGroupDto>("StudentGroups/get-all");
+        var items = await _api.GetListAsync<StudentGroupDto>("StudentGroups/GetStudentGroupList");
 
         foreach (var dto in items)
         {

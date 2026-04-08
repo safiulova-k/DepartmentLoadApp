@@ -20,7 +20,7 @@ public class AcademicPlanSyncService : IAcademicPlanSyncService
 
     public async Task Sync()
     {
-        var items = await _api.GetListAsync<AcademicPlanDto>("AcademicPlans/get-all");
+        var items = await _api.GetListAsync<AcademicPlanDto>("AcademicPlans/GetAcademicPlanList");
 
         foreach (var dto in items)
         {

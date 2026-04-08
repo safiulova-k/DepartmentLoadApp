@@ -20,7 +20,7 @@ public class LecturerDepartmentPostSyncService : ILecturerDepartmentPostSyncServ
 
     public async Task Sync()
     {
-        var items = await _api.GetListAsync<LecturerDepartmentPostDto>("LecturerDepartmentPosts/get-all");
+        var items = await _api.GetListAsync<LecturerDepartmentPostDto>("LecturerDepartmentPosts/GetLecturerDepartmentPostList");
 
         foreach (var dto in items)
         {

@@ -20,7 +20,7 @@ public class LecturerSyncService : ILecturerSyncService
 
     public async Task Sync()
     {
-        var items = await _api.GetListAsync<LecturerDto>("Lecturers/get-all");
+        var items = await _api.GetListAsync<LecturerDto>("Lecturers/GetLecturerList");
 
         foreach (var dto in items)
         {
