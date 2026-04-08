@@ -1,161 +1,127 @@
 ﻿@model DepartmentLoadApp.ViewModels.Workload.WorkloadTablePageViewModel
 
 @{
-    ViewData["Title"] = "Расчет нагрузки";
+    ViewData["Title"] = "Расчет нагрузки по дисциплинам";
 }
 
-<h1>Таблица расчета нагрузки</h1>
-<div class="d-flex gap-2 mb-4">
-    <a asp-controller="WorkloadCalculation"
-       asp-action="Index"
-       asp-route-year="@Model.SelectedYear"
-       class="btn btn-primary">
-        Дисциплины
-    </a>
+<h1 class="mb-3">Расчет нагрузки по дисциплинам</h1>
 
-    <a asp-controller="PracticeCalculation"
-       asp-action="Index"
-       asp-route-year="@Model.SelectedYear"
-       class="btn btn-outline-primary">
-        Практики
-    </a>
-    <a asp-controller="GiaCalculation"
-       asp-action="Index"
-       asp-route-year="@Model.SelectedYear"
-       class="btn btn-outline-primary">
-        ГИА
-    </a>
+<div class="mb-3 d-flex gap-2">
+    <a asp-controller="WorkloadCalculation" asp-action="Index" class="btn btn-primary">Дисциплины</a>
+    <a asp-controller="PracticeCalculation" asp-action="Index" class="btn btn-outline-primary">Практики</a>
+    <a asp-controller="GiaCalculation" asp-action="Index" class="btn btn-outline-primary">ГИА</a>
 </div>
+
+<form asp-action="ImportFromAcademicPlan" method="post" class="mb-3">
+    @Html.AntiForgeryToken()
+    <div class="d-flex gap-2 align-items-center">
+        <label class="form-label mb-0">Учебный год</label>
+        <input type="text" name="year" value="@Model.SelectedYear" class="form-control" style="max-width: 180px;" />
+        <button type="submit" class="btn btn-success">Импортировать и пересчитать</button>
+        <a asp-action="ExportToExcel" asp-route-year="@Model.SelectedYear" class="btn btn-outline-success">Выгрузить в Excel</a>
+    </div>
+</form>
+
 <form asp-action="Save" method="post">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="SelectedYear" />
 
     <div class="table-responsive">
-        <table class="table table-bordered table-sm align-middle">
-            <thead class="table-light">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-light text-center align-middle">
                 <tr>
-                    <th>Дисциплина</th>
-                    <th>Семестр</th>
-                    <th>Форма</th>
-                    <th>Код направления</th>
-                    <th>Курс</th>
-                    <th>Студентов</th>
-                    <th>Потоков</th>
-                    <th>Групп</th>
-                    <th>Подгрупп</th>
+                    <th rowspan="2">Семестр</th>
+                    <th rowspan="2">Форма обучения</th>
+                    <th rowspan="2">Код направления</th>
+                    <th rowspan="2">Наименование дисциплины</th>
+                    <th rowspan="2">Курс</th>
+                    <th rowspan="2">Студентов</th>
+                    <th rowspan="2">Потоков</th>
+                    <th rowspan="2">Групп</th>
+                    <th rowspan="2">Подгрупп</th>
 
-                    <th>Лекции (план)</th>
-                    <th>Лекции (всего)</th>
+                    <th colspan="2">Лекции</th>
+                    <th colspan="2">Практические занятия</th>
+                    <th colspan="2">Лабораторные занятия</th>
 
-                    <th>Практика (план)</th>
-                    <th>Практика (всего)</th>
+                    <th colspan="5">Формы контроля</th>
+                    <th colspan="5">Часы по формам контроля</th>
 
-                    <th>Лаб (план)</th>
-                    <th>Лаб (всего)</th>
+                    <th rowspan="2">Консультации</th>
+                    <th rowspan="2">Итого</th>
+                </tr>
+                <tr>
+                    <!-- Лекции -->
+                    <th>По плану</th>
+                    <th>Всего</th>
 
+                    <!-- Практика -->
+                    <th>По плану</th>
+                    <th>Всего</th>
+
+                    <!-- Лабы -->
+                    <th>По плану</th>
+                    <th>Всего</th>
+
+                    <!-- ФОРМЫ КОНТРОЛЯ -->
                     <th>Экзамен</th>
                     <th>Зачет</th>
                     <th>Курсовая работа</th>
                     <th>Курсовой проект</th>
+                    <th>РГР</th>
 
-                    <th>Консультации</th>
-                    <th>Экзамен (часы)</th>
-                    <th>Зачет (часы)</th>
-                    <th>Курсовая работа (часы)</th>
-                    <th>Курсовой проект (часы)</th>
-
-                    <th>Итого</th>
+                    <!-- ЧАСЫ -->
+                    <th>Экзамен</th>
+                    <th>Зачет</th>
+                    <th>Курсовая работа</th>
+                    <th>Курсовой проект</th>
+                    <th>РГР</th>
                 </tr>
             </thead>
             <tbody>
                 @for (int i = 0; i < Model.Rows.Count; i++)
                 {
-                    var row = Model.Rows[i];
-
                     <tr>
                         <td>
-                            @row.DisciplineName
-
-                            <input type="hidden" asp-for="Rows[i].Id" />
-                            <input type="hidden" asp-for="Rows[i].AcademicYear" />
-                            <input type="hidden" asp-for="Rows[i].AcademicPlanId" />
-                            <input type="hidden" asp-for="Rows[i].AcademicPlanRecordId" />
-                            <input type="hidden" asp-for="Rows[i].DisciplineId" />
-                            <input type="hidden" asp-for="Rows[i].DisciplineName" />
-                            <input type="hidden" asp-for="Rows[i].DirectionCode" />
-                            <input type="hidden" asp-for="Rows[i].DirectionName" />
-                            <input type="hidden" asp-for="Rows[i].SemesterName" />
-                            <input type="hidden" asp-for="Rows[i].EducationForm" />
-                            <input type="hidden" asp-for="Rows[i].Course" />
-                            <input type="hidden" asp-for="Rows[i].StudentsCount" />
-                            <input type="hidden" asp-for="Rows[i].FlowCount" />
-                            <input type="hidden" asp-for="Rows[i].GroupCount" />
-                            <input type="hidden" asp-for="Rows[i].SubgroupCount" />
-                            <input type="hidden" asp-for="Rows[i].LecturePlanHours" />
-                            <input type="hidden" asp-for="Rows[i].LectureTotalHours" />
-                            <input type="hidden" asp-for="Rows[i].PracticePlanHours" />
-                            <input type="hidden" asp-for="Rows[i].PracticeTotalHours" />
-                            <input type="hidden" asp-for="Rows[i].LabPlanHours" />
-                            <input type="hidden" asp-for="Rows[i].LabTotalHours" />
-                            <input type="hidden" asp-for="Rows[i].ConsultationHours" />
-                            <input type="hidden" asp-for="Rows[i].ExamHours" />
-                            <input type="hidden" asp-for="Rows[i].CreditHours" />
-                            <input type="hidden" asp-for="Rows[i].CourseWorkHours" />
-                            <input type="hidden" asp-for="Rows[i].CourseProjectHours" />
+                            @Model.Rows[i].SemesterName
+                            <input type="hidden" asp-for="Rows[@i].Id" />
                         </td>
+                        <td>@Model.Rows[i].EducationForm</td>
+                        <td>@Model.Rows[i].DirectionCode</td>
+                        <td>@Model.Rows[i].DisciplineName</td>
+                        <td>@Model.Rows[i].Course</td>
+                        <td>@Model.Rows[i].StudentsCount</td>
+                        <td>@Model.Rows[i].FlowCount</td>
+                        <td>@Model.Rows[i].GroupCount</td>
+                        <td>@Model.Rows[i].SubgroupCount</td>
 
-                        <td>@row.SemesterName</td>
-                        <td>@row.EducationForm</td>
-                        <td>@row.DirectionCode</td>
-                        <td>@row.Course</td>
-                        <td>@row.StudentsCount</td>
-                        <td>@row.FlowCount</td>
-                        <td>@row.GroupCount</td>
-                        <td>@row.SubgroupCount</td>
+                        <td>@Model.Rows[i].LecturePlanHours.ToString("0.##")</td>
+                        <td>@Model.Rows[i].LectureTotalHours.ToString("0.##")</td>
 
-                        <td>@row.LecturePlanHours.ToString("0.##")</td>
-                        <td>@row.LectureTotalHours.ToString("0.##")</td>
+                        <td>@Model.Rows[i].PracticePlanHours.ToString("0.##")</td>
+                        <td>@Model.Rows[i].PracticeTotalHours.ToString("0.##")</td>
 
-                        <td>@row.PracticePlanHours.ToString("0.##")</td>
-                        <td>@row.PracticeTotalHours.ToString("0.##")</td>
+                        <td>@Model.Rows[i].LabPlanHours.ToString("0.##")</td>
+                        <td>@Model.Rows[i].LabTotalHours.ToString("0.##")</td>
 
-                        <td>@row.LabPlanHours.ToString("0.##")</td>
-                        <td>@row.LabTotalHours.ToString("0.##")</td>
+                        <td class="text-center">@(Model.Rows[i].HasExam ? "✔" : "")</td>
+                        <td class="text-center">@(Model.Rows[i].HasCredit ? "✔" : "")</td>
+                        <td class="text-center">@(Model.Rows[i].HasCourseWork ? "✔" : "")</td>
+                        <td class="text-center">@(Model.Rows[i].HasCourseProject ? "✔" : "")</td>
+                        <td class="text-center">@(Model.Rows[i].HasRgr ? "✔" : "")</td>
 
-                        <td class="text-center">
-                            <input asp-for="Rows[i].HasExam" class="form-check-input" />
-                        </td>
-                        <td class="text-center">
-                            <input asp-for="Rows[i].HasCredit" class="form-check-input" />
-                        </td>
-                        <td class="text-center">
-                            <input asp-for="Rows[i].HasCourseWork" class="form-check-input" />
-                        </td>
-                        <td class="text-center">
-                            <input asp-for="Rows[i].HasCourseProject" class="form-check-input" />
-                        </td>
-
-                        <td>@row.ConsultationHours.ToString("0.##")</td>
-                        <td>@row.ExamHours.ToString("0.##")</td>
-                        <td>@row.CreditHours.ToString("0.##")</td>
-                        <td>@row.CourseWorkHours.ToString("0.##")</td>
-                        <td>@row.CourseProjectHours.ToString("0.##")</td>
-
-                        <td><strong>@row.TotalHours.ToString("0.##")</strong></td>
+                        <td>@Model.Rows[i].ExamHours.ToString("0.##")</td>
+                        <td>@Model.Rows[i].CreditHours.ToString("0.##")</td>
+                        <td>@Model.Rows[i].CourseWorkHours.ToString("0.##")</td>
+                        <td>@Model.Rows[i].CourseProjectHours.ToString("0.##")</td>
+                        <td>@Model.Rows[i].RgrHours.ToString("0.##")</td>
+                        <td>@Model.Rows[i].ConsultationHours.ToString("0.##")</td>
+                        <td>@Model.Rows[i].TotalHours.ToString("0.##")</td>
                     </tr>
                 }
             </tbody>
         </table>
     </div>
 
-    <div class="mt-3">
-        <button type="submit" class="btn btn-primary">Сохранить и пересчитать</button>
-
-        <a asp-action="ExportToExcel"
-           asp-route-year="@Model.SelectedYear"
-           class="btn btn-success">
-            Выгрузить в Excel
-        </a>
-
-    </div>
+    <button type="submit" class="btn btn-primary">Сохранить и пересчитать</button>
 </form>

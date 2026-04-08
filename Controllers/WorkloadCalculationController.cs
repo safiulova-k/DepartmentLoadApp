@@ -1,7 +1,8 @@
 ﻿using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Helpers;
 using DepartmentLoadApp.Models;
-using DepartmentLoadApp.Models.Enums;
+using DepartmentLoadApp.Models.Contingent;
+using DepartmentLoadApp.Models.Core;
 using DepartmentLoadApp.Models.Workload;
 using DepartmentLoadApp.ViewModels.Workload;
 using Microsoft.AspNetCore.Mvc;
@@ -13,8 +14,7 @@ namespace DepartmentLoadApp.Controllers
     {
         private readonly DepartmentLoadDbContext _context;
 
-        public WorkloadCalculationController(
-            DepartmentLoadDbContext context)
+        public WorkloadCalculationController(DepartmentLoadDbContext context)
         {
             _context = context;
         }
@@ -22,31 +22,13 @@ namespace DepartmentLoadApp.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(string? year)
         {
-            List<WorkloadRow> rows;
-            string selectedYear;
+            var selectedYear = string.IsNullOrWhiteSpace(year)
+                ? await GetDefaultYearAsync()
+                : year.Trim();
 
-            if (string.IsNullOrWhiteSpace(year))
-            {
-                rows = await _context.WorkloadRows
-                    .OrderBy(x => x.Course)
-                    .ThenBy(x => x.SemesterName)
-                    .ThenBy(x => x.DisciplineName)
-                    .ToListAsync();
-
-                selectedYear = rows.FirstOrDefault()?.AcademicYear
-                               ?? AcademicYearHelper.GetCurrentAcademicYear();
-            }
-            else
-            {
-                selectedYear = year;
-
-                rows = await _context.WorkloadRows
-                    .Where(x => x.AcademicYear == selectedYear)
-                    .OrderBy(x => x.Course)
-                    .ThenBy(x => x.SemesterName)
-                    .ThenBy(x => x.DisciplineName)
-                    .ToListAsync();
-            }
+            var rows = await LoadRowsAsync(selectedYear);
+            await RecalculateAsync(rows);
+            await _context.SaveChangesAsync();
 
             return View(new WorkloadTablePageViewModel
             {
@@ -64,16 +46,98 @@ namespace DepartmentLoadApp.Controllers
                 year = AcademicYearHelper.GetCurrentAcademicYear();
             }
 
+            year = year.Trim();
 
-            var rows = await _context.WorkloadRows
-                .Where(x => x.AcademicYear == year)
-                .OrderBy(x => x.Course)
-                .ThenBy(x => x.SemesterName)
-                .ThenBy(x => x.DisciplineName)
+            var plans = await _context.AcademicPlansCore
+                .AsNoTracking()
+                .Where(x => x.Year == year)
                 .ToListAsync();
 
-            await RecalculateAsync(rows);
-            await _context.SaveChangesAsync();
+            if (!plans.Any())
+            {
+                return RedirectToAction(nameof(Index), new { year });
+            }
+
+            var planIds = plans.Select(x => x.Id).ToList();
+
+            var records = await _context.AcademicPlanRecordsCore
+                .AsNoTracking()
+                .Where(x => planIds.Contains(x.AcademicPlanId))
+                .ToListAsync();
+
+            var directions = await _context.EducationDirections
+                .AsNoTracking()
+                .ToDictionaryAsync(x => x.Id);
+
+            var existingRows = await _context.WorkloadRows
+                .Where(x => x.AcademicYear == year)
+                .ToListAsync();
+
+            if (existingRows.Any())
+            {
+                _context.WorkloadRows.RemoveRange(existingRows);
+                await _context.SaveChangesAsync();
+            }
+
+            var importedRows = new List<WorkloadRow>();
+
+            foreach (var plan in plans)
+            {
+                if (plan.EducationDirectionId == null)
+                {
+                    continue;
+                }
+
+                if (!directions.TryGetValue(plan.EducationDirectionId.Value, out var direction))
+                {
+                    continue;
+                }
+
+                var planRecords = records
+                    .Where(x => x.AcademicPlanId == plan.Id)
+                    .Where(x => IsDisciplineRecord(x.Index))
+                    .ToList();
+
+                foreach (var record in planRecords)
+                {
+                    var row = new WorkloadRow
+                    {
+                        AcademicYear = year,
+
+                        // если эти поля уже есть в твоей модели — оставляй
+                        AcademicPlanId = plan.Id,
+                        AcademicPlanRecordId = record.Id,
+
+                        DirectionCode = direction.Cipher,
+                        DisciplineName = record.Name ?? string.Empty,
+                        SemesterName = GetSemesterName(record.Semester),
+                        Course = GetCourseFromSemester(record.Semester),
+
+                        EducationForm = GetEducationFormName(plan),
+
+                        LecturePlanHours = GetDecimal(record.Lectures),
+                        PracticePlanHours = GetDecimal(record.PracticalHours),
+                        LabPlanHours = GetDecimal(record.LaboratoryHours),
+
+                        HasExam = HasValue(record.Exam),
+                        HasCredit = HasValue(record.Pass) || HasValue(record.GradedPass),
+                        HasCourseWork = HasValue(record.CourseWork),
+                        HasCourseProject = HasValue(record.CourseProject),
+                        HasRgr = HasValue(record.Rgr)
+                    };
+
+                    importedRows.Add(row);
+                }
+            }
+
+            if (importedRows.Any())
+            {
+                await _context.WorkloadRows.AddRangeAsync(importedRows);
+                await _context.SaveChangesAsync();
+
+                await RecalculateAsync(importedRows);
+                await _context.SaveChangesAsync();
+            }
 
             return RedirectToAction(nameof(Index), new { year });
         }
@@ -86,27 +150,52 @@ namespace DepartmentLoadApp.Controllers
 
             var dbRows = await _context.WorkloadRows
                 .Where(x => ids.Contains(x.Id))
-                .OrderBy(x => x.Id)
+                .OrderBy(x => x.Course)
+                .ThenBy(x => x.SemesterName)
+                .ThenBy(x => x.DisciplineName)
                 .ToListAsync();
-
-            foreach (var postedRow in model.Rows)
-            {
-                var dbRow = dbRows.FirstOrDefault(x => x.Id == postedRow.Id);
-                if (dbRow == null)
-                {
-                    continue;
-                }
-
-                dbRow.HasExam = postedRow.HasExam;
-                dbRow.HasCredit = postedRow.HasCredit;
-                dbRow.HasCourseWork = postedRow.HasCourseWork;
-                dbRow.HasCourseProject = postedRow.HasCourseProject;
-            }
 
             await RecalculateAsync(dbRows);
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index), new { year = model.SelectedYear });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportToExcel(string? year)
+        {
+            var selectedYear = string.IsNullOrWhiteSpace(year)
+                ? await GetDefaultYearAsync()
+                : year.Trim();
+
+            var rows = await LoadRowsAsync(selectedYear);
+            await RecalculateAsync(rows);
+
+            var content = ExcelExportHelper.ExportWorkload(rows);
+            var fileName = $"Расчет_дисциплин_{selectedYear}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+            return File(
+                content,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
+        }
+
+        private async Task<List<WorkloadRow>> LoadRowsAsync(string year)
+        {
+            return await _context.WorkloadRows
+                .Where(x => x.AcademicYear == year)
+                .OrderBy(x => x.Course)
+                .ThenBy(x => x.SemesterName)
+                .ThenBy(x => x.DisciplineName)
+                .ToListAsync();
+        }
+
+        private async Task<string> GetDefaultYearAsync()
+        {
+            return await _context.WorkloadRows
+                       .Select(x => x.AcademicYear)
+                       .FirstOrDefaultAsync()
+                   ?? AcademicYearHelper.GetCurrentAcademicYear();
         }
 
         private async Task RecalculateAsync(List<WorkloadRow> rows)
@@ -120,26 +209,21 @@ namespace DepartmentLoadApp.Controllers
             var creditNorm = await GetNormAsync("Зачет");
             var courseWorkNorm = await GetNormAsync("Курсовая работа");
             var courseProjectNorm = await GetNormAsync("Курсовой проект");
+            var rgrNorm = await GetNormAsync("РГР");
 
             var contingentMap = await _context.ContingentRows
                 .AsNoTracking()
                 .ToDictionaryAsync(x => x.DirectionCode);
 
+            var flows = await _context.StudentFlows
+                .AsNoTracking()
+                .ToListAsync();
+
             foreach (var row in rows)
             {
                 if (!contingentMap.TryGetValue(row.DirectionCode, out var contingent))
                 {
-                    row.StudentsCount = 0;
-                    row.GroupCount = 0;
-                    row.SubgroupCount = 0;
-                    row.LectureTotalHours = 0;
-                    row.PracticeTotalHours = 0;
-                    row.LabTotalHours = 0;
-                    row.ConsultationHours = 0;
-                    row.ExamHours = 0;
-                    row.CreditHours = 0;
-                    row.CourseWorkHours = 0;
-                    row.CourseProjectHours = 0;
+                    ResetCalculatedFields(row);
                     continue;
                 }
 
@@ -147,87 +231,51 @@ namespace DepartmentLoadApp.Controllers
                 row.GroupCount = CalculationHelper.GetGroupsByCourse(contingent, row.Course);
                 row.SubgroupCount = CalculationHelper.GetSubgroupsByCourse(contingent, row.Course);
 
-                row.LectureTotalHours = CalculatePlanBasedHours(row.LecturePlanHours, lectureNorm, row);
-                row.PracticeTotalHours = CalculatePlanBasedHours(row.PracticePlanHours, practiceNorm, row);
-                row.LabTotalHours = CalculatePlanBasedHours(row.LabPlanHours, labNorm, row);
+                row.FlowCount = flows
+                    .Count(x =>
+                        x.AcademicYear == row.AcademicYear &&
+                        x.DirectionCode == row.DirectionCode &&
+                        x.Course == row.Course);
 
-                row.ExamHours = CalculateOptionalHours(row.HasExam, examNorm, row);
-                row.CreditHours = CalculateOptionalHours(row.HasCredit, creditNorm, row);
-                row.CourseWorkHours = CalculateOptionalHours(row.HasCourseWork, courseWorkNorm, row);
-                row.CourseProjectHours = CalculateOptionalHours(row.HasCourseProject, courseProjectNorm, row);
+                if (row.FlowCount <= 0)
+                {
+                    row.FlowCount = row.GroupCount > 0 ? 1 : 0;
+                }
 
-                row.ConsultationHours = CalculateConsultationHours(
+                row.LectureTotalHours = NormCalculationHelper.CalculatePlanHours(row.LecturePlanHours, lectureNorm, row);
+                row.PracticeTotalHours = NormCalculationHelper.CalculatePlanHours(row.PracticePlanHours, practiceNorm, row);
+                row.LabTotalHours = NormCalculationHelper.CalculatePlanHours(row.LabPlanHours, labNorm, row);
+
+                row.ExamHours = NormCalculationHelper.CalculateOptionalHours(row.HasExam, examNorm, row);
+                row.CreditHours = NormCalculationHelper.CalculateOptionalHours(row.HasCredit, creditNorm, row);
+                row.CourseWorkHours = NormCalculationHelper.CalculateOptionalHours(row.HasCourseWork, courseWorkNorm, row);
+                row.CourseProjectHours = NormCalculationHelper.CalculateOptionalHours(row.HasCourseProject, courseProjectNorm, row);
+                row.RgrHours = NormCalculationHelper.CalculateOptionalHours(row.HasRgr, rgrNorm, row);
+
+                row.ConsultationHours = NormCalculationHelper.CalculateConsultationHours(
                     row,
                     consultationNorm,
                     consultationExamExtraNorm);
             }
         }
 
-        private decimal CalculatePlanBasedHours(decimal planHours, NormTime? norm, WorkloadRow row)
+        private static void ResetCalculatedFields(WorkloadRow row)
         {
-            if (planHours <= 0 || norm == null)
-            {
-                return 0;
-            }
+            row.StudentsCount = 0;
+            row.FlowCount = 0;
+            row.GroupCount = 0;
+            row.SubgroupCount = 0;
 
-            var multiplier = GetBaseValue(norm.CalculationBase, row);
-            var result = planHours * multiplier * norm.Hours;
+            row.LectureTotalHours = 0;
+            row.PracticeTotalHours = 0;
+            row.LabTotalHours = 0;
 
-            return CalculationHelper.RoundHours(result);
-        }
-
-        private decimal CalculateOptionalHours(bool isEnabled, NormTime? norm, WorkloadRow row)
-        {
-            if (!isEnabled || norm == null)
-            {
-                return 0;
-            }
-
-            var baseValue = GetBaseValue(norm.CalculationBase, row);
-            var result = baseValue * norm.Hours;
-
-            return CalculationHelper.RoundHours(result);
-        }
-
-        private decimal CalculateConsultationHours(
-            WorkloadRow row,
-            NormTime? consultationNorm,
-            NormTime? consultationExamExtraNorm)
-        {
-            decimal result = 0;
-
-            if (consultationNorm != null)
-            {
-                decimal consultationBase = consultationNorm.CalculationBase switch
-                {
-                    WorkCalculationBase.FromLectureHoursTotal => row.GroupCount * row.LecturePlanHours,
-                    _ => GetBaseValue(consultationNorm.CalculationBase, row)
-                };
-
-                result += consultationBase * consultationNorm.Hours;
-            }
-
-            if (row.HasExam && consultationExamExtraNorm != null)
-            {
-                var extraBase = GetBaseValue(consultationExamExtraNorm.CalculationBase, row);
-                result += extraBase * consultationExamExtraNorm.Hours;
-            }
-
-            return CalculationHelper.RoundHours(result);
-        }
-
-        private decimal GetBaseValue(WorkCalculationBase calculationBase, WorkloadRow row)
-        {
-            return calculationBase switch
-            {
-                WorkCalculationBase.PerStream => row.FlowCount,
-                WorkCalculationBase.PerGroup => row.GroupCount,
-                WorkCalculationBase.PerSubgroup => row.SubgroupCount,
-                WorkCalculationBase.PerStudent => row.StudentsCount,
-                WorkCalculationBase.PerWork => 1,
-                WorkCalculationBase.FromLectureHoursTotal => row.GroupCount * row.LecturePlanHours,
-                _ => 1
-            };
+            row.ConsultationHours = 0;
+            row.ExamHours = 0;
+            row.CreditHours = 0;
+            row.CourseWorkHours = 0;
+            row.CourseProjectHours = 0;
+            row.RgrHours = 0;
         }
 
         private Task<NormTime?> GetNormAsync(string workName)
@@ -237,30 +285,52 @@ namespace DepartmentLoadApp.Controllers
                 .FirstOrDefaultAsync(x => x.WorkName == workName);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> ExportToExcel(string? year)
+        private static bool IsDisciplineRecord(string? index)
         {
-            var selectedYear = string.IsNullOrWhiteSpace(year)
-                ? AcademicYearHelper.GetCurrentAcademicYear()
-                : year;
+            if (string.IsNullOrWhiteSpace(index))
+            {
+                return false;
+            }
 
-            var rows = await _context.WorkloadRows
-                .AsNoTracking()
-                .Where(x => x.AcademicYear == selectedYear)
-                .OrderBy(x => x.Course)
-                .ThenBy(x => x.SemesterName)
-                .ThenBy(x => x.DisciplineName)
-                .ToListAsync();
+            var normalized = index.Trim().ToUpperInvariant();
 
-            await RecalculateAsync(rows);
+            if (normalized.StartsWith("ФТД"))
+            {
+                return true;
+            }
 
-            var content = ExcelExportHelper.ExportWorkload(rows);
-            var fileName = $"Расчет_дисциплин_{selectedYear}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            return normalized.StartsWith("Б1.");
+        }
 
-            return File(
-                content,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                fileName);
+        private static bool HasValue(int? value)
+        {
+            return value.HasValue && value.Value > 0;
+        }
+
+        private static decimal GetDecimal(int? value)
+        {
+            return value.HasValue ? value.Value : 0;
+        }
+
+        private static string GetSemesterName(int semester)
+        {
+            return semester % 2 == 0 ? "Весенний" : "Осенний";
+        }
+
+        private static int GetCourseFromSemester(int semester)
+        {
+            if (semester <= 0)
+            {
+                return 0;
+            }
+
+            return (semester + 1) / 2;
+        }
+
+        private static string GetEducationFormName(Models.Core.AcademicPlan plan)
+        {
+            // Подстрой под свои реальные значения enum/свойства, если названия отличаются
+            return plan.EducationForm.ToString();
         }
     }
 }
