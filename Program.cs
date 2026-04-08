@@ -25,9 +25,17 @@ builder.Services.AddScoped<StudentGroupSyncService>();
 builder.Services.AddScoped<AcademicPlanSyncService>();
 builder.Services.AddScoped<AcademicPlanRecordSyncService>();
 
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 var app = builder.Build();
 
-if (!app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+else
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();

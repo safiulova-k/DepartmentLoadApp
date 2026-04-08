@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace DepartmentLoadApp.Controllers;
 
 [ApiController]
-[Route("sync")]
+[Route("api/sync")]
 public class SyncController : ControllerBase
 {
     private readonly EducationDirectionSyncService _education;
