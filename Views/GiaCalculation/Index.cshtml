@@ -37,15 +37,14 @@
 
     <div class="col-auto d-flex gap-2">
         <button type="submit" class="btn btn-primary">Рассчитать</button>
-
-        <a asp-action="ExportToExcel"
-           asp-route-startYear="@Model.SelectedYearStart"
-           class="btn btn-outline-success">
-            Выгрузить в Excel
-        </a>
     </div>
 </form>
-
+<form asp-controller="WorkloadCalculation" asp-action="ExportToExcel" method="get" class="d-inline">
+    <input type="hidden" name="startYear" value="@Model.SelectedYearStart" />
+    <button type="submit" class="btn btn-success">
+        Выгрузить в Excel
+    </button>
+</form>
 <div class="mb-3 d-flex gap-2">
     <a asp-controller="WorkloadCalculation"
        asp-action="Index"

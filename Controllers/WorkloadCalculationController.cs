@@ -1,11 +1,14 @@
 ﻿using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Helpers;
 using DepartmentLoadApp.Models;
+using DepartmentLoadApp.Models.Contingent;
+using DepartmentLoadApp.Models.Gia;
+using DepartmentLoadApp.Models.Practice;
 using DepartmentLoadApp.Models.Workload;
+using DepartmentLoadApp.Services;
 using DepartmentLoadApp.ViewModels.Workload;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using DepartmentLoadApp.Services;
 
 namespace DepartmentLoadApp.Controllers
 {
@@ -29,7 +32,6 @@ namespace DepartmentLoadApp.Controllers
             var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
             var rows = await LoadRowsAsync(selectedYear);
-
             await RecalculateAsync(rows);
             await _context.SaveChangesAsync();
 
@@ -47,7 +49,6 @@ namespace DepartmentLoadApp.Controllers
         public async Task<IActionResult> ImportFromAcademicPlan(int? startYear)
         {
             var selectedYearStart = AcademicYearResolver.NormalizeStartYear(startYear);
-
             await _importService.ImportAllAsync(selectedYearStart);
 
             return RedirectToAction(nameof(Index), new { startYear = selectedYearStart });
@@ -78,11 +79,35 @@ namespace DepartmentLoadApp.Controllers
             var selectedYearStart = AcademicYearResolver.NormalizeStartYear(startYear);
             var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
-            var rows = await LoadRowsAsync(selectedYear);
-            await RecalculateAsync(rows);
+            var workloadRows = await LoadRowsAsync(selectedYear);
+            await RecalculateAsync(workloadRows);
 
-            var content = ExcelExportHelper.ExportWorkload(rows);
-            var fileName = $"Расчет_дисциплин_{selectedYear}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            var practiceRows = await _context.PracticeWorkloadRows
+                .Where(x => x.PlanYear == selectedYear)
+                .OrderBy(x => x.Course)
+                .ThenBy(x => x.DirectionCode)
+                .ThenBy(x => x.PracticeName)
+                .ToListAsync();
+
+            await RecalculatePracticeAsync(practiceRows);
+
+            var giaRows = await _context.GiaWorkloadRows
+                .Where(x => x.PlanYear == selectedYear)
+                .OrderBy(x => x.Course)
+                .ThenBy(x => x.DirectionCode)
+                .ThenBy(x => x.GiaSection)
+                .ThenBy(x => x.WorkName)
+                .ToListAsync();
+
+            await RecalculateGiaAsync(giaRows);
+
+            var content = ExcelExportHelper.ExportCombinedCalculation(
+                selectedYear,
+                workloadRows,
+                practiceRows,
+                giaRows);
+
+            var fileName = $"Расчет_нагрузки_кафедры_{selectedYear}.xlsx";
 
             return File(
                 content,
@@ -160,6 +185,175 @@ namespace DepartmentLoadApp.Controllers
             }
         }
 
+        private async Task RecalculatePracticeAsync(List<PracticeWorkloadRow> rows)
+        {
+            var norms = await _context.NormTimes
+                .AsNoTracking()
+                .Where(x =>
+                    !string.IsNullOrWhiteSpace(x.CategoryName) &&
+                    (EF.Functions.ILike(x.CategoryName, "%практи%") ||
+                     EF.Functions.ILike(x.CategoryName, "%науч%")))
+                .ToListAsync();
+
+            var contingentMap = await _context.ContingentRows
+                .AsNoTracking()
+                .ToDictionaryAsync(x => NormalizeText(x.DirectionCode));
+
+            foreach (var row in rows)
+            {
+                if (!contingentMap.TryGetValue(NormalizeText(row.DirectionCode), out var contingent))
+                {
+                    row.StudentsCount = 0;
+                    row.GroupCount = 0;
+                    row.TotalHours = 0;
+                    continue;
+                }
+
+                row.StudentsCount = CalculationHelper.GetStudentsByCourse(contingent, row.Course);
+                row.GroupCount = CalculationHelper.GetGroupsByCourse(contingent, row.Course);
+
+                var norm = FindPracticeNorm(norms, row.PracticeName);
+
+                if (norm == null || row.WeeksCount <= 0 || norm.Hours <= 0)
+                {
+                    row.TotalHours = 0;
+                    continue;
+                }
+
+                var result = CalculationHelper.CalculateByNorm(
+                    calculationBase: norm.CalculationBase,
+                    coefficient: norm.Hours,
+                    studentsCount: row.StudentsCount,
+                    groupCount: row.GroupCount,
+                    weeksCount: row.WeeksCount);
+
+                row.TotalHours = CalculationHelper.RoundHours(result);
+            }
+        }
+
+        private async Task RecalculateGiaAsync(List<GiaWorkloadRow> rows)
+        {
+            var norms = await _context.NormTimes
+                .AsNoTracking()
+                .Where(x => x.CategoryName == "ГИА")
+                .ToListAsync();
+
+            var contingentMap = await _context.ContingentRows
+                .AsNoTracking()
+                .ToDictionaryAsync(x => x.DirectionCode);
+
+            foreach (var row in rows)
+            {
+                if (!contingentMap.TryGetValue(row.DirectionCode, out var contingent))
+                {
+                    row.StudentsCount = 0;
+                    row.GroupCount = 0;
+                    row.TotalHours = 0;
+                    continue;
+                }
+
+                row.StudentsCount = CalculationHelper.GetStudentsByCourse(contingent, row.Course);
+                row.GroupCount = CalculationHelper.GetGroupsByCourse(contingent, row.Course);
+                row.TotalHours = CalculateGiaHours(row, norms, contingent);
+            }
+        }
+
+        private decimal CalculateGiaHours(
+            GiaWorkloadRow row,
+            List<NormTime> norms,
+            ContingentRow contingent)
+        {
+            if (row.WorkName == "Консультация к госэкзамену")
+            {
+                return CalculationHelper.RoundHours(row.ManualHours);
+            }
+
+            var normName = GetGiaNormName(row, contingent);
+            var norm = norms.FirstOrDefault(x => x.WorkName == normName);
+
+            if (norm == null)
+            {
+                return 0;
+            }
+
+            var result = CalculationHelper.CalculateByNorm(
+                calculationBase: norm.CalculationBase,
+                coefficient: norm.Hours,
+                studentsCount: row.StudentsCount,
+                groupCount: row.GroupCount);
+
+            return CalculationHelper.RoundHours(result);
+        }
+
+        private static string GetGiaNormName(GiaWorkloadRow row, ContingentRow contingent)
+        {
+            if (row.WorkName == "Руководство ВКР")
+            {
+                return contingent.IsMaster
+                    ? "Руководство ВКР магистра"
+                    : "Руководство ВКР бакалавра";
+            }
+
+            return row.WorkName;
+        }
+
+        private static NormTime? FindPracticeNorm(List<NormTime> norms, string practiceName)
+        {
+            var target = NormalizePracticeKey(practiceName);
+
+            return norms.FirstOrDefault(x => NormalizePracticeKey(x.WorkName) == target)
+                   ?? norms.FirstOrDefault(x => IsSamePracticeType(x.WorkName, practiceName));
+        }
+
+        private static bool IsSamePracticeType(string? left, string? right)
+        {
+            var a = NormalizePracticeKey(left);
+            var b = NormalizePracticeKey(right);
+
+            if (a == b) return true;
+            if (a.Contains("технологическ") && b.Contains("технологическ")) return true;
+            if (a.Contains("преддиплом") && b.Contains("преддиплом")) return true;
+            if (a.Contains("ознаком") && b.Contains("ознаком")) return true;
+            if (a == "нир" && b == "нир") return true;
+            if (a.Contains("научно-исследователь") && b.Contains("научно-исследователь")) return true;
+            if (a.Contains("учебн") && b.Contains("учебн")) return true;
+
+            return false;
+        }
+
+        private static string NormalizePracticeKey(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            var normalized = value
+                .Trim()
+                .ToLowerInvariant()
+                .Replace("ё", "е")
+                .Replace("бакалавров", "")
+                .Replace("магистров", "")
+                .Replace("(учебная)", "")
+                .Replace("(производственная)", "");
+
+            return string.Join(' ', normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        private static string NormalizeText(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            return string.Join(' ', value
+                .Trim()
+                .ToLowerInvariant()
+                .Replace("ё", "е")
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        }
+
         private static void ResetCalculatedFields(WorkloadRow row)
         {
             row.StudentsCount = 0;
@@ -182,21 +376,6 @@ namespace DepartmentLoadApp.Controllers
             return _context.NormTimes
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.WorkName == workName);
-        }
-
-        private static bool IsDisciplineRecord(string? index)
-        {
-            if (string.IsNullOrWhiteSpace(index))
-                return false;
-
-            var normalized = index.Trim().ToUpperInvariant();
-
-            return normalized.StartsWith("Б1.") || normalized.StartsWith("ФТД");
-        }
-
-        private static string GetEducationFormName(DepartmentLoadApp.Models.Core.AcademicPlan plan)
-        {
-            return plan.EducationForm.ToString();
         }
     }
 }

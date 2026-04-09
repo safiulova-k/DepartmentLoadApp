@@ -110,11 +110,13 @@ public class IndividualPlanService
         var planRows = await BuildPlanRowsAsync(academicYear, plan.Id);
 
         using var workbook = new XLWorkbook(templatePath);
+
         FillTitleSheet(workbook, plan, academicYear);
+        FillSummarySheet(workbook, plan, academicYear);
+
         FillAutumnSheet(
             workbook,
             academicYear,
-            plan,
             planRows.Where(x => x.Semester == SemesterKind.Autumn).ToList());
 
         FillSpringSheet(
@@ -334,14 +336,12 @@ public class IndividualPlanService
     }
 
     private static void FillTitleSheet(
-        XLWorkbook workbook,
-        LecturerAcademicYearPlan plan,
-        string academicYear)
+     XLWorkbook workbook,
+     LecturerAcademicYearPlan plan,
+     string academicYear)
     {
         var sheet = workbook.Worksheet("Титул");
         var lecturer = plan.Lecturer!;
-
-        var startYear = academicYear.Split('-')[0];
 
         sheet.Cell("F17").Value = lecturer.LastName;
         sheet.Cell("F18").Value = lecturer.FirstName;
@@ -351,43 +351,43 @@ public class IndividualPlanService
 
         sheet.Cell("F22").Value = string.Empty;
         sheet.Cell("F23").Value = string.Empty;
-
-        // Год учебного года на титуле
-        sheet.Cell("E4").Value = academicYear;
-
-        // Количество занимаемых ставок
-        sheet.Cell("H5").Value = plan.Rate;
-        sheet.Cell("H5").Style.NumberFormat.Format = "0.##";
     }
+    private static void FillSummarySheet(
+    XLWorkbook workbook,
+    LecturerAcademicYearPlan plan,
+    string academicYear)
+    {
+        var sheet = workbook.Worksheet("Сводная таблица");
+        var academicYearForTemplate = academicYear.Replace("-", "/");
 
+        sheet.Cell("A3").Value = $"на {academicYearForTemplate} учебный год";
+        sheet.Cell("H4").Value = plan.Rate;
+        sheet.Cell("H4").Style.NumberFormat.Format = "0.##";
+    }
     private static void FillAutumnSheet(
-        XLWorkbook workbook,
-        string academicYear,
-        LecturerAcademicYearPlan plan,
-        List<IndividualPlanRowData> rows)
+     XLWorkbook workbook,
+     string academicYear,
+     List<IndividualPlanRowData> rows)
     {
         var sheet = workbook.Worksheet("Осенний сем.");
         var startYear = academicYear.Split('-')[0];
+        var academicYearForTemplate = academicYear.Replace("-", "/");
 
-        sheet.Cell("G1").Value =
-            $"1.1 Нагрузка преподавателя по программам высшего образования (ВО)    {academicYear} уч. год";
+        sheet.Cell("D2").Value =
+            $"1.1 Нагрузка преподавателя по программам высшего образования (ВО)     {academicYearForTemplate}уч. год ";
 
-        sheet.Cell("I2").Value = "a) Осенний семестр";
-
-        // В блоке утверждения ставим год начала расчета
-        sheet.Cell("C4").Value = $"{startYear}г";
+        sheet.Cell("I3").Value = "a) Осенний семестр";
+        sheet.Cell("A4").Value = $"\"____\"______________________{startYear}г";
 
         FillSemesterSheet(
             sheet,
             rows,
-            new SemesterSheetConfig
-            {
-                DataStartRow = 8,
-                TotalRow = 20,
-                ActualRow = 21,
-                YearTotalRow = null
-            },
-            autumnTotalSheet: null);
+            dataStartRow: 8,
+            dataEndRow: 19,
+            totalRow: 20,
+            actualRow: 21,
+            yearTotalRow: null,
+            yearActualRow: null);
     }
 
     private static void FillSpringSheet(
@@ -395,62 +395,72 @@ public class IndividualPlanService
         string academicYear,
         List<IndividualPlanRowData> rows)
     {
-        var springSheet = workbook.Worksheet("Весенний сем.");
-        springSheet.Cell("A1").Value = "a) Весенний семестр";
+        var sheet = workbook.Worksheet("Весенний сем.");
+
+        sheet.Cell("A1").Value = "a) Весенний семестр";
 
         FillSemesterSheet(
-            springSheet,
+            sheet,
             rows,
-            new SemesterSheetConfig
-            {
-                DataStartRow = 5,
-                TotalRow = 18,
-                ActualRow = 19,
-                YearTotalRow = 20
-            },
-            autumnTotalSheet: workbook.Worksheet("Осенний сем."));
+            dataStartRow: 5,
+            dataEndRow: 17,
+            totalRow: 18,
+            actualRow: 19,
+            yearTotalRow: 20,
+            yearActualRow: 21);
     }
 
     private static void FillSemesterSheet(
-        IXLWorksheet sheet,
-        List<IndividualPlanRowData> rows,
-        SemesterSheetConfig config,
-        IXLWorksheet? autumnTotalSheet)
+     IXLWorksheet sheet,
+     List<IndividualPlanRowData> rows,
+     int dataStartRow,
+     int dataEndRow,
+     int totalRow,
+     int actualRow,
+     int? yearTotalRow,
+     int? yearActualRow)
     {
-        const int totalColumns = 22;
-
-        var templateCapacity = config.TotalRow - config.DataStartRow;
-        var requiredCapacity = Math.Max(rows.Count, templateCapacity);
+        const int lastColumn = 22;
+        var templateCapacity = dataEndRow - dataStartRow + 1;
         var extraRows = Math.Max(0, rows.Count - templateCapacity);
 
         if (extraRows > 0)
         {
-            sheet.Row(config.TotalRow).InsertRowsAbove(extraRows);
+            sheet.Row(totalRow).InsertRowsAbove(extraRows);
 
-            var templateRowIndex = config.TotalRow - 1;
-
-            for (var rowIndex = config.TotalRow; rowIndex < config.TotalRow + extraRows; rowIndex++)
+            for (var i = 0; i < extraRows; i++)
             {
-                for (var col = 1; col <= totalColumns; col++)
+                var newRow = totalRow + i;
+                var templateRow = totalRow - 1;
+
+                for (var col = 1; col <= lastColumn; col++)
                 {
-                    sheet.Cell(rowIndex, col).Style = sheet.Cell(templateRowIndex, col).Style;
-                    sheet.Cell(rowIndex, col).Clear(XLClearOptions.Contents);
+                    sheet.Cell(newRow, col).Style = sheet.Cell(templateRow, col).Style;
+                    sheet.Cell(newRow, col).Clear(XLClearOptions.Contents);
                 }
 
-                sheet.Row(rowIndex).Height = sheet.Row(templateRowIndex).Height;
-                sheet.Range(rowIndex, 1, rowIndex, 3).Unmerge();
-                sheet.Range(rowIndex, 1, rowIndex, 3).Merge();
+                sheet.Range(newRow, 1, newRow, 3).Unmerge();
+                sheet.Range(newRow, 1, newRow, 3).Merge();
+            }
+
+            dataEndRow += extraRows;
+            totalRow += extraRows;
+            actualRow += extraRows;
+
+            if (yearTotalRow.HasValue)
+            {
+                yearTotalRow += extraRows;
+            }
+
+            if (yearActualRow.HasValue)
+            {
+                yearActualRow += extraRows;
             }
         }
 
-        var totalRow = config.TotalRow + extraRows;
-        var actualRow = config.ActualRow + extraRows;
-        var yearTotalRow = config.YearTotalRow.HasValue ? config.YearTotalRow.Value + extraRows : (int?)null;
-        var dataEndRow = totalRow - 1;
-
-        for (var row = config.DataStartRow; row <= dataEndRow; row++)
+        for (var row = dataStartRow; row <= dataEndRow; row++)
         {
-            for (var col = 1; col <= totalColumns; col++)
+            for (var col = 1; col <= lastColumn; col++)
             {
                 sheet.Cell(row, col).Clear(XLClearOptions.Contents);
             }
@@ -459,39 +469,35 @@ public class IndividualPlanService
             sheet.Range(row, 1, row, 3).Merge();
         }
 
-        for (var i = 0; i < requiredCapacity; i++)
+        for (var i = 0; i < rows.Count; i++)
         {
-            var rowNumber = config.DataStartRow + i;
-            var item = i < rows.Count ? rows[i] : null;
+            var targetRow = dataStartRow + i;
+            var item = rows[i];
 
-            if (item != null)
-            {
-                sheet.Cell(rowNumber, 1).Value = item.DisplayText;
-                sheet.Cell(rowNumber, 4).Value = item.StudentsCount == 0 ? string.Empty : item.StudentsCount;
+            sheet.Cell(targetRow, 1).Value = item.DisplayText;
+            sheet.Cell(targetRow, 4).Value = item.StudentsCount == 0 ? string.Empty : item.StudentsCount;
 
-                SetHourValue(sheet, rowNumber, 5, item.LectureHours);
-                SetHourValue(sheet, rowNumber, 6, item.PracticeHours);
-                SetHourValue(sheet, rowNumber, 7, item.LaboratoryHours);
-                SetHourValue(sheet, rowNumber, 8, item.CourseProjectHours);
-                SetHourValue(sheet, rowNumber, 9, item.ConsultationHours);
-                SetHourValue(sheet, rowNumber, 10, item.CreditHours);
-                SetHourValue(sheet, rowNumber, 11, item.ExamHours);
-                SetHourValue(sheet, rowNumber, 13, item.PracticeHoursGuidance);
-                SetHourValue(sheet, rowNumber, 17, item.GiaHours);
-                SetHourValue(sheet, rowNumber, 20, item.OtherHours);
-            }
+            SetHourValue(sheet, targetRow, 5, item.LectureHours);              // E Лекции
+            SetHourValue(sheet, targetRow, 6, item.PracticeHours);             // F Практ.
+            SetHourValue(sheet, targetRow, 7, item.LaboratoryHours);           // G Лаб.
+            SetHourValue(sheet, targetRow, 8, item.CourseProjectHours);        // H Курсовое проектирование
+            SetHourValue(sheet, targetRow, 9, item.ConsultationHours);         // I Консультации
+            SetHourValue(sheet, targetRow, 10, item.CreditHours);              // J Зачеты
+            SetHourValue(sheet, targetRow, 11, item.ExamHours);                // K Экзамены
+            SetHourValue(sheet, targetRow, 13, item.PracticeHoursGuidance);    // M Руководство практиками
+            SetHourValue(sheet, targetRow, 17, item.GiaHours);                 // Q Работа в ГИА
+            SetHourValue(sheet, targetRow, 20, item.OtherHours);               // T Другие виды работ
 
-            sheet.Cell(rowNumber, 21).FormulaA1 = $"SUM(E{rowNumber}:T{rowNumber})";
-            sheet.Cell(rowNumber, 22).FormulaA1 = $"U{rowNumber}";
+            sheet.Cell(targetRow, 21).FormulaA1 = $"SUM(E{targetRow}:T{targetRow})";
+            sheet.Cell(targetRow, 22).FormulaA1 = $"U{targetRow}";
         }
 
         sheet.Cell(totalRow, 1).Value = "Итого за семестр";
 
         for (var col = 5; col <= 21; col++)
         {
-            var columnLetter = XLHelper.GetColumnLetterFromNumber(col);
-            sheet.Cell(totalRow, col).FormulaA1 =
-                $"SUM({columnLetter}{config.DataStartRow}:{columnLetter}{dataEndRow})";
+            var letter = XLHelper.GetColumnLetterFromNumber(col);
+            sheet.Cell(totalRow, col).FormulaA1 = $"SUM({letter}{dataStartRow}:{letter}{dataEndRow})";
         }
 
         sheet.Cell(totalRow, 22).FormulaA1 = $"U{totalRow}";
@@ -500,22 +506,32 @@ public class IndividualPlanService
 
         for (var col = 5; col <= 22; col++)
         {
-            var columnLetter = XLHelper.GetColumnLetterFromNumber(col);
-            sheet.Cell(actualRow, col).FormulaA1 = $"{columnLetter}{totalRow}";
+            var letter = XLHelper.GetColumnLetterFromNumber(col);
+            sheet.Cell(actualRow, col).FormulaA1 = $"{letter}{totalRow}";
         }
 
-        if (yearTotalRow.HasValue && autumnTotalSheet != null)
+        if (yearTotalRow.HasValue)
         {
             sheet.Cell(yearTotalRow.Value, 1).Value = "Итого за учебный год по ВО";
 
-            for (var col = 5; col <= 21; col++)
+            for (var col = 5; col <= 22; col++)
             {
-                var columnLetter = XLHelper.GetColumnLetterFromNumber(col);
+                var letter = XLHelper.GetColumnLetterFromNumber(col);
                 sheet.Cell(yearTotalRow.Value, col).FormulaA1 =
-                    $"SUM({columnLetter}{totalRow},'Осенний сем.'!{columnLetter}20)";
+                    $"SUM({letter}{totalRow},'Осенний сем.'!{letter}{(totalRow == 18 ? 20 : 20)})";
             }
+        }
 
-            sheet.Cell(yearTotalRow.Value, 22).FormulaA1 = $"U{yearTotalRow.Value}";
+        if (yearActualRow.HasValue)
+        {
+            sheet.Cell(yearActualRow.Value, 1).Value = "Фактически  выполнено за учебный год по ВО";
+
+            for (var col = 5; col <= 22; col++)
+            {
+                var letter = XLHelper.GetColumnLetterFromNumber(col);
+                sheet.Cell(yearActualRow.Value, col).FormulaA1 =
+                    $"SUM({letter}{actualRow},'Осенний сем.'!{letter}21)";
+            }
         }
     }
 
@@ -673,14 +689,6 @@ public class IndividualPlanService
         }
 
         return sanitized.Trim('_');
-    }
-
-    private sealed class SemesterSheetConfig
-    {
-        public int DataStartRow { get; set; }
-        public int TotalRow { get; set; }
-        public int ActualRow { get; set; }
-        public int? YearTotalRow { get; set; }
     }
 
     private sealed class IndividualPlanRowData
