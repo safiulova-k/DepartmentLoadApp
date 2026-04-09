@@ -114,16 +114,19 @@ namespace DepartmentLoadApp.Controllers
         {
             var norms = await _context.NormTimes
                 .AsNoTracking()
-                .Where(x => x.CategoryName == "Практика" || x.CategoryName == "Научная работа")
+                .Where(x =>
+                    !string.IsNullOrWhiteSpace(x.CategoryName) &&
+                    (EF.Functions.ILike(x.CategoryName, "%практи%") ||
+                     EF.Functions.ILike(x.CategoryName, "%науч%")))
                 .ToListAsync();
 
             var contingentMap = await _context.ContingentRows
                 .AsNoTracking()
-                .ToDictionaryAsync(x => x.DirectionCode);
+                .ToDictionaryAsync(x => NormalizeText(x.DirectionCode));
 
             foreach (var row in rows)
             {
-                if (!contingentMap.TryGetValue(row.DirectionCode, out var contingent))
+                if (!contingentMap.TryGetValue(NormalizeText(row.DirectionCode), out var contingent))
                 {
                     row.StudentsCount = 0;
                     row.GroupCount = 0;
@@ -134,8 +137,9 @@ namespace DepartmentLoadApp.Controllers
                 row.StudentsCount = CalculationHelper.GetStudentsByCourse(contingent, row.Course);
                 row.GroupCount = CalculationHelper.GetGroupsByCourse(contingent, row.Course);
 
-                var norm = norms.FirstOrDefault(x => x.WorkName == row.PracticeName);
-                if (norm == null)
+                var norm = FindPracticeNorm(norms, row.PracticeName);
+
+                if (norm == null || row.WeeksCount <= 0 || norm.Hours <= 0)
                 {
                     row.TotalHours = 0;
                     continue;
@@ -150,6 +154,72 @@ namespace DepartmentLoadApp.Controllers
 
                 row.TotalHours = CalculationHelper.RoundHours(result);
             }
+        }
+
+        private static NormTime? FindPracticeNorm(List<NormTime> norms, string practiceName)
+        {
+            var target = NormalizePracticeKey(practiceName);
+
+            return norms.FirstOrDefault(x => NormalizePracticeKey(x.WorkName) == target)
+                ?? norms.FirstOrDefault(x => IsSamePracticeType(x.WorkName, practiceName));
+        }
+
+        private static bool IsSamePracticeType(string? left, string? right)
+        {
+            var a = NormalizePracticeKey(left);
+            var b = NormalizePracticeKey(right);
+
+            if (a == b)
+                return true;
+
+            if (a.Contains("технологическ") && b.Contains("технологическ"))
+                return true;
+
+            if (a.Contains("преддиплом") && b.Contains("преддиплом"))
+                return true;
+
+            if (a.Contains("ознаком") && b.Contains("ознаком"))
+                return true;
+
+            if (a == "нир" && b == "нир")
+                return true;
+
+            if (a.Contains("научно-исследователь") && b.Contains("научно-исследователь"))
+                return true;
+
+            if (a.Contains("учебн") && b.Contains("учебн"))
+                return true;
+
+            return false;
+        }
+
+        private static string NormalizePracticeKey(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            var normalized = value
+                .Trim()
+                .ToLowerInvariant()
+                .Replace("ё", "е")
+                .Replace("бакалавров", "")
+                .Replace("магистров", "")
+                .Replace("(учебная)", "")
+                .Replace("(производственная)", "");
+
+            return string.Join(' ', normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        private static string NormalizeText(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            return string.Join(' ', value
+                .Trim()
+                .ToLowerInvariant()
+                .Replace("ё", "е")
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries));
         }
 
         private static bool IsPracticeRecord(string? index)

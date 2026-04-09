@@ -107,33 +107,38 @@
                         <tr>
                             <td>
                                 @Model.Rows[i].SemesterName
-                                <input type="hidden" asp-for="Rows[@i].Id" />
-                                <input type="hidden" asp-for="Rows[@i].PlanYear" />
-                                <input type="hidden" asp-for="Rows[@i].AcademicPlanId" />
-                                <input type="hidden" asp-for="Rows[@i].AcademicPlanRecordId" />
-                                <input type="hidden" asp-for="Rows[@i].PracticeName" />
-                                <input type="hidden" asp-for="Rows[@i].DirectionCode" />
-                                <input type="hidden" asp-for="Rows[@i].DirectionName" />
-                                <input type="hidden" asp-for="Rows[@i].Course" />
-                                <input type="hidden" asp-for="Rows[@i].SemesterName" />
-                                <input type="hidden" asp-for="Rows[@i].EducationForm" />
-                                <input type="hidden" asp-for="Rows[@i].StudentsCount" />
-                                <input type="hidden" asp-for="Rows[@i].GroupCount" />
-                                <input type="hidden" asp-for="Rows[@i].TotalHours" />
+
+                                <input type="hidden" name="Rows[@i].Id" value="@Model.Rows[i].Id" />
+                                <input type="hidden" name="Rows[@i].PlanYear" value="@Model.Rows[i].PlanYear" />
+                                <input type="hidden" name="Rows[@i].AcademicPlanId" value="@Model.Rows[i].AcademicPlanId" />
+                                <input type="hidden" name="Rows[@i].AcademicPlanRecordId" value="@Model.Rows[i].AcademicPlanRecordId" />
+                                <input type="hidden" name="Rows[@i].PracticeName" value="@Model.Rows[i].PracticeName" />
+                                <input type="hidden" name="Rows[@i].DirectionCode" value="@Model.Rows[i].DirectionCode" />
+                                <input type="hidden" name="Rows[@i].DirectionName" value="@Model.Rows[i].DirectionName" />
+                                <input type="hidden" name="Rows[@i].Course" value="@Model.Rows[i].Course" />
+                                <input type="hidden" name="Rows[@i].SemesterName" value="@Model.Rows[i].SemesterName" />
+                                <input type="hidden" name="Rows[@i].EducationForm" value="@Model.Rows[i].EducationForm" />
+                                <input type="hidden" name="Rows[@i].StudentsCount" value="@Model.Rows[i].StudentsCount" />
+                                <input type="hidden" name="Rows[@i].GroupCount" value="@Model.Rows[i].GroupCount" />
+                                <input type="hidden" name="Rows[@i].TotalHours" value="@Model.Rows[i].TotalHours.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                             </td>
+
                             <td>@Model.Rows[i].EducationForm</td>
                             <td>@Model.Rows[i].DirectionCode</td>
                             <td>@Model.Rows[i].PracticeName</td>
                             <td>@Model.Rows[i].Course</td>
                             <td>@Model.Rows[i].GroupCount</td>
                             <td>@Model.Rows[i].StudentsCount</td>
+
                             <td style="max-width: 140px;">
-                                <input asp-for="Rows[@i].WeeksCount"
-                                       type="number"
+                                <input type="number"
                                        min="0"
                                        step="1"
+                                       name="Rows[@i].WeeksCount"
+                                       value="@Model.Rows[i].WeeksCount"
                                        class="form-control" />
                             </td>
+
                             <td>@Model.Rows[i].TotalHours.ToString("0.##")</td>
                         </tr>
                     }
