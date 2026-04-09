@@ -3,128 +3,147 @@
 @{
     ViewData["Title"] = "Практики";
 }
-@await Html.PartialAsync(
-        "_CalculationTopPanel",
-        new DepartmentLoadApp.ViewModels.Shared.CalculationTopPanelViewModel
-    {
-        SelectedYear = Model.SelectedYear,
-        SelectedYearStart = Model.SelectedYearStart,
-        AvailableYearStarts = Model.AvailableYearStarts,
-        ActiveTab = "practice"
-    })
-<div class="container-fluid py-4">
-    <div class="card shadow-sm border-0 rounded-4">
-        <div class="card-body p-4">
-            <div class="mb-4">
-                <h1 class="h2 mb-2">Практики</h1>
-                <div class="text-muted">
-                    Для практик вручную задается количество недель. Количество студентов и групп подтягивается из контингента,
-                    коэффициент берется со страницы норм времени, итог рассчитывается автоматически.
-                </div>
-            </div>
 
-            <form asp-controller="PracticeCalculation" asp-action="Save" method="post">
-                @Html.AntiForgeryToken()
-                <input type="hidden" asp-for="SelectedYear" />
+<h1 class="mb-4">Расчет нагрузки по практикам</h1>
 
-                <div class="table-responsive">
-                    <table class="table table-bordered align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Семестр</th>
-                                <th>Форма обучения</th>
-                                <th>Код направления</th>
-                                <th>Вид практики</th>
-                                <th>Курс</th>
-                                <th>Групп</th>
-                                <th>Студентов</th>
-                                <th>Количество недель</th>
-                                <th>Итого</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @for (int i = 0; i < Model.Rows.Count; i++)
-                            {
-                                <tr>
-                                    <td>
-                                        <input type="hidden" asp-for="Rows[i].Id" />
-                                        <input type="hidden" asp-for="Rows[i].PlanYear" />
-                                        <input type="hidden" asp-for="Rows[i].PracticeName" />
-                                        <input type="hidden" asp-for="Rows[i].DirectionName" />
-                                        <input type="hidden" asp-for="Rows[i].SemesterName" />
-                                        <input type="hidden" asp-for="Rows[i].EducationForm" />
-                                        <input type="hidden" asp-for="Rows[i].StudentsCount" />
-                                        <input type="hidden" asp-for="Rows[i].GroupCount" />
-                                        <input type="hidden" asp-for="Rows[i].TotalHours" />
+<form asp-action="ImportFromAcademicPlan" method="post" class="row g-3 align-items-end mb-4">
+    @Html.AntiForgeryToken()
 
-                                        <input asp-for="Rows[i].SemesterName"
-                                               class="form-control form-control-sm text-center"
-                                               readonly />
-                                    </td>
-
-                                    <td>
-                                        <input asp-for="Rows[i].EducationForm"
-                                               class="form-control form-control-sm text-center"
-                                               readonly />
-                                    </td>
-
-                                    <td class="text-center fw-semibold">
-                                        @Model.Rows[i].DirectionCode
-                                    </td>
-
-                                    <td>
-                                        <div class="fw-semibold">@Model.Rows[i].PracticeName</div>
-                                    </td>
-
-                                    <td>
-                                        <input asp-for="Rows[i].Course"
-                                               class="form-control form-control-sm text-center"
-                                               readonly />
-                                    </td>
-
-                                    <td class="text-center fw-semibold">
-                                        @Model.Rows[i].GroupCount
-                                    </td>
-
-                                    <td class="text-center fw-semibold">
-                                        @Model.Rows[i].StudentsCount
-                                    </td>
-
-                                    <td>
-                                        <input asp-for="Rows[i].WeeksCount"
-                                               class="form-control form-control-sm text-center"
-                                               type="number"
-                                               min="0"
-                                               step="1" />
-                                        <span asp-validation-for="Rows[i].WeeksCount" class="text-danger small"></span>
-                                    </td>
-
-                                    <td class="text-center fw-bold">
-                                        @Model.Rows[i].TotalHours
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="d-flex justify-content-end mt-4">
-                    <button type="submit" class="btn btn-primary px-4">
-                        Сохранить и пересчитать
-                    </button>
-
-                    <a asp-action="ExportToExcel"
-                       asp-route-year="@Model.SelectedYear"
-                       class="btn btn-success">
-                        Выгрузить в Excel
-                    </a>
-
-                </div>
-            </form>
-        </div>
+    <div class="col-auto">
+        <label class="form-label">Год начала расчета</label>
+        <select name="startYear" class="form-select">
+            @foreach (var year in Model.AvailableYearStarts)
+            {
+                if (year == Model.SelectedYearStart)
+                {
+                    <option value="@year" selected>@year</option>
+                }
+                else
+                {
+                    <option value="@year">@year</option>
+                }
+            }
+        </select>
     </div>
+
+    <div class="col-auto">
+        <label class="form-label">Учебный год</label>
+        <input class="form-control" value="@Model.SelectedYear" readonly />
+    </div>
+
+    <div class="col-auto d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Рассчитать</button>
+
+        <a asp-action="ExportToExcel"
+           asp-route-startYear="@Model.SelectedYearStart"
+           class="btn btn-outline-success">
+            Выгрузить в Excel
+        </a>
+    </div>
+</form>
+
+<div class="mb-3 d-flex gap-2">
+    <a asp-controller="WorkloadCalculation"
+       asp-action="Index"
+       asp-route-startYear="@Model.SelectedYearStart"
+       class="btn btn-outline-primary">
+        Дисциплины
+    </a>
+
+    <a asp-controller="PracticeCalculation"
+       asp-action="Index"
+       asp-route-startYear="@Model.SelectedYearStart"
+       class="btn btn-primary">
+        Практики
+    </a>
+
+    <a asp-controller="GiaCalculation"
+       asp-action="Index"
+       asp-route-startYear="@Model.SelectedYearStart"
+       class="btn btn-outline-primary">
+        ГИА
+    </a>
 </div>
 
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-}
+<p class="text-muted">
+    Для практик вручную задается только количество недель. Остальные данные
+    подтягиваются автоматически из учебных планов, контингента и норм времени.
+</p>
+
+<form asp-action="Save" method="post">
+    @Html.AntiForgeryToken()
+
+    <input type="hidden" asp-for="SelectedYearStart" />
+    <input type="hidden" asp-for="SelectedYear" />
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-light text-center align-middle">
+                <tr>
+                    <th>Семестр</th>
+                    <th>Форма обучения</th>
+                    <th>Код направления</th>
+                    <th>Вид практики</th>
+                    <th>Курс</th>
+                    <th>Групп</th>
+                    <th>Студентов</th>
+                    <th>Количество недель</th>
+                    <th>Итого</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Rows == null || !Model.Rows.Any())
+                {
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">
+                            По выбранному учебному году данных пока нет
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @for (int i = 0; i < Model.Rows.Count; i++)
+                    {
+                        <tr>
+                            <td>
+                                @Model.Rows[i].SemesterName
+                                <input type="hidden" asp-for="Rows[@i].Id" />
+                                <input type="hidden" asp-for="Rows[@i].PlanYear" />
+                                <input type="hidden" asp-for="Rows[@i].AcademicPlanId" />
+                                <input type="hidden" asp-for="Rows[@i].AcademicPlanRecordId" />
+                                <input type="hidden" asp-for="Rows[@i].PracticeName" />
+                                <input type="hidden" asp-for="Rows[@i].DirectionCode" />
+                                <input type="hidden" asp-for="Rows[@i].DirectionName" />
+                                <input type="hidden" asp-for="Rows[@i].Course" />
+                                <input type="hidden" asp-for="Rows[@i].SemesterName" />
+                                <input type="hidden" asp-for="Rows[@i].EducationForm" />
+                                <input type="hidden" asp-for="Rows[@i].StudentsCount" />
+                                <input type="hidden" asp-for="Rows[@i].GroupCount" />
+                                <input type="hidden" asp-for="Rows[@i].TotalHours" />
+                            </td>
+                            <td>@Model.Rows[i].EducationForm</td>
+                            <td>@Model.Rows[i].DirectionCode</td>
+                            <td>@Model.Rows[i].PracticeName</td>
+                            <td>@Model.Rows[i].Course</td>
+                            <td>@Model.Rows[i].GroupCount</td>
+                            <td>@Model.Rows[i].StudentsCount</td>
+                            <td style="max-width: 140px;">
+                                <input asp-for="Rows[@i].WeeksCount"
+                                       type="number"
+                                       min="0"
+                                       step="1"
+                                       class="form-control" />
+                            </td>
+                            <td>@Model.Rows[i].TotalHours.ToString("0.##")</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.Rows != null && Model.Rows.Any())
+    {
+        <button type="submit" class="btn btn-primary">Сохранить недели и пересчитать</button>
+    }
+</form>

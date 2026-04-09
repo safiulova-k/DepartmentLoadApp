@@ -7,48 +7,107 @@
     var vkrRows = Model.Rows.Where(x => x.GiaSection == "Дипломное проектирование").ToList();
     var gecRows = Model.Rows.Where(x => x.GiaSection == "ГЭК").ToList();
 }
-@await Html.PartialAsync(
-        "_CalculationTopPanel",
-        new DepartmentLoadApp.ViewModels.Shared.CalculationTopPanelViewModel
-    {
-        SelectedYear = Model.SelectedYear,
-        SelectedYearStart = Model.SelectedYearStart,
-        AvailableYearStarts = Model.AvailableYearStarts,
-        ActiveTab = "gia"
-    })
-<h1 class="mb-3">ГИА</h1>
+
+<h1 class="mb-4">Расчет нагрузки по ГИА</h1>
+
+<form asp-action="ImportFromAcademicPlan" method="post" class="row g-3 align-items-end mb-4">
+    @Html.AntiForgeryToken()
+
+    <div class="col-auto">
+        <label class="form-label">Год начала расчета</label>
+        <select name="startYear" class="form-select">
+            @foreach (var year in Model.AvailableYearStarts)
+            {
+                if (year == Model.SelectedYearStart)
+                {
+                    <option value="@year" selected>@year</option>
+                }
+                else
+                {
+                    <option value="@year">@year</option>
+                }
+            }
+        </select>
+    </div>
+
+    <div class="col-auto">
+        <label class="form-label">Учебный год</label>
+        <input class="form-control" value="@Model.SelectedYear" readonly />
+    </div>
+
+    <div class="col-auto d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Рассчитать</button>
+
+        <a asp-action="ExportToExcel"
+           asp-route-startYear="@Model.SelectedYearStart"
+           class="btn btn-outline-success">
+            Выгрузить в Excel
+        </a>
+    </div>
+</form>
+
+<div class="mb-3 d-flex gap-2">
+    <a asp-controller="WorkloadCalculation"
+       asp-action="Index"
+       asp-route-startYear="@Model.SelectedYearStart"
+       class="btn btn-outline-primary">
+        Дисциплины
+    </a>
+
+    <a asp-controller="PracticeCalculation"
+       asp-action="Index"
+       asp-route-startYear="@Model.SelectedYearStart"
+       class="btn btn-outline-primary">
+        Практики
+    </a>
+
+    <a asp-controller="GiaCalculation"
+       asp-action="Index"
+       asp-route-startYear="@Model.SelectedYearStart"
+       class="btn btn-primary">
+        ГИА
+    </a>
+</div>
 
 <p class="text-muted">
-    Количество студентов и групп берётся из контингента.
-    Если в учебном плане есть госэкзамен, создаются строки консультации и госэкзамена.
-    Если есть ВКР, создаются строки руководства ВКР, нормоконтроля и работы в ГЭК.
+    Для ГИА автоматически создаются строки по госэкзамену и ВКР.
+    Вручную задаются только часы консультации к госэкзамену.
 </p>
 
 <form asp-action="Save" method="post">
     @Html.AntiForgeryToken()
+
+    <input type="hidden" asp-for="SelectedYearStart" />
     <input type="hidden" asp-for="SelectedYear" />
 
-    <div class="mb-4">
-        <h3>Госэкзамен</h3>
-        @await Html.PartialAsync("_GiaTable", stateExamRows)
-    </div>
+    @{
+        var offset = 0;
+    }
 
-    <div class="mb-4">
-        <h3>Дипломное проектирование</h3>
-        @await Html.PartialAsync("_GiaTable", vkrRows)
-    </div>
+    <h3 class="mt-4">Госэкзамен</h3>
+    @await Html.PartialAsync(
+            "_GiaTable",
+            stateExamRows,
+            new ViewDataDictionary(ViewData) { ["IndexOffset"] = offset })
+    offset += stateExamRows.Count;
 
-    <div class="mb-4">
-        <h3>ГЭК</h3>
-        @await Html.PartialAsync("_GiaTable", gecRows)
-    </div>
+    <h3 class="mt-4">Дипломное проектирование</h3>
+    @await Html.PartialAsync(
+            "_GiaTable",
+            vkrRows,
+            new ViewDataDictionary(ViewData) { ["IndexOffset"] = offset })
+    offset += vkrRows.Count;
 
-    <button type="submit" class="btn btn-success">Сохранить и пересчитать</button>
+    <h3 class="mt-4">ГЭК</h3>
+    @await Html.PartialAsync(
+            "_GiaTable",
+            gecRows,
+            new ViewDataDictionary(ViewData) { ["IndexOffset"] = offset })
 
-    <a asp-action="ExportToExcel"
-       asp-route-year="@Model.SelectedYear"
-       class="btn btn-success">
-        Выгрузить в Excel
-    </a>
-
+    @if (Model.Rows != null && Model.Rows.Any())
+    {
+        <button type="submit" class="btn btn-primary mt-3">
+            Сохранить часы консультаций и пересчитать
+        </button>
+    }
 </form>

@@ -1,52 +1,72 @@
 ﻿@model DepartmentLoadApp.ViewModels.Shared.CalculationTopPanelViewModel
-@using DepartmentLoadApp.Helpers
 
-<div class="card shadow-sm border-0 rounded-4 mb-4">
-    <div class="card-body p-4">
-        <form method="get" class="row g-3 align-items-end">
-            <div class="col-auto">
-                <label for="startYear" class="form-label">Год начала расчета</label>
-                <select id="startYear" name="startYear" class="form-select">
-                    @foreach (var year in Model.AvailableYearStarts)
-                    {
-                        <option value="@year" selected="@(year == Model.SelectedYearStart)">
-                            @AcademicYearResolver.BuildAcademicYear(year)
-                        </option>
-                    }
-                </select>
-            </div>
+@{
+    var currentController = Model.ActiveTab switch
+    {
+        "practice" => "PracticeCalculation",
+        "gia" => "GiaCalculation",
+        _ => "WorkloadCalculation"
+    };
+}
 
-            <div class="col-auto">
-                <label class="form-label">Учебный год</label>
-                <input class="form-control" value="@Model.SelectedYear" readonly />
-            </div>
-
-            <div class="col-auto">
-                <button type="submit" class="btn btn-primary">Показать</button>
-            </div>
-        </form>
-
-        <div class="d-flex gap-2 mt-3">
-            <a asp-controller="WorkloadCalculation"
-               asp-action="Index"
-               asp-route-startYear="@Model.SelectedYearStart"
-               class="btn @(Model.ActiveTab == "workload" ? "btn-primary" : "btn-outline-primary")">
-                Дисциплины
-            </a>
-
-            <a asp-controller="PracticeCalculation"
-               asp-action="Index"
-               asp-route-startYear="@Model.SelectedYearStart"
-               class="btn @(Model.ActiveTab == "practice" ? "btn-primary" : "btn-outline-primary")">
-                Практики
-            </a>
-
-            <a asp-controller="GiaCalculation"
-               asp-action="Index"
-               asp-route-startYear="@Model.SelectedYearStart"
-               class="btn @(Model.ActiveTab == "gia" ? "btn-primary" : "btn-outline-primary")">
-                ГИА
-            </a>
+<div class="d-flex flex-wrap gap-3 align-items-end mb-4">
+    <div>
+        <label class="form-label fw-semibold d-block">Год начала расчета</label>
+        <div class="btn-group" role="group">
+            @foreach (var year in Model.AvailableYearStarts)
+            {
+                <a asp-controller="@currentController"
+                   asp-action="Index"
+                   asp-route-startYear="@year"
+                   class="btn @(year == Model.SelectedYearStart ? "btn-primary" : "btn-outline-primary")">
+                    @year
+                </a>
+            }
         </div>
     </div>
+
+    <div style="min-width: 170px;">
+        <label class="form-label fw-semibold">Учебный год</label>
+        <input class="form-control" value="@Model.SelectedYear" readonly />
+    </div>
+
+    <div class="d-flex gap-2">
+        <form asp-controller="@currentController"
+              asp-action="ImportFromAcademicPlan"
+              asp-route-startYear="@Model.SelectedYearStart"
+              method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-success">Рассчитать</button>
+        </form>
+
+        <a asp-controller="@currentController"
+           asp-action="ExportToExcel"
+           asp-route-startYear="@Model.SelectedYearStart"
+           class="btn btn-outline-success">
+            Выгрузить в Excel
+        </a>
+    </div>
+</div>
+
+<div class="btn-group mb-4" role="group">
+    <a asp-controller="WorkloadCalculation"
+       asp-action="Index"
+       asp-route-startYear="@Model.SelectedYearStart"
+       class="btn @(Model.ActiveTab == "workload" ? "btn-dark" : "btn-outline-dark")">
+        Дисциплины
+    </a>
+
+    <a asp-controller="PracticeCalculation"
+       asp-action="Index"
+       asp-route-startYear="@Model.SelectedYearStart"
+       class="btn @(Model.ActiveTab == "practice" ? "btn-dark" : "btn-outline-dark")">
+        Практики
+    </a>
+
+    <a asp-controller="GiaCalculation"
+       asp-action="Index"
+       asp-route-startYear="@Model.SelectedYearStart"
+       class="btn @(Model.ActiveTab == "gia" ? "btn-dark" : "btn-outline-dark")">
+        ГИА
+    </a>
 </div>

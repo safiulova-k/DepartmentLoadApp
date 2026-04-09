@@ -1,5 +1,9 @@
 ﻿@model List<DepartmentLoadApp.Models.Gia.GiaWorkloadRow>
 
+@{
+    var indexOffset = (int?)ViewData["IndexOffset"] ?? 0;
+}
+
 @if (Model.Count == 0)
 {
     <div class="alert alert-light border">Нет строк для отображения.</div>
@@ -24,20 +28,25 @@ else
             <tbody>
                 @for (int i = 0; i < Model.Count; i++)
                 {
+                    var index = indexOffset + i;
+
                     <tr>
                         <td>
                             @Model[i].SemesterName
-                            <input type="hidden" name="Rows[@i].Id" value="@Model[i].Id" />
-                            <input type="hidden" name="Rows[@i].PlanYear" value="@Model[i].PlanYear" />
-                            <input type="hidden" name="Rows[@i].GiaSection" value="@Model[i].GiaSection" />
-                            <input type="hidden" name="Rows[@i].WorkName" value="@Model[i].WorkName" />
-                            <input type="hidden" name="Rows[@i].DirectionCode" value="@Model[i].DirectionCode" />
-                            <input type="hidden" name="Rows[@i].Course" value="@Model[i].Course" />
-                            <input type="hidden" name="Rows[@i].SemesterName" value="@Model[i].SemesterName" />
-                            <input type="hidden" name="Rows[@i].EducationForm" value="@Model[i].EducationForm" />
-                            <input type="hidden" name="Rows[@i].StudentsCount" value="@Model[i].StudentsCount" />
-                            <input type="hidden" name="Rows[@i].GroupCount" value="@Model[i].GroupCount" />
-                            <input type="hidden" name="Rows[@i].TotalHours" value="@Model[i].TotalHours" />
+                            <input type="hidden" name="Rows[@index].Id" value="@Model[i].Id" />
+                            <input type="hidden" name="Rows[@index].PlanYear" value="@Model[i].PlanYear" />
+                            <input type="hidden" name="Rows[@index].AcademicPlanId" value="@Model[i].AcademicPlanId" />
+                            <input type="hidden" name="Rows[@index].AcademicPlanRecordId" value="@Model[i].AcademicPlanRecordId" />
+                            <input type="hidden" name="Rows[@index].GiaSection" value="@Model[i].GiaSection" />
+                            <input type="hidden" name="Rows[@index].WorkName" value="@Model[i].WorkName" />
+                            <input type="hidden" name="Rows[@index].DirectionCode" value="@Model[i].DirectionCode" />
+                            <input type="hidden" name="Rows[@index].DirectionName" value="@Model[i].DirectionName" />
+                            <input type="hidden" name="Rows[@index].Course" value="@Model[i].Course" />
+                            <input type="hidden" name="Rows[@index].SemesterName" value="@Model[i].SemesterName" />
+                            <input type="hidden" name="Rows[@index].EducationForm" value="@Model[i].EducationForm" />
+                            <input type="hidden" name="Rows[@index].StudentsCount" value="@Model[i].StudentsCount" />
+                            <input type="hidden" name="Rows[@index].GroupCount" value="@Model[i].GroupCount" />
+                            <input type="hidden" name="Rows[@index].TotalHours" value="@Model[i].TotalHours.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                         </td>
                         <td>@Model[i].EducationForm</td>
                         <td>@Model[i].DirectionCode</td>
@@ -51,14 +60,16 @@ else
                                 <input type="number"
                                        step="1"
                                        min="0"
-                                       name="Rows[@i].ManualHours"
+                                       name="Rows[@index].ManualHours"
                                        value="@Math.Round(Model[i].ManualHours, 0, MidpointRounding.AwayFromZero)"
                                        class="form-control form-control-sm" />
                             }
                             else
                             {
                                 <span class="text-muted">—</span>
-                                <input type="hidden" name="Rows[@i].ManualHours" value="@Model[i].ManualHours.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                                <input type="hidden"
+                                       name="Rows[@index].ManualHours"
+                                       value="@Model[i].ManualHours.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                             }
                         </td>
                         <td>@Math.Round(Model[i].TotalHours, 0, MidpointRounding.AwayFromZero)</td>
