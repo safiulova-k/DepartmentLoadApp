@@ -221,23 +221,32 @@ public class IndividualPlanService
             .Distinct()
             .ToList();
 
-        var disciplineMap = await _context.WorkloadRows
-            .AsNoTracking()
-            .Where(x => x.AcademicYear == academicYear && disciplinePlanRecordIds.Contains(x.AcademicPlanRecordId))
-            .GroupBy(x => x.AcademicPlanRecordId)
-            .ToDictionaryAsync(x => x.Key, x => x.First());
+        var disciplineRows = await _context.WorkloadRows
+             .AsNoTracking()
+             .Where(x => x.AcademicYear == academicYear && disciplinePlanRecordIds.Contains(x.AcademicPlanRecordId))
+             .ToListAsync();
 
-        var practiceMap = await _context.PracticeWorkloadRows
+        var disciplineMap = disciplineRows
+            .GroupBy(x => x.AcademicPlanRecordId)
+            .ToDictionary(x => x.Key, x => x.First());
+
+        var practiceRows = await _context.PracticeWorkloadRows
             .AsNoTracking()
             .Where(x => x.PlanYear == academicYear && practicePlanRecordIds.Contains(x.AcademicPlanRecordId))
-            .GroupBy(x => x.AcademicPlanRecordId)
-            .ToDictionaryAsync(x => x.Key, x => x.First());
+            .ToListAsync();
 
-        var giaMap = await _context.GiaWorkloadRows
+        var practiceMap = practiceRows
+            .GroupBy(x => x.AcademicPlanRecordId)
+            .ToDictionary(x => x.Key, x => x.First());
+
+        var giaRows = await _context.GiaWorkloadRows
             .AsNoTracking()
             .Where(x => x.PlanYear == academicYear && giaPlanRecordIds.Contains(x.AcademicPlanRecordId))
+            .ToListAsync();
+
+        var giaMap = giaRows
             .GroupBy(x => x.AcademicPlanRecordId)
-            .ToDictionaryAsync(x => x.Key, x => x.First());
+            .ToDictionary(x => x.Key, x => x.First());
 
         var result = new Dictionary<string, IndividualPlanRowData>();
 
@@ -346,8 +355,8 @@ public class IndividualPlanService
         var sheet = workbook.Worksheet("Титул");
         var lecturer = plan.Lecturer!;
 
-        sheet.Cell("F17").Value = lecturer.LastName;
-        sheet.Cell("F18").Value = lecturer.FirstName;
+        sheet.Cell("F17").Value = lecturer.FirstName;
+        sheet.Cell("F18").Value = lecturer.LastName;
         sheet.Cell("F19").Value = lecturer.Patronymic;
         sheet.Cell("F20").Value = plan.LecturerStudyPost?.StudyPostTitle ?? string.Empty;
         sheet.Cell("F21").Value = lecturer.DateBirth.Year;
