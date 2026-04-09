@@ -6,16 +6,21 @@ using DepartmentLoadApp.Models.Gia;
 using DepartmentLoadApp.ViewModels.Gia;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using DepartmentLoadApp.Services;
 
 namespace DepartmentLoadApp.Controllers
 {
     public class GiaCalculationController : Controller
     {
         private readonly DepartmentLoadDbContext _context;
+        private readonly CalculationImportService _importService;
 
-        public GiaCalculationController(DepartmentLoadDbContext context)
+        public GiaCalculationController(
+            DepartmentLoadDbContext context,
+            CalculationImportService importService)
         {
             _context = context;
+            _importService = importService;
         }
 
         [HttpGet]
@@ -49,152 +54,8 @@ namespace DepartmentLoadApp.Controllers
         public async Task<IActionResult> ImportFromAcademicPlan(int? startYear)
         {
             var selectedYearStart = AcademicYearResolver.NormalizeStartYear(startYear);
-            var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
-            var plans = await _context.AcademicPlansCore
-                .AsNoTracking()
-                .ToListAsync();
-
-            var planIds = plans.Select(x => x.Id).ToList();
-
-            var records = await _context.AcademicPlanRecordsCore
-                .AsNoTracking()
-                .Where(x => planIds.Contains(x.AcademicPlanId))
-                .ToListAsync();
-
-            var directions = await _context.EducationDirections
-                .AsNoTracking()
-                .ToDictionaryAsync(x => x.Id);
-
-            var existingRows = await _context.GiaWorkloadRows
-                .Where(x => x.PlanYear == selectedYear)
-                .ToListAsync();
-
-            var manualHoursMap = existingRows
-                .Where(x => x.AcademicPlanRecordId > 0)
-                .ToDictionary(
-                    x => BuildGiaManualKey(x.AcademicPlanRecordId, x.WorkName),
-                    x => x.ManualHours);
-
-            if (existingRows.Any())
-            {
-                _context.GiaWorkloadRows.RemoveRange(existingRows);
-                await _context.SaveChangesAsync();
-            }
-
-            var importedRows = new List<GiaWorkloadRow>();
-
-            foreach (var plan in plans)
-            {
-                if (plan.EducationDirectionId == null)
-                    continue;
-
-                if (!directions.TryGetValue(plan.EducationDirectionId.Value, out var direction))
-                    continue;
-
-                if (!AcademicYearResolver.TryResolveCourseAndSemesters(
-                        plan.Year,
-                        selectedYearStart,
-                        out var course,
-                        out var semesters))
-                    continue;
-
-                var planRecords = records
-                    .Where(x => x.AcademicPlanId == plan.Id)
-                    .Where(x => semesters.Contains(x.Semester))
-                    .Where(x => IsGiaRecord(x.Index))
-                    .ToList();
-
-                foreach (var record in planRecords)
-                {
-                    var semesterName = AcademicYearResolver.GetSemesterName(record.Semester);
-                    var educationForm = GetEducationFormName(plan);
-
-                    if (IsStateExamRecord(record))
-                    {
-                        AddGiaRow(
-                            importedRows,
-                            selectedYear,
-                            plan.Id,
-                            record.Id,
-                            "Госэкзамен",
-                            "Консультация к госэкзамену",
-                            direction.Cipher,
-                            direction.Title,
-                            course,
-                            semesterName,
-                            educationForm,
-                            manualHoursMap);
-
-                        AddGiaRow(
-                            importedRows,
-                            selectedYear,
-                            plan.Id,
-                            record.Id,
-                            "Госэкзамен",
-                            "Госэкзамен",
-                            direction.Cipher,
-                            direction.Title,
-                            course,
-                            semesterName,
-                            educationForm,
-                            manualHoursMap);
-
-                        continue;
-                    }
-
-                    AddGiaRow(
-                        importedRows,
-                        selectedYear,
-                        plan.Id,
-                        record.Id,
-                        "Дипломное проектирование",
-                        "Руководство ВКР",
-                        direction.Cipher,
-                        direction.Title,
-                        course,
-                        semesterName,
-                        educationForm,
-                        manualHoursMap);
-
-                    AddGiaRow(
-                        importedRows,
-                        selectedYear,
-                        plan.Id,
-                        record.Id,
-                        "Дипломное проектирование",
-                        "Нормоконтроль ВКР",
-                        direction.Cipher,
-                        direction.Title,
-                        course,
-                        semesterName,
-                        educationForm,
-                        manualHoursMap);
-
-                    AddGiaRow(
-                        importedRows,
-                        selectedYear,
-                        plan.Id,
-                        record.Id,
-                        "ГЭК",
-                        "Работа в ГЭК",
-                        direction.Cipher,
-                        direction.Title,
-                        course,
-                        semesterName,
-                        educationForm,
-                        manualHoursMap);
-                }
-            }
-
-            if (importedRows.Any())
-            {
-                await _context.GiaWorkloadRows.AddRangeAsync(importedRows);
-                await _context.SaveChangesAsync();
-
-                await RecalculateAsync(importedRows);
-                await _context.SaveChangesAsync();
-            }
+            await _importService.ImportAllAsync(selectedYearStart);
 
             return RedirectToAction(nameof(Index), new { startYear = selectedYearStart });
         }

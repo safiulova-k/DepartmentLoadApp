@@ -5,16 +5,21 @@ using DepartmentLoadApp.Models.Workload;
 using DepartmentLoadApp.ViewModels.Workload;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using DepartmentLoadApp.Services;
 
 namespace DepartmentLoadApp.Controllers
 {
     public class WorkloadCalculationController : Controller
     {
         private readonly DepartmentLoadDbContext _context;
+        private readonly CalculationImportService _importService;
 
-        public WorkloadCalculationController(DepartmentLoadDbContext context)
+        public WorkloadCalculationController(
+            DepartmentLoadDbContext context,
+            CalculationImportService importService)
         {
             _context = context;
+            _importService = importService;
         }
 
         [HttpGet]
@@ -42,92 +47,8 @@ namespace DepartmentLoadApp.Controllers
         public async Task<IActionResult> ImportFromAcademicPlan(int? startYear)
         {
             var selectedYearStart = AcademicYearResolver.NormalizeStartYear(startYear);
-            var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
-            var plans = await _context.AcademicPlansCore
-                .AsNoTracking()
-                .ToListAsync();
-
-            var planIds = plans.Select(x => x.Id).ToList();
-
-            var records = await _context.AcademicPlanRecordsCore
-                .AsNoTracking()
-                .Where(x => planIds.Contains(x.AcademicPlanId))
-                .ToListAsync();
-
-            var directions = await _context.EducationDirections
-                .AsNoTracking()
-                .ToDictionaryAsync(x => x.Id);
-
-            var existingRows = await _context.WorkloadRows
-                .Where(x => x.AcademicYear == selectedYear)
-                .ToListAsync();
-
-            if (existingRows.Any())
-            {
-                _context.WorkloadRows.RemoveRange(existingRows);
-                await _context.SaveChangesAsync();
-            }
-
-            var importedRows = new List<WorkloadRow>();
-
-            foreach (var plan in plans)
-            {
-                if (plan.EducationDirectionId == null)
-                    continue;
-
-                if (!directions.TryGetValue(plan.EducationDirectionId.Value, out var direction))
-                    continue;
-
-                if (!AcademicYearResolver.TryResolveCourseAndSemesters(
-                        plan.Year,
-                        selectedYearStart,
-                        out var course,
-                        out var semesters))
-                    continue;
-
-                var planRecords = records
-                    .Where(x => x.AcademicPlanId == plan.Id)
-                    .Where(x => semesters.Contains(x.Semester))
-                    .Where(x => IsDisciplineRecord(x.Index))
-                    .ToList();
-
-                foreach (var record in planRecords)
-                {
-                    importedRows.Add(new WorkloadRow
-                    {
-                        AcademicYear = selectedYear,
-                        AcademicPlanId = plan.Id,
-                        AcademicPlanRecordId = record.Id,
-
-                        DirectionCode = direction.Cipher,
-                        DirectionName = direction.Title,
-                        DisciplineName = record.Name ?? string.Empty,
-                        SemesterName = AcademicYearResolver.GetSemesterName(record.Semester),
-                        EducationForm = GetEducationFormName(plan),
-                        Course = course,
-
-                        LecturePlanHours = record.Lectures ?? 0,
-                        PracticePlanHours = record.PracticalHours ?? 0,
-                        LabPlanHours = record.LaboratoryHours ?? 0,
-
-                        HasExam = (record.Exam ?? 0) > 0,
-                        HasCredit = (record.Pass ?? 0) > 0 || (record.GradedPass ?? 0) > 0,
-                        HasCourseWork = (record.CourseWork ?? 0) > 0,
-                        HasCourseProject = (record.CourseProject ?? 0) > 0,
-                        HasRgr = (record.Rgr ?? 0) > 0
-                    });
-                }
-            }
-
-            if (importedRows.Any())
-            {
-                await _context.WorkloadRows.AddRangeAsync(importedRows);
-                await _context.SaveChangesAsync();
-
-                await RecalculateAsync(importedRows);
-                await _context.SaveChangesAsync();
-            }
+            await _importService.ImportAllAsync(selectedYearStart);
 
             return RedirectToAction(nameof(Index), new { startYear = selectedYearStart });
         }

@@ -5,6 +5,7 @@ using DepartmentLoadApp.Integration.CoreSync;
 using DepartmentLoadApp.Integration.CoreSync.Interfaces;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
+using DepartmentLoadApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +26,8 @@ builder.Services.AddScoped<ILecturerSyncService, LecturerSyncService>();
 builder.Services.AddScoped<IStudentGroupSyncService, StudentGroupSyncService>();
 builder.Services.AddScoped<IAcademicPlanSyncService, AcademicPlanSyncService>();
 builder.Services.AddScoped<IAcademicPlanRecordSyncService, AcademicPlanRecordSyncService>();
+
+builder.Services.AddScoped<CalculationImportService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

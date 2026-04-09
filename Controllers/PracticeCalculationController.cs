@@ -5,16 +5,20 @@ using DepartmentLoadApp.Models.Practice;
 using DepartmentLoadApp.ViewModels.Practice;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-
+using DepartmentLoadApp.Services;
 namespace DepartmentLoadApp.Controllers
 {
     public class PracticeCalculationController : Controller
     {
         private readonly DepartmentLoadDbContext _context;
+        private readonly CalculationImportService _importService;
 
-        public PracticeCalculationController(DepartmentLoadDbContext context)
+        public PracticeCalculationController(
+            DepartmentLoadDbContext context,
+            CalculationImportService importService)
         {
             _context = context;
+            _importService = importService;
         }
 
         [HttpGet]
@@ -47,92 +51,8 @@ namespace DepartmentLoadApp.Controllers
         public async Task<IActionResult> ImportFromAcademicPlan(int? startYear)
         {
             var selectedYearStart = AcademicYearResolver.NormalizeStartYear(startYear);
-            var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
-            var plans = await _context.AcademicPlansCore
-                .AsNoTracking()
-                .ToListAsync();
-
-            var planIds = plans.Select(x => x.Id).ToList();
-
-            var records = await _context.AcademicPlanRecordsCore
-                .AsNoTracking()
-                .Where(x => planIds.Contains(x.AcademicPlanId))
-                .ToListAsync();
-
-            var directions = await _context.EducationDirections
-                .AsNoTracking()
-                .ToDictionaryAsync(x => x.Id);
-
-            var existingRows = await _context.PracticeWorkloadRows
-                .Where(x => x.PlanYear == selectedYear)
-                .ToListAsync();
-
-            var weeksByRecordId = existingRows
-                .Where(x => x.AcademicPlanRecordId > 0)
-                .GroupBy(x => x.AcademicPlanRecordId)
-                .ToDictionary(x => x.Key, x => x.First().WeeksCount);
-
-            if (existingRows.Any())
-            {
-                _context.PracticeWorkloadRows.RemoveRange(existingRows);
-                await _context.SaveChangesAsync();
-            }
-
-            var importedRows = new List<PracticeWorkloadRow>();
-
-            foreach (var plan in plans)
-            {
-                if (plan.EducationDirectionId == null)
-                    continue;
-
-                if (!directions.TryGetValue(plan.EducationDirectionId.Value, out var direction))
-                    continue;
-
-                if (!AcademicYearResolver.TryResolveCourseAndSemesters(
-                        plan.Year,
-                        selectedYearStart,
-                        out var course,
-                        out var semesters))
-                    continue;
-
-                var planRecords = records
-                    .Where(x => x.AcademicPlanId == plan.Id)
-                    .Where(x => semesters.Contains(x.Semester))
-                    .Where(x => IsPracticeRecord(x.Index))
-                    .ToList();
-
-                foreach (var record in planRecords)
-                {
-                    importedRows.Add(new PracticeWorkloadRow
-                    {
-                        PlanYear = selectedYear,
-                        AcademicPlanId = plan.Id,
-                        AcademicPlanRecordId = record.Id,
-
-                        PracticeName = NormalizePracticeName(record.Name),
-                        DirectionCode = direction.Cipher,
-                        DirectionName = direction.Title,
-
-                        Course = course,
-                        SemesterName = AcademicYearResolver.GetSemesterName(record.Semester),
-                        EducationForm = GetEducationFormName(plan),
-
-                        WeeksCount = weeksByRecordId.TryGetValue(record.Id, out var weeks)
-                            ? weeks
-                            : 0
-                    });
-                }
-            }
-
-            if (importedRows.Any())
-            {
-                await _context.PracticeWorkloadRows.AddRangeAsync(importedRows);
-                await _context.SaveChangesAsync();
-
-                await RecalculateAsync(importedRows);
-                await _context.SaveChangesAsync();
-            }
+            await _importService.ImportAllAsync(selectedYearStart);
 
             return RedirectToAction(nameof(Index), new { startYear = selectedYearStart });
         }
