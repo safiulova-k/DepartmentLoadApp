@@ -3,20 +3,14 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
     <title>@ViewData["Title"] - Расчет нагрузки</title>
-
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-
 </head>
-
 <body>
-
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <div class="container-fluid">
-
                 <a class="navbar-brand" asp-controller="Home" asp-action="Index">
                     Кафедральный портал
                 </a>
@@ -26,61 +20,48 @@
                 </button>
 
                 <div class="collapse navbar-collapse" id="navbarMain">
-
                     <ul class="navbar-nav me-auto">
-
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="Index">
-                                Главная
-                            </a>
+                            <a class="nav-link" asp-controller="Home" asp-action="Index">Главная</a>
                         </li>
 
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="WorkloadCalculation" asp-action="Index">
-                                Расчет нагрузки
-                            </a>
+                            <a class="nav-link" asp-controller="WorkloadCalculation" asp-action="Index">Расчет нагрузки</a>
                         </li>
+
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Contingent" asp-action="Index">
-                                Контингент
-                            </a>
+                            <a class="nav-link" asp-controller="WorkloadDistribution" asp-action="Index">Распределение</a>
                         </li>
+
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="NormTime" asp-action="Index">
-                                Нормы времени
-                            </a>
+                            <a class="nav-link" asp-controller="Contingent" asp-action="Index">Контингент</a>
                         </li>
+
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Teachers" asp-action="Index">Преподаватели</a>
+                            <a class="nav-link" asp-controller="NormTime" asp-action="Index">Нормы времени</a>
                         </li>
+
                         <li class="nav-item">
                             <a class="nav-link" asp-controller="Disciplines" asp-action="Index">Дисциплины</a>
                         </li>
+
                         <li class="nav-item">
                             <a class="nav-link" asp-controller="SemesterPeriods" asp-action="Index">Семестры</a>
                         </li>
+
                         <li class="nav-item">
                             <a class="nav-link" asp-controller="StudentFlows" asp-action="Index">Потоки</a>
                         </li>
                     </ul>
-                    @* ПОКА ЗАГЛУШКА, ПОТОМ БУДЕТ ПЕРЕХОД В ГЛАВНЫЙ МОДУЛЬ *@
-                    <div class="d-flex ms-auto">
-                        <a href="#" onclick="alert('Переход в главный портал')" class="btn btn-outline-primary">
-                            ← В портал кафедры
-                        </a>
-                    </div>
                 </div>
-
             </div>
         </nav>
     </header>
 
     <div class="container-fluid mt-4">
-
         <main role="main">
             @RenderBody()
         </main>
-
     </div>
 
     <footer class="border-top footer text-muted mt-4">
@@ -90,8 +71,6 @@
     </footer>
 
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-
     @await RenderSectionAsync("Scripts", required: false)
-
 </body>
 </html>

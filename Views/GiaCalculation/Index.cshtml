@@ -89,14 +89,20 @@
             "_GiaTable",
             stateExamRows,
             new ViewDataDictionary(ViewData) { ["IndexOffset"] = offset })
-    offset += stateExamRows.Count;
+
+    @{
+        offset += stateExamRows.Count;
+    }
 
     <h3 class="mt-4">Дипломное проектирование</h3>
     @await Html.PartialAsync(
             "_GiaTable",
             vkrRows,
             new ViewDataDictionary(ViewData) { ["IndexOffset"] = offset })
-    offset += vkrRows.Count;
+
+    @{
+        offset += vkrRows.Count;
+    }
 
     <h3 class="mt-4">ГЭК</h3>
     @await Html.PartialAsync(

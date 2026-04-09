@@ -35,12 +35,15 @@ public class DepartmentLoadDbContext : DbContext
     public DbSet<SemesterPeriod> SemesterPeriods { get; set; } = null!;
     public DbSet<StudentFlow> StudentFlows { get; set; } = null!;
 
+    // Распределение нагрузки
+    public DbSet<LecturerAcademicYearPlan> LecturerAcademicYearPlans { get; set; } = null!;
+    public DbSet<LecturerLoadAssignment> LecturerLoadAssignments { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
         // ---------- CORE ----------
-
         modelBuilder.Entity<EducationDirection>(entity =>
         {
             entity.HasKey(x => x.Id);
@@ -57,7 +60,6 @@ public class DepartmentLoadDbContext : DbContext
         {
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.CoreId).IsUnique();
-
             entity.Property(x => x.StudyPostTitle).IsRequired();
         });
 
@@ -65,7 +67,6 @@ public class DepartmentLoadDbContext : DbContext
         {
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.CoreId).IsUnique();
-
             entity.Property(x => x.DepartmentPostTitle).IsRequired();
         });
 
@@ -99,7 +100,6 @@ public class DepartmentLoadDbContext : DbContext
         {
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.CoreId).IsUnique();
-
             entity.Property(x => x.GroupName).IsRequired();
 
             entity.HasOne<EducationDirection>()
@@ -117,7 +117,6 @@ public class DepartmentLoadDbContext : DbContext
         {
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.CoreId).IsUnique();
-
             entity.Property(x => x.Year).IsRequired();
 
             entity.HasOne<EducationDirection>()
@@ -130,7 +129,6 @@ public class DepartmentLoadDbContext : DbContext
         {
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.CoreId).IsUnique();
-
             entity.Property(x => x.Index).IsRequired();
             entity.Property(x => x.Name).IsRequired();
 
@@ -141,7 +139,6 @@ public class DepartmentLoadDbContext : DbContext
         });
 
         // ---------- ТВОЙ МОДУЛЬ ----------
-
         modelBuilder.Entity<LoadDistribution>(entity =>
         {
             entity.HasOne(x => x.Lecturer)
@@ -162,5 +159,70 @@ public class DepartmentLoadDbContext : DbContext
         modelBuilder.Entity<StudentFlow>()
             .Property(x => x.AcademicYear)
             .HasMaxLength(9);
+
+        // ---------- РАСПРЕДЕЛЕНИЕ НАГРУЗКИ ----------
+        modelBuilder.Entity<LecturerAcademicYearPlan>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.AcademicYear)
+                .IsRequired()
+                .HasMaxLength(9);
+
+            entity.Property(x => x.Rate)
+                .HasPrecision(5, 2);
+
+            entity.HasIndex(x => new { x.AcademicYear, x.LecturerId })
+                .IsUnique();
+
+            entity.HasOne(x => x.Lecturer)
+                .WithMany()
+                .HasForeignKey(x => x.LecturerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.LecturerStudyPost)
+                .WithMany()
+                .HasForeignKey(x => x.LecturerStudyPostId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LecturerLoadAssignment>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.AcademicYear)
+                .IsRequired()
+                .HasMaxLength(9);
+
+            entity.Property(x => x.SourceType)
+                .HasConversion<string>();
+
+            entity.Property(x => x.LoadElementType)
+                .HasConversion<string>();
+
+            entity.Property(x => x.AssignedHours)
+                .IsRequired();
+
+            entity.HasIndex(x => new
+            {
+                x.LecturerAcademicYearPlanId,
+                x.SourceType,
+                x.SourceRowId,
+                x.LoadElementType
+            }).IsUnique();
+
+            entity.HasIndex(x => new
+            {
+                x.AcademicYear,
+                x.SourceType,
+                x.SourceRowId,
+                x.LoadElementType
+            });
+
+            entity.HasOne(x => x.LecturerAcademicYearPlan)
+                .WithMany()
+                .HasForeignKey(x => x.LecturerAcademicYearPlanId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }

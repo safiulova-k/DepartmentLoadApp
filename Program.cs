@@ -3,9 +3,9 @@ using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Integration.CoreApi;
 using DepartmentLoadApp.Integration.CoreSync;
 using DepartmentLoadApp.Integration.CoreSync.Interfaces;
+using DepartmentLoadApp.Services;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
-using DepartmentLoadApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +13,9 @@ builder.Services.AddControllersWithViews();
 
 builder.Services.AddDbContext<DepartmentLoadDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<CalculationImportService>();
+builder.Services.AddScoped<WorkloadDistributionService>();
 
 builder.Services.AddHttpClient<CoreApiService>(client =>
 {
@@ -26,8 +29,6 @@ builder.Services.AddScoped<ILecturerSyncService, LecturerSyncService>();
 builder.Services.AddScoped<IStudentGroupSyncService, StudentGroupSyncService>();
 builder.Services.AddScoped<IAcademicPlanSyncService, AcademicPlanSyncService>();
 builder.Services.AddScoped<IAcademicPlanRecordSyncService, AcademicPlanRecordSyncService>();
-
-builder.Services.AddScoped<CalculationImportService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -57,7 +58,6 @@ app.UseRequestLocalization(localizationOptions);
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
 
 app.MapControllerRoute(
