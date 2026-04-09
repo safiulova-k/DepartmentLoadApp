@@ -1,0 +1,107 @@
+﻿@model DepartmentLoadApp.ViewModels.IndividualPlans.IndividualPlansPageViewModel
+
+@{
+    ViewData["Title"] = "Индивидуальные планы";
+}
+
+<h1 class="mb-4">Индивидуальные планы преподавателей</h1>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+}
+
+@if (!Model.TemplateExists)
+{
+    <div class="alert alert-warning">
+        Не найден Excel-шаблон.
+        Помести файл шаблона по пути <strong>Templates/IndividualPlanTemplate.xlsx</strong>.
+    </div>
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <form asp-action="Index" method="get" class="row g-3 align-items-end m-0">
+        <div class="col-auto">
+            <label class="form-label">Год начала расчета</label>
+            <select name="startYear" class="form-select">
+                @foreach (var year in Model.AvailableYearStarts)
+                {
+                    if (year == Model.SelectedYearStart)
+                    {
+                        <option value="@year" selected>@year</option>
+                    }
+                    else
+                    {
+                        <option value="@year">@year</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="col-auto">
+            <label class="form-label">Учебный год</label>
+            <input class="form-control" value="@Model.SelectedAcademicYear" readonly />
+        </div>
+
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Показать</button>
+        </div>
+    </form>
+
+    <form asp-action="ExportAll" method="post" class="m-0">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="startYear" value="@Model.SelectedYearStart" />
+        <button type="submit" class="btn btn-success" @(Model.Lecturers.Count == 0 ? "disabled" : null)>
+            Выгрузить все планы
+        </button>
+    </form>
+</div>
+
+@if (Model.Lecturers.Count == 0)
+{
+    <div class="alert alert-secondary">
+        Для выбранного учебного года преподаватели не найдены.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>ФИО</th>
+                    <th>Учебная должность</th>
+                    <th>Ставка</th>
+                    <th>Распределено часов</th>
+                    <th style="width: 220px;">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var lecturer in Model.Lecturers)
+                {
+                    <tr>
+                        <td>@lecturer.FullName</td>
+                        <td>@lecturer.StudyPostTitle</td>
+                        <td>@lecturer.Rate.ToString("0.##")</td>
+                        <td>@lecturer.AssignedHours</td>
+                        <td>
+                            <form asp-action="Export" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="startYear" value="@Model.SelectedYearStart" />
+                                <input type="hidden" name="lecturerId" value="@lecturer.LecturerId" />
+                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                    Выгрузить план
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -16,6 +16,7 @@ builder.Services.AddDbContext<DepartmentLoadDbContext>(options =>
 
 builder.Services.AddScoped<CalculationImportService>();
 builder.Services.AddScoped<WorkloadDistributionService>();
+builder.Services.AddScoped<IndividualPlanService>();
 
 builder.Services.AddHttpClient<CoreApiService>(client =>
 {
@@ -29,6 +30,7 @@ builder.Services.AddScoped<ILecturerSyncService, LecturerSyncService>();
 builder.Services.AddScoped<IStudentGroupSyncService, StudentGroupSyncService>();
 builder.Services.AddScoped<IAcademicPlanSyncService, AcademicPlanSyncService>();
 builder.Services.AddScoped<IAcademicPlanRecordSyncService, AcademicPlanRecordSyncService>();
+
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
