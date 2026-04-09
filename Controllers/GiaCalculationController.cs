@@ -330,7 +330,7 @@ namespace DepartmentLoadApp.Controllers
                 return false;
 
             var normalized = index.Trim().ToUpperInvariant();
-            return normalized.StartsWith("Б3.");
+            return normalized.StartsWith("Б3");
         }
 
         private static bool IsStateExamRecord(DepartmentLoadApp.Models.Core.AcademicPlanRecord record)

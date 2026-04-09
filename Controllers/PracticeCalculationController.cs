@@ -238,7 +238,7 @@ namespace DepartmentLoadApp.Controllers
                 return false;
 
             var normalized = index.Trim().ToUpperInvariant();
-            return normalized.StartsWith("Б2.");
+            return normalized.StartsWith("Б2");
         }
 
         private static string NormalizePracticeName(string? sourceName)

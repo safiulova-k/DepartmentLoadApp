@@ -1,72 +1,71 @@
 ﻿@model DepartmentLoadApp.ViewModels.Shared.CalculationTopPanelViewModel
 
 @{
-    var currentController = Model.ActiveTab switch
+    var controllerName = Model.ActiveTab switch
     {
+        "workload" => "WorkloadCalculation",
         "practice" => "PracticeCalculation",
         "gia" => "GiaCalculation",
         _ => "WorkloadCalculation"
     };
 }
 
-<div class="d-flex flex-wrap gap-3 align-items-end mb-4">
-    <div>
-        <label class="form-label fw-semibold d-block">Год начала расчета</label>
-        <div class="btn-group" role="group">
+<form asp-controller="@controllerName" asp-action="ImportFromAcademicPlan" method="post" class="row g-3 align-items-end mb-4">
+    @Html.AntiForgeryToken()
+
+    <div class="col-auto">
+        <label class="form-label">Год начала расчета</label>
+        <select name="startYear" class="form-select">
             @foreach (var year in Model.AvailableYearStarts)
             {
-                <a asp-controller="@currentController"
-                   asp-action="Index"
-                   asp-route-startYear="@year"
-                   class="btn @(year == Model.SelectedYearStart ? "btn-primary" : "btn-outline-primary")">
-                    @year
-                </a>
+                if (year == Model.SelectedYearStart)
+                {
+                    <option value="@year" selected>@year</option>
+                }
+                else
+                {
+                    <option value="@year">@year</option>
+                }
             }
-        </div>
+        </select>
     </div>
 
-    <div style="min-width: 170px;">
-        <label class="form-label fw-semibold">Учебный год</label>
+    <div class="col-auto">
+        <label class="form-label">Учебный год</label>
         <input class="form-control" value="@Model.SelectedYear" readonly />
     </div>
 
-    <div class="d-flex gap-2">
-        <form asp-controller="@currentController"
-              asp-action="ImportFromAcademicPlan"
-              asp-route-startYear="@Model.SelectedYearStart"
-              method="post">
-            @Html.AntiForgeryToken()
-            <button type="submit" class="btn btn-success">Рассчитать</button>
-        </form>
+    <div class="col-auto d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Рассчитать</button>
 
-        <a asp-controller="@currentController"
+        <a asp-controller="@controllerName"
            asp-action="ExportToExcel"
            asp-route-startYear="@Model.SelectedYearStart"
            class="btn btn-outline-success">
             Выгрузить в Excel
         </a>
     </div>
-</div>
+</form>
 
-<div class="btn-group mb-4" role="group">
+<div class="mb-3 d-flex gap-2">
     <a asp-controller="WorkloadCalculation"
        asp-action="Index"
        asp-route-startYear="@Model.SelectedYearStart"
-       class="btn @(Model.ActiveTab == "workload" ? "btn-dark" : "btn-outline-dark")">
+       class="btn @(Model.ActiveTab == "workload" ? "btn-primary" : "btn-outline-primary")">
         Дисциплины
     </a>
 
     <a asp-controller="PracticeCalculation"
        asp-action="Index"
        asp-route-startYear="@Model.SelectedYearStart"
-       class="btn @(Model.ActiveTab == "practice" ? "btn-dark" : "btn-outline-dark")">
+       class="btn @(Model.ActiveTab == "practice" ? "btn-primary" : "btn-outline-primary")">
         Практики
     </a>
 
     <a asp-controller="GiaCalculation"
        asp-action="Index"
        asp-route-startYear="@Model.SelectedYearStart"
-       class="btn @(Model.ActiveTab == "gia" ? "btn-dark" : "btn-outline-dark")">
+       class="btn @(Model.ActiveTab == "gia" ? "btn-primary" : "btn-outline-primary")">
         ГИА
     </a>
 </div>

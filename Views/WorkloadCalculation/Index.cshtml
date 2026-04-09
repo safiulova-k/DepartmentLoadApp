@@ -6,64 +6,15 @@
 
 <h1 class="mb-4">Расчет нагрузки по дисциплинам</h1>
 
-<form asp-action="ImportFromAcademicPlan" method="post" class="row g-3 align-items-end mb-4">
-    @Html.AntiForgeryToken()
-
-    <div class="col-auto">
-        <label class="form-label">Год начала расчета</label>
-        <select name="startYear" class="form-select">
-            @foreach (var year in Model.AvailableYearStarts)
-            {
-                if (year == Model.SelectedYearStart)
-                {
-                    <option value="@year" selected>@year</option>
-                }
-                else
-                {
-                    <option value="@year">@year</option>
-                }
-            }
-        </select>
-    </div>
-
-    <div class="col-auto">
-        <label class="form-label">Учебный год</label>
-        <input class="form-control" value="@Model.SelectedYear" readonly />
-    </div>
-
-    <div class="col-auto d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Рассчитать</button>
-
-        <a asp-action="ExportToExcel"
-           asp-route-startYear="@Model.SelectedYearStart"
-           class="btn btn-outline-success">
-            Выгрузить в Excel
-        </a>
-    </div>
-</form>
-
-<div class="mb-3 d-flex gap-2">
-    <a asp-controller="WorkloadCalculation"
-       asp-action="Index"
-       asp-route-startYear="@Model.SelectedYearStart"
-       class="btn btn-primary">
-        Дисциплины
-    </a>
-
-    <a asp-controller="PracticeCalculation"
-       asp-action="Index"
-       asp-route-startYear="@Model.SelectedYearStart"
-       class="btn btn-outline-primary">
-        Практики
-    </a>
-
-    <a asp-controller="GiaCalculation"
-       asp-action="Index"
-       asp-route-startYear="@Model.SelectedYearStart"
-       class="btn btn-outline-primary">
-        ГИА
-    </a>
-</div>
+@await Html.PartialAsync(
+        "_CalculationTopPanel",
+        new DepartmentLoadApp.ViewModels.Shared.CalculationTopPanelViewModel
+    {
+        SelectedYear = Model.SelectedYear,
+        SelectedYearStart = Model.SelectedYearStart,
+        AvailableYearStarts = Model.AvailableYearStarts,
+        ActiveTab = "workload"
+    })
 
 <div class="table-responsive">
     <table class="table table-bordered table-striped align-middle workload-table">
