@@ -22,6 +22,21 @@ public class WorkloadDistributionController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> FillAssignmentToRemaining(int startYear, int assignmentId)
+    {
+        var result = await _service.FillAssignmentToMaxAsync(startYear, assignmentId);
+
+        TempData[result.Success ? "SuccessMessage" : "ErrorMessage"] = result.Message;
+
+        return RedirectToAction(nameof(Index), new
+        {
+            startYear,
+            selectedLecturerId = result.LecturerId
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveLecturerPlan(UpdateLecturerPlanInputModel model)
     {
         var result = await _service.SaveLecturerPlanAsync(

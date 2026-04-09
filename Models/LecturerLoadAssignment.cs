@@ -14,7 +14,12 @@ public class LecturerLoadAssignment
 
     public LoadAssignmentSourceType SourceType { get; set; }
 
+    // Старый временный Id строки расчета.
+    // Оставляем, чтобы не ломать старые данные и миграцию.
     public int SourceRowId { get; set; }
+
+    // Новый стабильный ключ из AcademicPlanRecord
+    public int SourceAcademicPlanRecordId { get; set; }
 
     public LoadAssignmentElementType LoadElementType { get; set; }
 

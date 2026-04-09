@@ -42,14 +42,20 @@ public class WorkloadDistributionService
             .ToListAsync();
 
         var assignments = await _context.LecturerLoadAssignments
-            .AsNoTracking()
             .Where(x => x.AcademicYear == academicYear)
             .OrderBy(x => x.Id)
             .ToListAsync();
 
         var items = await BuildDistributableItemsAsync(academicYear, assignments);
 
-        var itemMap = items.ToDictionary(x => BuildKey(x.SourceType, x.SourceRowId, x.LoadElementType));
+        var itemMap = items
+            .GroupBy(x => BuildKey(x.SourceType, x.SourceAcademicPlanRecordId, x.LoadElementType))
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var validAssignments = assignments
+            .Where(x => x.SourceAcademicPlanRecordId > 0)
+            .Where(x => itemMap.ContainsKey(BuildKey(x.SourceType, x.SourceAcademicPlanRecordId, x.LoadElementType)))
+            .ToList();
 
         var selectedId = selectedLecturerId;
         if (!selectedId.HasValue && plans.Count > 0)
@@ -64,8 +70,8 @@ public class WorkloadDistributionService
             AvailableYearStarts = AcademicYearResolver.BuildAvailableStartYears(selectedYearStart),
             SelectedLecturerId = selectedId,
             TotalHours = items.Sum(x => x.TotalHours),
-            AssignedHours = assignments.Sum(x => x.AssignedHours),
-            RemainingHours = Math.Max(0, items.Sum(x => x.TotalHours) - assignments.Sum(x => x.AssignedHours)),
+            AssignedHours = validAssignments.Sum(x => x.AssignedHours),
+            RemainingHours = Math.Max(0, items.Sum(x => x.TotalHours) - validAssignments.Sum(x => x.AssignedHours)),
             StudyPosts = studyPosts.Select(x => new WorkloadDistributionStudyPostOptionViewModel
             {
                 Id = x.Id,
@@ -83,7 +89,7 @@ public class WorkloadDistributionService
 
         foreach (var plan in plans)
         {
-            var lecturerAssignments = assignments
+            var lecturerAssignments = validAssignments
                 .Where(x => x.LecturerAcademicYearPlanId == plan.Id)
                 .ToList();
 
@@ -92,7 +98,7 @@ public class WorkloadDistributionService
             var isAssistant = IsAssistant(plan.LecturerStudyPost?.StudyPostTitle);
 
             var existingKeys = lecturerAssignments
-                .Select(x => BuildKey(x.SourceType, x.SourceRowId, x.LoadElementType))
+                .Select(x => BuildKey(x.SourceType, x.SourceAcademicPlanRecordId, x.LoadElementType))
                 .ToHashSet();
 
             var card = new WorkloadDistributionLecturerCardViewModel
@@ -112,7 +118,7 @@ public class WorkloadDistributionService
 
             card.AvailableItems = items
                 .Where(x => x.RemainingHours > 0)
-                .Where(x => !existingKeys.Contains(BuildKey(x.SourceType, x.SourceRowId, x.LoadElementType)))
+                .Where(x => !existingKeys.Contains(BuildKey(x.SourceType, x.SourceAcademicPlanRecordId, x.LoadElementType)))
                 .Where(x => !(isAssistant && x.LoadElementType == LoadAssignmentElementType.Lecture))
                 .OrderBy(x => x.SourceType)
                 .ThenBy(x => x.Title)
@@ -122,7 +128,11 @@ public class WorkloadDistributionService
 
             foreach (var assignment in lecturerAssignments)
             {
-                var key = BuildKey(assignment.SourceType, assignment.SourceRowId, assignment.LoadElementType);
+                var key = BuildKey(
+                    assignment.SourceType,
+                    assignment.SourceAcademicPlanRecordId,
+                    assignment.LoadElementType);
+
                 if (!itemMap.TryGetValue(key, out var item))
                 {
                     continue;
@@ -173,6 +183,7 @@ public class WorkloadDistributionService
         await EnsureAcademicYearPlansAsync(academicYear);
 
         var normalizedRate = Math.Round(rate, 2, MidpointRounding.AwayFromZero);
+
         if (normalizedRate < 0 || normalizedRate > 2.00m)
         {
             return WorkloadDistributionOperationResult.Fail(
@@ -190,6 +201,7 @@ public class WorkloadDistributionService
         }
 
         LecturerStudyPost? newStudyPost = null;
+
         if (lecturerStudyPostId.HasValue)
         {
             newStudyPost = await _context.LecturerStudyPosts
@@ -248,7 +260,7 @@ public class WorkloadDistributionService
 
         await EnsureAcademicYearPlansAsync(academicYear);
 
-        if (!TryParseKey(itemKey, out var sourceType, out var sourceRowId, out var elementType))
+        if (!TryParseKey(itemKey, out var sourceType, out var sourceAcademicPlanRecordId, out var elementType))
         {
             return WorkloadDistributionOperationResult.Fail("Некорректный элемент нагрузки.", lecturerId);
         }
@@ -272,12 +284,14 @@ public class WorkloadDistributionService
             x.AcademicYear == academicYear &&
             x.LecturerAcademicYearPlanId == plan.Id &&
             x.SourceType == sourceType &&
-            x.SourceRowId == sourceRowId &&
+            x.SourceAcademicPlanRecordId == sourceAcademicPlanRecordId &&
             x.LoadElementType == elementType);
 
         if (alreadyExists)
         {
-            return WorkloadDistributionOperationResult.Fail("Этот элемент уже назначен выбранному преподавателю.", lecturerId);
+            return WorkloadDistributionOperationResult.Fail(
+                "Этот элемент уже назначен выбранному преподавателю.",
+                lecturerId);
         }
 
         var assignments = await _context.LecturerLoadAssignments
@@ -286,9 +300,10 @@ public class WorkloadDistributionService
             .ToListAsync();
 
         var items = await BuildDistributableItemsAsync(academicYear, assignments);
+
         var item = items.FirstOrDefault(x =>
             x.SourceType == sourceType &&
-            x.SourceRowId == sourceRowId &&
+            x.SourceAcademicPlanRecordId == sourceAcademicPlanRecordId &&
             x.LoadElementType == elementType);
 
         if (item == null)
@@ -298,7 +313,9 @@ public class WorkloadDistributionService
 
         if (item.RemainingHours <= 0)
         {
-            return WorkloadDistributionOperationResult.Fail("По этому элементу больше нет свободных часов.", lecturerId);
+            return WorkloadDistributionOperationResult.Fail(
+                "По этому элементу больше нет свободных часов.",
+                lecturerId);
         }
 
         var lecturerAssignedHours = assignments
@@ -310,10 +327,13 @@ public class WorkloadDistributionService
 
         if (lecturerRemainingHours <= 0)
         {
-            return WorkloadDistributionOperationResult.Fail("У преподавателя уже исчерпан лимит часов.", lecturerId);
+            return WorkloadDistributionOperationResult.Fail(
+                "У преподавателя уже исчерпан лимит часов.",
+                lecturerId);
         }
 
         var initialHours = Math.Min(1, Math.Min(item.RemainingHours, lecturerRemainingHours));
+
         if (initialHours <= 0)
         {
             return WorkloadDistributionOperationResult.Fail("Назначить часы не удалось.", lecturerId);
@@ -324,7 +344,8 @@ public class WorkloadDistributionService
             AcademicYear = academicYear,
             LecturerAcademicYearPlanId = plan.Id,
             SourceType = sourceType,
-            SourceRowId = sourceRowId,
+            SourceRowId = item.SourceRowId,
+            SourceAcademicPlanRecordId = sourceAcademicPlanRecordId,
             LoadElementType = elementType,
             AssignedHours = initialHours
         });
@@ -357,7 +378,7 @@ public class WorkloadDistributionService
         var itemTotalHours = await GetItemTotalHoursAsync(
             academicYear,
             assignment.SourceType,
-            assignment.SourceRowId,
+            assignment.SourceAcademicPlanRecordId,
             assignment.LoadElementType);
 
         if (itemTotalHours <= 0)
@@ -370,18 +391,20 @@ public class WorkloadDistributionService
                 lecturerId);
         }
 
-        var allAssignmentsForYear = await _context.LecturerLoadAssignments
+        var yearAssignments = await _context.LecturerLoadAssignments
+            .AsNoTracking()
             .Where(x => x.AcademicYear == academicYear)
             .ToListAsync();
 
-        var totalAssignedForItem = allAssignmentsForYear
-            .Where(x =>
-                x.SourceType == assignment.SourceType &&
-                x.SourceRowId == assignment.SourceRowId &&
-                x.LoadElementType == assignment.LoadElementType)
+        var sameItemAssignedHours = yearAssignments
+            .Where(x => x.Id != assignment.Id)
+            .Where(x => x.SourceType == assignment.SourceType)
+            .Where(x => x.SourceAcademicPlanRecordId == assignment.SourceAcademicPlanRecordId)
+            .Where(x => x.LoadElementType == assignment.LoadElementType)
             .Sum(x => x.AssignedHours);
 
-        var totalAssignedForLecturer = allAssignmentsForYear
+        var lecturerOtherAssignedHours = yearAssignments
+            .Where(x => x.Id != assignment.Id)
             .Where(x => x.LecturerAcademicYearPlanId == assignment.LecturerAcademicYearPlanId)
             .Sum(x => x.AssignedHours);
 
@@ -389,33 +412,99 @@ public class WorkloadDistributionService
             assignment.LecturerAcademicYearPlan.LecturerStudyPost?.Hours ?? 0,
             assignment.LecturerAcademicYearPlan.Rate);
 
-        var maxForItem = itemTotalHours - (totalAssignedForItem - assignment.AssignedHours);
-        var maxForLecturer = limitHours - (totalAssignedForLecturer - assignment.AssignedHours);
-        var maxAllowed = Math.Max(0, Math.Min(maxForItem, maxForLecturer));
+        var newHours = assignment.AssignedHours + delta;
 
-        var newValue = assignment.AssignedHours + delta;
-        if (newValue < 0)
-        {
-            newValue = 0;
-        }
-
-        if (newValue > maxAllowed)
-        {
-            newValue = maxAllowed;
-        }
-
-        if (newValue <= 0)
+        if (newHours <= 0)
         {
             _context.LecturerLoadAssignments.Remove(assignment);
-        }
-        else
-        {
-            assignment.AssignedHours = newValue;
+            await _context.SaveChangesAsync();
+
+            return WorkloadDistributionOperationResult.Ok("Назначение удалено.", lecturerId);
         }
 
+        var maxByItem = itemTotalHours - sameItemAssignedHours;
+        var maxByLecturer = limitHours - lecturerOtherAssignedHours;
+        var maxAllowed = Math.Max(0, Math.Min(maxByItem, maxByLecturer));
+
+        if (newHours > maxAllowed)
+        {
+            return WorkloadDistributionOperationResult.Fail(
+                "Нельзя назначить больше часов по этому элементу.",
+                lecturerId);
+        }
+
+        assignment.AssignedHours = newHours;
         await _context.SaveChangesAsync();
 
-        return WorkloadDistributionOperationResult.Ok("Часы распределения обновлены.", lecturerId);
+        return WorkloadDistributionOperationResult.Ok("Часы изменены.", lecturerId);
+    }
+
+    public async Task<WorkloadDistributionOperationResult> FillAssignmentToMaxAsync(
+        int selectedYearStart,
+        int assignmentId)
+    {
+        var academicYear = AcademicYearResolver.BuildAcademicYear(
+            AcademicYearResolver.NormalizeStartYear(selectedYearStart));
+
+        var assignment = await _context.LecturerLoadAssignments
+            .Include(x => x.LecturerAcademicYearPlan)
+            .ThenInclude(x => x!.LecturerStudyPost)
+            .FirstOrDefaultAsync(x => x.Id == assignmentId && x.AcademicYear == academicYear);
+
+        if (assignment == null || assignment.LecturerAcademicYearPlan == null)
+        {
+            return WorkloadDistributionOperationResult.Fail("Назначение не найдено.");
+        }
+
+        var lecturerId = assignment.LecturerAcademicYearPlan.LecturerId;
+
+        var itemTotalHours = await GetItemTotalHoursAsync(
+            academicYear,
+            assignment.SourceType,
+            assignment.SourceAcademicPlanRecordId,
+            assignment.LoadElementType);
+
+        if (itemTotalHours <= 0)
+        {
+            return WorkloadDistributionOperationResult.Fail("Элемент нагрузки не найден.", lecturerId);
+        }
+
+        var yearAssignments = await _context.LecturerLoadAssignments
+            .AsNoTracking()
+            .Where(x => x.AcademicYear == academicYear)
+            .ToListAsync();
+
+        var sameItemAssignedHoursWithoutCurrent = yearAssignments
+            .Where(x => x.Id != assignment.Id)
+            .Where(x => x.SourceType == assignment.SourceType)
+            .Where(x => x.SourceAcademicPlanRecordId == assignment.SourceAcademicPlanRecordId)
+            .Where(x => x.LoadElementType == assignment.LoadElementType)
+            .Sum(x => x.AssignedHours);
+
+        var lecturerAssignedHoursWithoutCurrent = yearAssignments
+            .Where(x => x.Id != assignment.Id)
+            .Where(x => x.LecturerAcademicYearPlanId == assignment.LecturerAcademicYearPlanId)
+            .Sum(x => x.AssignedHours);
+
+        var limitHours = CalculateLimitHours(
+            assignment.LecturerAcademicYearPlan.LecturerStudyPost?.Hours ?? 0,
+            assignment.LecturerAcademicYearPlan.Rate);
+
+        var maxByItem = itemTotalHours - sameItemAssignedHoursWithoutCurrent;
+        var maxByLecturer = limitHours - lecturerAssignedHoursWithoutCurrent;
+        var maxAllowed = Math.Max(0, Math.Min(maxByItem, maxByLecturer));
+
+        if (maxAllowed <= 0)
+        {
+            return WorkloadDistributionOperationResult.Fail(
+                "Нельзя назначить больше часов по этому элементу.",
+                lecturerId);
+        }
+
+        assignment.AssignedHours = maxAllowed;
+        await _context.SaveChangesAsync();
+
+        return WorkloadDistributionOperationResult.Ok("Часы доведены до остатка.", lecturerId);
     }
 
     public async Task<WorkloadDistributionOperationResult> DeleteAssignmentAsync(
@@ -442,6 +531,238 @@ public class WorkloadDistributionService
         return WorkloadDistributionOperationResult.Ok("Назначение удалено.", lecturerId);
     }
 
+    private async Task<List<DistributableLoadItem>> BuildDistributableItemsAsync(
+        string academicYear,
+        List<LecturerLoadAssignment> assignments)
+    {
+        var rawItems = new List<DistributableLoadItem>();
+
+        var disciplineRows = await _context.WorkloadRows
+            .AsNoTracking()
+            .Where(x => x.AcademicYear == academicYear)
+            .OrderBy(x => x.Course)
+            .ThenBy(x => x.SemesterName)
+            .ThenBy(x => x.DisciplineName)
+            .ToListAsync();
+
+        foreach (var row in disciplineRows)
+        {
+            AddItemIfNeeded(rawItems, new DistributableLoadItem
+            {
+                SourceType = LoadAssignmentSourceType.Discipline,
+                SourceRowId = row.Id,
+                SourceAcademicPlanRecordId = row.AcademicPlanRecordId,
+                LoadElementType = LoadAssignmentElementType.Lecture,
+                Title = row.DisciplineName,
+                Subtitle = $"{row.DirectionCode} · курс {row.Course} · {row.SemesterName}",
+                ElementDisplayName = "Лекции",
+                TotalHours = RoundHoursToInt(row.LectureTotalHours)
+            });
+
+            AddItemIfNeeded(rawItems, new DistributableLoadItem
+            {
+                SourceType = LoadAssignmentSourceType.Discipline,
+                SourceRowId = row.Id,
+                SourceAcademicPlanRecordId = row.AcademicPlanRecordId,
+                LoadElementType = LoadAssignmentElementType.Practice,
+                Title = row.DisciplineName,
+                Subtitle = $"{row.DirectionCode} · курс {row.Course} · {row.SemesterName}",
+                ElementDisplayName = "Практические занятия",
+                TotalHours = RoundHoursToInt(row.PracticeTotalHours)
+            });
+
+            AddItemIfNeeded(rawItems, new DistributableLoadItem
+            {
+                SourceType = LoadAssignmentSourceType.Discipline,
+                SourceRowId = row.Id,
+                SourceAcademicPlanRecordId = row.AcademicPlanRecordId,
+                LoadElementType = LoadAssignmentElementType.Laboratory,
+                Title = row.DisciplineName,
+                Subtitle = $"{row.DirectionCode} · курс {row.Course} · {row.SemesterName}",
+                ElementDisplayName = "Лабораторные занятия",
+                TotalHours = RoundHoursToInt(row.LabTotalHours)
+            });
+
+            AddItemIfNeeded(rawItems, new DistributableLoadItem
+            {
+                SourceType = LoadAssignmentSourceType.Discipline,
+                SourceRowId = row.Id,
+                SourceAcademicPlanRecordId = row.AcademicPlanRecordId,
+                LoadElementType = LoadAssignmentElementType.Consultation,
+                Title = row.DisciplineName,
+                Subtitle = $"{row.DirectionCode} · курс {row.Course} · {row.SemesterName}",
+                ElementDisplayName = "Консультации",
+                TotalHours = RoundHoursToInt(row.ConsultationHours)
+            });
+
+            AddItemIfNeeded(rawItems, new DistributableLoadItem
+            {
+                SourceType = LoadAssignmentSourceType.Discipline,
+                SourceRowId = row.Id,
+                SourceAcademicPlanRecordId = row.AcademicPlanRecordId,
+                LoadElementType = LoadAssignmentElementType.Exam,
+                Title = row.DisciplineName,
+                Subtitle = $"{row.DirectionCode} · курс {row.Course} · {row.SemesterName}",
+                ElementDisplayName = "Экзамен",
+                TotalHours = RoundHoursToInt(row.ExamHours)
+            });
+
+            AddItemIfNeeded(rawItems, new DistributableLoadItem
+            {
+                SourceType = LoadAssignmentSourceType.Discipline,
+                SourceRowId = row.Id,
+                SourceAcademicPlanRecordId = row.AcademicPlanRecordId,
+                LoadElementType = LoadAssignmentElementType.Credit,
+                Title = row.DisciplineName,
+                Subtitle = $"{row.DirectionCode} · курс {row.Course} · {row.SemesterName}",
+                ElementDisplayName = "Зачет",
+                TotalHours = RoundHoursToInt(row.CreditHours)
+            });
+
+            AddItemIfNeeded(rawItems, new DistributableLoadItem
+            {
+                SourceType = LoadAssignmentSourceType.Discipline,
+                SourceRowId = row.Id,
+                SourceAcademicPlanRecordId = row.AcademicPlanRecordId,
+                LoadElementType = LoadAssignmentElementType.CourseWork,
+                Title = row.DisciplineName,
+                Subtitle = $"{row.DirectionCode} · курс {row.Course} · {row.SemesterName}",
+                ElementDisplayName = "Курсовая работа",
+                TotalHours = RoundHoursToInt(row.CourseWorkHours)
+            });
+
+            AddItemIfNeeded(rawItems, new DistributableLoadItem
+            {
+                SourceType = LoadAssignmentSourceType.Discipline,
+                SourceRowId = row.Id,
+                SourceAcademicPlanRecordId = row.AcademicPlanRecordId,
+                LoadElementType = LoadAssignmentElementType.CourseProject,
+                Title = row.DisciplineName,
+                Subtitle = $"{row.DirectionCode} · курс {row.Course} · {row.SemesterName}",
+                ElementDisplayName = "Курсовой проект",
+                TotalHours = RoundHoursToInt(row.CourseProjectHours)
+            });
+        }
+
+        var practiceRows = await _context.PracticeWorkloadRows
+            .AsNoTracking()
+            .Where(x => x.PlanYear == academicYear)
+            .OrderBy(x => x.Course)
+            .ThenBy(x => x.SemesterName)
+            .ThenBy(x => x.PracticeName)
+            .ToListAsync();
+
+        foreach (var row in practiceRows)
+        {
+            AddItemIfNeeded(rawItems, new DistributableLoadItem
+            {
+                SourceType = LoadAssignmentSourceType.Practice,
+                SourceRowId = row.Id,
+                SourceAcademicPlanRecordId = row.AcademicPlanRecordId,
+                LoadElementType = LoadAssignmentElementType.PracticeWork,
+                Title = row.PracticeName,
+                Subtitle = $"{row.DirectionCode} · курс {row.Course} · {row.SemesterName}",
+                ElementDisplayName = "Практика",
+                TotalHours = RoundHoursToInt(row.TotalHours)
+            });
+        }
+
+        var giaRows = await _context.GiaWorkloadRows
+            .AsNoTracking()
+            .Where(x => x.PlanYear == academicYear)
+            .OrderBy(x => x.Course)
+            .ThenBy(x => x.SemesterName)
+            .ThenBy(x => x.GiaSection)
+            .ThenBy(x => x.WorkName)
+            .ToListAsync();
+
+        foreach (var row in giaRows)
+        {
+            AddItemIfNeeded(rawItems, new DistributableLoadItem
+            {
+                SourceType = LoadAssignmentSourceType.Gia,
+                SourceRowId = row.Id,
+                SourceAcademicPlanRecordId = row.AcademicPlanRecordId,
+                LoadElementType = LoadAssignmentElementType.GiaWork,
+                Title = row.GiaSection,
+                Subtitle = $"{row.DirectionCode} · курс {row.Course} · {row.SemesterName}",
+                ElementDisplayName = row.WorkName,
+                TotalHours = RoundHoursToInt(row.TotalHours)
+            });
+        }
+
+        var groupedItems = rawItems
+            .GroupBy(x => new
+            {
+                x.SourceType,
+                x.SourceAcademicPlanRecordId,
+                x.LoadElementType
+            })
+            .Select(g =>
+            {
+                var first = g.First();
+
+                var totalHours = g.Sum(x => x.TotalHours);
+
+                var assignedHours = assignments
+                    .Where(x => x.SourceType == first.SourceType)
+                    .Where(x => x.SourceAcademicPlanRecordId == first.SourceAcademicPlanRecordId)
+                    .Where(x => x.LoadElementType == first.LoadElementType)
+                    .Sum(x => x.AssignedHours);
+
+                return new DistributableLoadItem
+                {
+                    SourceType = first.SourceType,
+                    SourceRowId = first.SourceRowId,
+                    SourceAcademicPlanRecordId = first.SourceAcademicPlanRecordId,
+                    LoadElementType = first.LoadElementType,
+                    Title = first.Title,
+                    Subtitle = first.Subtitle,
+                    ElementDisplayName = first.ElementDisplayName,
+                    TotalHours = totalHours,
+                    AssignedHours = assignedHours,
+                    RemainingHours = Math.Max(0, totalHours - assignedHours)
+                };
+            })
+            .OrderBy(x => x.SourceType)
+            .ThenBy(x => x.Title)
+            .ThenBy(x => x.ElementDisplayName)
+            .ToList();
+
+        return groupedItems;
+    }
+
+    private static void AddItemIfNeeded(List<DistributableLoadItem> result, DistributableLoadItem item)
+    {
+        if (item.TotalHours <= 0)
+        {
+            return;
+        }
+
+        result.Add(item);
+    }
+
+    private async Task<int> GetItemTotalHoursAsync(
+        string academicYear,
+        LoadAssignmentSourceType sourceType,
+        int sourceAcademicPlanRecordId,
+        LoadAssignmentElementType elementType)
+    {
+        var assignments = await _context.LecturerLoadAssignments
+            .AsNoTracking()
+            .Where(x => x.AcademicYear == academicYear)
+            .ToListAsync();
+
+        var items = await BuildDistributableItemsAsync(academicYear, assignments);
+
+        return items
+            .Where(x => x.SourceType == sourceType)
+            .Where(x => x.SourceAcademicPlanRecordId == sourceAcademicPlanRecordId)
+            .Where(x => x.LoadElementType == elementType)
+            .Select(x => x.TotalHours)
+            .FirstOrDefault();
+    }
+
     private async Task EnsureAcademicYearPlansAsync(string academicYear)
     {
         var existingLecturerIds = await _context.LecturerAcademicYearPlans
@@ -459,227 +780,28 @@ public class WorkloadDistributionService
             return;
         }
 
-        var newPlans = missingLecturers.Select(x => new LecturerAcademicYearPlan
+        foreach (var lecturer in missingLecturers)
         {
-            AcademicYear = academicYear,
-            LecturerId = x.Id,
-            LecturerStudyPostId = x.LecturerStudyPostId,
-            Rate = 1.00m
-        });
+            _context.LecturerAcademicYearPlans.Add(new LecturerAcademicYearPlan
+            {
+                AcademicYear = academicYear,
+                LecturerId = lecturer.Id,
+                LecturerStudyPostId = lecturer.LecturerStudyPostId,
+                Rate = 1.00m
+            });
+        }
 
-        _context.LecturerAcademicYearPlans.AddRange(newPlans);
         await _context.SaveChangesAsync();
-    }
-
-    private async Task<List<DistributableLoadItem>> BuildDistributableItemsAsync(
-        string academicYear,
-        IReadOnlyCollection<LecturerLoadAssignment> assignments)
-    {
-        var result = new List<DistributableLoadItem>();
-
-        var workloadRows = await _context.WorkloadRows
-            .AsNoTracking()
-            .Where(x => x.AcademicYear == academicYear)
-            .OrderBy(x => x.Course)
-            .ThenBy(x => x.SemesterName)
-            .ThenBy(x => x.DisciplineName)
-            .ToListAsync();
-
-        foreach (var row in workloadRows)
-        {
-            AddDisciplineItem(result, row, LoadAssignmentElementType.Lecture, "Лекции", row.LectureTotalHours);
-            AddDisciplineItem(result, row, LoadAssignmentElementType.Practice, "Практические занятия", row.PracticeTotalHours);
-            AddDisciplineItem(result, row, LoadAssignmentElementType.Laboratory, "Лабораторные занятия", row.LabTotalHours);
-            AddDisciplineItem(result, row, LoadAssignmentElementType.Consultation, "Консультации", row.ConsultationHours);
-            AddDisciplineItem(result, row, LoadAssignmentElementType.Exam, "Экзамен", row.ExamHours);
-            AddDisciplineItem(result, row, LoadAssignmentElementType.Credit, "Зачет", row.CreditHours);
-            AddDisciplineItem(result, row, LoadAssignmentElementType.CourseWork, "Курсовая работа", row.CourseWorkHours);
-            AddDisciplineItem(result, row, LoadAssignmentElementType.CourseProject, "Курсовой проект", row.CourseProjectHours);
-        }
-
-        var practiceRows = await _context.PracticeWorkloadRows
-            .AsNoTracking()
-            .Where(x => x.PlanYear == academicYear)
-            .OrderBy(x => x.Course)
-            .ThenBy(x => x.DirectionCode)
-            .ThenBy(x => x.PracticeName)
-            .ToListAsync();
-
-        foreach (var row in practiceRows)
-        {
-            AddCommonItem(
-                result,
-                LoadAssignmentSourceType.Practice,
-                row.Id,
-                LoadAssignmentElementType.PracticeWork,
-                row.PracticeName,
-                $"{row.DirectionCode} · курс {row.Course} · {row.SemesterName}",
-                row.TotalHours);
-        }
-
-        var giaRows = await _context.GiaWorkloadRows
-            .AsNoTracking()
-            .Where(x => x.PlanYear == academicYear)
-            .OrderBy(x => x.Course)
-            .ThenBy(x => x.DirectionCode)
-            .ThenBy(x => x.GiaSection)
-            .ThenBy(x => x.WorkName)
-            .ToListAsync();
-
-        foreach (var row in giaRows)
-        {
-            AddCommonItem(
-                result,
-                LoadAssignmentSourceType.Gia,
-                row.Id,
-                LoadAssignmentElementType.GiaWork,
-                row.WorkName,
-                $"{row.GiaSection} · {row.DirectionCode} · курс {row.Course} · {row.SemesterName}",
-                row.TotalHours);
-        }
-
-        var assignedMap = assignments
-            .GroupBy(x => BuildKey(x.SourceType, x.SourceRowId, x.LoadElementType))
-            .ToDictionary(x => x.Key, x => x.Sum(y => y.AssignedHours));
-
-        foreach (var item in result)
-        {
-            var key = BuildKey(item.SourceType, item.SourceRowId, item.LoadElementType);
-            item.AssignedHours = assignedMap.TryGetValue(key, out var assignedHours)
-                ? assignedHours
-                : 0;
-
-            item.RemainingHours = Math.Max(0, item.TotalHours - item.AssignedHours);
-        }
-
-        return result;
-    }
-
-    private async Task<int> GetItemTotalHoursAsync(
-        string academicYear,
-        LoadAssignmentSourceType sourceType,
-        int sourceRowId,
-        LoadAssignmentElementType elementType)
-    {
-        switch (sourceType)
-        {
-            case LoadAssignmentSourceType.Discipline:
-                {
-                    var row = await _context.WorkloadRows
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(x => x.Id == sourceRowId && x.AcademicYear == academicYear);
-
-                    if (row == null)
-                    {
-                        return 0;
-                    }
-
-                    return elementType switch
-                    {
-                        LoadAssignmentElementType.Lecture => RoundHours(row.LectureTotalHours),
-                        LoadAssignmentElementType.Practice => RoundHours(row.PracticeTotalHours),
-                        LoadAssignmentElementType.Laboratory => RoundHours(row.LabTotalHours),
-                        LoadAssignmentElementType.Consultation => RoundHours(row.ConsultationHours),
-                        LoadAssignmentElementType.Exam => RoundHours(row.ExamHours),
-                        LoadAssignmentElementType.Credit => RoundHours(row.CreditHours),
-                        LoadAssignmentElementType.CourseWork => RoundHours(row.CourseWorkHours),
-                        LoadAssignmentElementType.CourseProject => RoundHours(row.CourseProjectHours),
-                        _ => 0
-                    };
-                }
-
-            case LoadAssignmentSourceType.Practice:
-                {
-                    var row = await _context.PracticeWorkloadRows
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(x => x.Id == sourceRowId && x.PlanYear == academicYear);
-
-                    return row == null ? 0 : RoundHours(row.TotalHours);
-                }
-
-            case LoadAssignmentSourceType.Gia:
-                {
-                    var row = await _context.GiaWorkloadRows
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(x => x.Id == sourceRowId && x.PlanYear == academicYear);
-
-                    return row == null ? 0 : RoundHours(row.TotalHours);
-                }
-
-            default:
-                return 0;
-        }
-    }
-
-    private static void AddDisciplineItem(
-        List<DistributableLoadItem> items,
-        WorkloadRow row,
-        LoadAssignmentElementType elementType,
-        string elementDisplayName,
-        decimal hours)
-    {
-        AddCommonItem(
-            items,
-            LoadAssignmentSourceType.Discipline,
-            row.Id,
-            elementType,
-            row.DisciplineName,
-            $"{row.DirectionCode} · курс {row.Course} · {row.SemesterName}",
-            hours,
-            elementDisplayName);
-    }
-
-    private static void AddCommonItem(
-        List<DistributableLoadItem> items,
-        LoadAssignmentSourceType sourceType,
-        int sourceRowId,
-        LoadAssignmentElementType elementType,
-        string title,
-        string subtitle,
-        decimal hours,
-        string? customElementDisplayName = null)
-    {
-        var roundedHours = RoundHours(hours);
-        if (roundedHours <= 0)
-        {
-            return;
-        }
-
-        items.Add(new DistributableLoadItem
-        {
-            SourceType = sourceType,
-            SourceRowId = sourceRowId,
-            LoadElementType = elementType,
-            Title = title,
-            Subtitle = subtitle,
-            ElementDisplayName = customElementDisplayName ?? GetElementDisplayName(elementType),
-            TotalHours = roundedHours
-        });
-    }
-
-    private static int RoundHours(decimal hours)
-    {
-        return (int)Math.Round(hours, 0, MidpointRounding.AwayFromZero);
     }
 
     private static int CalculateLimitHours(int normHours, decimal rate)
     {
-        return (int)Math.Round(normHours * rate, 0, MidpointRounding.AwayFromZero);
+        return (int)Math.Round(normHours * rate, MidpointRounding.AwayFromZero);
     }
 
-    private static string GetLecturerDisplayName(Lecturer? lecturer)
+    private static int RoundHoursToInt(decimal value)
     {
-        if (lecturer == null)
-        {
-            return "Без имени";
-        }
-
-        if (!string.IsNullOrWhiteSpace(lecturer.Abbreviation))
-        {
-            return lecturer.Abbreviation;
-        }
-
-        return $"{lecturer.LastName} {lecturer.FirstName} {lecturer.Patronymic}".Trim();
+        return (int)Math.Round(value, MidpointRounding.AwayFromZero);
     }
 
     private static bool IsAssistant(string? studyPostTitle)
@@ -688,51 +810,22 @@ public class WorkloadDistributionService
                studyPostTitle.Contains("ассист", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string GetSourceDisplayName(LoadAssignmentSourceType sourceType)
-    {
-        return sourceType switch
-        {
-            LoadAssignmentSourceType.Discipline => "Дисциплина",
-            LoadAssignmentSourceType.Practice => "Практика",
-            LoadAssignmentSourceType.Gia => "ГИА",
-            _ => "Неизвестно"
-        };
-    }
-
-    private static string GetElementDisplayName(LoadAssignmentElementType elementType)
-    {
-        return elementType switch
-        {
-            LoadAssignmentElementType.Lecture => "Лекции",
-            LoadAssignmentElementType.Practice => "Практические занятия",
-            LoadAssignmentElementType.Laboratory => "Лабораторные занятия",
-            LoadAssignmentElementType.Consultation => "Консультации",
-            LoadAssignmentElementType.Exam => "Экзамен",
-            LoadAssignmentElementType.Credit => "Зачет",
-            LoadAssignmentElementType.CourseWork => "Курсовая работа",
-            LoadAssignmentElementType.CourseProject => "Курсовой проект",
-            LoadAssignmentElementType.PracticeWork => "Практика",
-            LoadAssignmentElementType.GiaWork => "ГИА",
-            _ => "Нагрузка"
-        };
-    }
-
     private static string BuildKey(
         LoadAssignmentSourceType sourceType,
-        int sourceRowId,
+        int sourceAcademicPlanRecordId,
         LoadAssignmentElementType elementType)
     {
-        return $"{(int)sourceType}|{sourceRowId}|{(int)elementType}";
+        return $"{(int)sourceType}_{sourceAcademicPlanRecordId}_{(int)elementType}";
     }
 
     private static bool TryParseKey(
-        string? key,
+        string key,
         out LoadAssignmentSourceType sourceType,
-        out int sourceRowId,
+        out int sourceAcademicPlanRecordId,
         out LoadAssignmentElementType elementType)
     {
         sourceType = default;
-        sourceRowId = 0;
+        sourceAcademicPlanRecordId = 0;
         elementType = default;
 
         if (string.IsNullOrWhiteSpace(key))
@@ -740,21 +833,33 @@ public class WorkloadDistributionService
             return false;
         }
 
-        var parts = key.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var parts = key.Split('_');
         if (parts.Length != 3)
         {
             return false;
         }
 
-        if (!int.TryParse(parts[0], out var sourceTypeValue) ||
-            !int.TryParse(parts[1], out sourceRowId) ||
-            !int.TryParse(parts[2], out var elementTypeValue))
+        if (!int.TryParse(parts[0], out var sourceTypeValue))
         {
             return false;
         }
 
-        if (!Enum.IsDefined(typeof(LoadAssignmentSourceType), sourceTypeValue) ||
-            !Enum.IsDefined(typeof(LoadAssignmentElementType), elementTypeValue))
+        if (!int.TryParse(parts[1], out sourceAcademicPlanRecordId))
+        {
+            return false;
+        }
+
+        if (!int.TryParse(parts[2], out var elementTypeValue))
+        {
+            return false;
+        }
+
+        if (!Enum.IsDefined(typeof(LoadAssignmentSourceType), sourceTypeValue))
+        {
+            return false;
+        }
+
+        if (!Enum.IsDefined(typeof(LoadAssignmentElementType), elementTypeValue))
         {
             return false;
         }
@@ -769,7 +874,7 @@ public class WorkloadDistributionService
     {
         return new WorkloadDistributionAvailableItemViewModel
         {
-            ItemKey = BuildKey(item.SourceType, item.SourceRowId, item.LoadElementType),
+            ItemKey = BuildKey(item.SourceType, item.SourceAcademicPlanRecordId, item.LoadElementType),
             SourceTypeDisplayName = GetSourceDisplayName(item.SourceType),
             Title = item.Title,
             Subtitle = item.Subtitle,
@@ -780,50 +885,65 @@ public class WorkloadDistributionService
         };
     }
 
+    private static string GetLecturerDisplayName(Lecturer? lecturer)
+    {
+        if (lecturer == null)
+        {
+            return string.Empty;
+        }
+
+        return $"{lecturer.LastName}{lecturer.FirstName}{lecturer.Patronymic}".Trim();
+    }
+
+    private static string GetSourceDisplayName(LoadAssignmentSourceType sourceType)
+    {
+        return sourceType switch
+        {
+            LoadAssignmentSourceType.Discipline => "Дисциплина",
+            LoadAssignmentSourceType.Practice => "Практика",
+            LoadAssignmentSourceType.Gia => "ГИА",
+            _ => "Неизвестно"
+        };
+    }
+
     private sealed class DistributableLoadItem
     {
         public LoadAssignmentSourceType SourceType { get; set; }
-
         public int SourceRowId { get; set; }
-
+        public int SourceAcademicPlanRecordId { get; set; }
         public LoadAssignmentElementType LoadElementType { get; set; }
-
         public string Title { get; set; } = string.Empty;
-
         public string Subtitle { get; set; } = string.Empty;
-
         public string ElementDisplayName { get; set; } = string.Empty;
-
         public int TotalHours { get; set; }
-
         public int AssignedHours { get; set; }
-
         public int RemainingHours { get; set; }
     }
 }
 
 public sealed class WorkloadDistributionOperationResult
 {
-    private WorkloadDistributionOperationResult(bool success, string message, int? lecturerId)
-    {
-        Success = success;
-        Message = message;
-        LecturerId = lecturerId;
-    }
-
-    public bool Success { get; }
-
-    public string Message { get; }
-
-    public int? LecturerId { get; }
+    public bool Success { get; private set; }
+    public string Message { get; private set; } = string.Empty;
+    public int? LecturerId { get; private set; }
 
     public static WorkloadDistributionOperationResult Ok(string message, int? lecturerId = null)
     {
-        return new WorkloadDistributionOperationResult(true, message, lecturerId);
+        return new WorkloadDistributionOperationResult
+        {
+            Success = true,
+            Message = message,
+            LecturerId = lecturerId
+        };
     }
 
     public static WorkloadDistributionOperationResult Fail(string message, int? lecturerId = null)
     {
-        return new WorkloadDistributionOperationResult(false, message, lecturerId);
+        return new WorkloadDistributionOperationResult
+        {
+            Success = false,
+            Message = message,
+            LecturerId = lecturerId
+        };
     }
 }

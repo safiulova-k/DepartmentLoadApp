@@ -330,12 +330,11 @@ else
                                                                             <button type="submit" name="Delta" value="10" class="btn btn-outline-primary btn-sm" @(assignment.CanIncrease ? null : "disabled")>+10</button>
                                                                         </form>
 
-                                                                        <form asp-action="ChangeAssignmentHours" method="post" class="d-inline">
+                                                                        <form asp-action="FillAssignmentToRemaining" method="post" class="d-inline">
                                                                             @Html.AntiForgeryToken()
-                                                                            <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
-                                                                            <input type="hidden" name="SelectedLecturerId" value="@card.LecturerId" />
-                                                                            <input type="hidden" name="AssignmentId" value="@assignment.AssignmentId" />
-                                                                            <button type="submit" name="Delta" value="999999" class="btn btn-outline-success btn-sm" @(assignment.CanIncrease ? null : "disabled")>
+                                                                            <input type="hidden" name="startYear" value="@Model.SelectedYearStart" />
+                                                                            <input type="hidden" name="assignmentId" value="@assignment.AssignmentId" />
+                                                                            <button type="submit" class="btn btn-outline-success btn-sm">
                                                                                 Остаток
                                                                             </button>
                                                                         </form>

@@ -194,7 +194,7 @@ public class IndividualPlanService
                 x.AcademicYear == academicYear &&
                 x.LecturerAcademicYearPlanId == lecturerAcademicYearPlanId)
             .OrderBy(x => x.SourceType)
-            .ThenBy(x => x.SourceRowId)
+            .ThenBy(x => x.SourceAcademicPlanRecordId)
             .ThenBy(x => x.LoadElementType)
             .ToListAsync();
 
@@ -203,38 +203,41 @@ public class IndividualPlanService
             return new List<IndividualPlanRowData>();
         }
 
-        var disciplineIds = assignments
+        var disciplinePlanRecordIds = assignments
             .Where(x => x.SourceType == LoadAssignmentSourceType.Discipline)
-            .Select(x => x.SourceRowId)
+            .Select(x => x.SourceAcademicPlanRecordId)
             .Distinct()
             .ToList();
 
-        var practiceIds = assignments
+        var practicePlanRecordIds = assignments
             .Where(x => x.SourceType == LoadAssignmentSourceType.Practice)
-            .Select(x => x.SourceRowId)
+            .Select(x => x.SourceAcademicPlanRecordId)
             .Distinct()
             .ToList();
 
-        var giaIds = assignments
+        var giaPlanRecordIds = assignments
             .Where(x => x.SourceType == LoadAssignmentSourceType.Gia)
-            .Select(x => x.SourceRowId)
+            .Select(x => x.SourceAcademicPlanRecordId)
             .Distinct()
             .ToList();
 
         var disciplineMap = await _context.WorkloadRows
             .AsNoTracking()
-            .Where(x => disciplineIds.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id);
+            .Where(x => x.AcademicYear == academicYear && disciplinePlanRecordIds.Contains(x.AcademicPlanRecordId))
+            .GroupBy(x => x.AcademicPlanRecordId)
+            .ToDictionaryAsync(x => x.Key, x => x.First());
 
         var practiceMap = await _context.PracticeWorkloadRows
             .AsNoTracking()
-            .Where(x => practiceIds.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id);
+            .Where(x => x.PlanYear == academicYear && practicePlanRecordIds.Contains(x.AcademicPlanRecordId))
+            .GroupBy(x => x.AcademicPlanRecordId)
+            .ToDictionaryAsync(x => x.Key, x => x.First());
 
         var giaMap = await _context.GiaWorkloadRows
             .AsNoTracking()
-            .Where(x => giaIds.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id);
+            .Where(x => x.PlanYear == academicYear && giaPlanRecordIds.Contains(x.AcademicPlanRecordId))
+            .GroupBy(x => x.AcademicPlanRecordId)
+            .ToDictionaryAsync(x => x.Key, x => x.First());
 
         var result = new Dictionary<string, IndividualPlanRowData>();
 
@@ -244,13 +247,13 @@ public class IndividualPlanService
             {
                 case LoadAssignmentSourceType.Discipline:
                     {
-                        if (!disciplineMap.TryGetValue(assignment.SourceRowId, out var row))
+                        if (!disciplineMap.TryGetValue(assignment.SourceAcademicPlanRecordId, out var row))
                         {
                             continue;
                         }
 
                         var semester = ResolveSemester(row.SemesterName);
-                        var key = BuildRowKey(assignment.SourceType, assignment.SourceRowId, semester);
+                        var key = BuildRowKey(assignment.SourceType, assignment.SourceAcademicPlanRecordId, semester);
 
                         if (!result.TryGetValue(key, out var item))
                         {
@@ -272,13 +275,13 @@ public class IndividualPlanService
 
                 case LoadAssignmentSourceType.Practice:
                     {
-                        if (!practiceMap.TryGetValue(assignment.SourceRowId, out var row))
+                        if (!practiceMap.TryGetValue(assignment.SourceAcademicPlanRecordId, out var row))
                         {
                             continue;
                         }
 
                         var semester = ResolveSemester(row.SemesterName);
-                        var key = BuildRowKey(assignment.SourceType, assignment.SourceRowId, semester);
+                        var key = BuildRowKey(assignment.SourceType, assignment.SourceAcademicPlanRecordId, semester);
 
                         if (!result.TryGetValue(key, out var item))
                         {
@@ -300,13 +303,13 @@ public class IndividualPlanService
 
                 case LoadAssignmentSourceType.Gia:
                     {
-                        if (!giaMap.TryGetValue(assignment.SourceRowId, out var row))
+                        if (!giaMap.TryGetValue(assignment.SourceAcademicPlanRecordId, out var row))
                         {
                             continue;
                         }
 
                         var semester = ResolveSemester(row.SemesterName);
-                        var key = BuildRowKey(assignment.SourceType, assignment.SourceRowId, semester);
+                        var key = BuildRowKey(assignment.SourceType, assignment.SourceAcademicPlanRecordId, semester);
 
                         if (!result.TryGetValue(key, out var item))
                         {
@@ -316,7 +319,7 @@ public class IndividualPlanService
                                 Semester = semester,
                                 SortOrder = 3,
                                 DisplayText = $"{row.DirectionCode} {row.GiaSection}: {row.WorkName}",
-                                StudentsCount = 0
+                                StudentsCount = row.StudentsCount
                             };
 
                             result[key] = item;
@@ -660,10 +663,10 @@ public class IndividualPlanService
 
     private static string BuildRowKey(
         LoadAssignmentSourceType sourceType,
-        int sourceRowId,
+        int sourceAcademicPlanRecordId,
         SemesterKind semester)
     {
-        return $"{sourceType}_{sourceRowId}_{semester}";
+        return $"{sourceType}_{sourceAcademicPlanRecordId}_{semester}";
     }
 
     private static string BuildLecturerFullName(Lecturer? lecturer)
