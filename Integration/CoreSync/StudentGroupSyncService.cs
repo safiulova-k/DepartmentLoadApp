@@ -20,9 +20,15 @@ public class StudentGroupSyncService : IStudentGroupSyncService
 
     public async Task Sync()
     {
-        var items = await _api.GetListAsync<StudentGroupDto>("StudentGroups/GetStudentGroupList");
+        var groupDtos = await _api.GetListAsync<StudentGroupDto>("StudentGroups/GetStudentGroupList");
+        var studentDtos = await _api.GetListAsync<StudentDto>("Students/GetStudentList");
 
-        foreach (var dto in items)
+        var studentCountsByCoreGroupId = studentDtos
+            .Where(x => x.StudentGroupId.HasValue)
+            .GroupBy(x => x.StudentGroupId!.Value)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        foreach (var dto in groupDtos)
         {
             var entity = await _db.StudentGroupsCore
                 .FirstOrDefaultAsync(x => x.CoreId == dto.Id);
@@ -36,11 +42,16 @@ public class StudentGroupSyncService : IStudentGroupSyncService
             }
 
             Lecturer? curator = null;
+
             if (dto.CuratorId.HasValue)
             {
                 curator = await _db.Lecturers
                     .FirstOrDefaultAsync(x => x.CoreId == dto.CuratorId.Value);
             }
+
+            var studentCount = studentCountsByCoreGroupId.TryGetValue(dto.Id, out var count)
+                ? count
+                : 0;
 
             if (entity == null)
             {
@@ -50,7 +61,8 @@ public class StudentGroupSyncService : IStudentGroupSyncService
                     EducationDirectionId = direction.Id,
                     CuratorId = curator?.Id,
                     GroupName = dto.GroupName,
-                    Course = dto.Course
+                    Course = dto.Course,
+                    StudentCount = studentCount
                 };
 
                 _db.StudentGroupsCore.Add(entity);
@@ -61,6 +73,7 @@ public class StudentGroupSyncService : IStudentGroupSyncService
                 entity.CuratorId = curator?.Id;
                 entity.GroupName = dto.GroupName;
                 entity.Course = dto.Course;
+                entity.StudentCount = studentCount;
             }
         }
 
