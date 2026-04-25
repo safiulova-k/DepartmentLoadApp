@@ -26,6 +26,7 @@ public class DepartmentLoadDbContext : DbContext
 
     // Твой модуль
     public DbSet<ContingentRow> ContingentRows { get; set; } = null!;
+    public DbSet<ContingentSubgroup> ContingentSubgroups { get; set; } = null!;
     public DbSet<NormTime> NormTimes { get; set; } = null!;
     public DbSet<WorkloadRow> WorkloadRows { get; set; } = null!;
     public DbSet<LoadCalculation> LoadCalculations { get; set; } = null!;
@@ -139,6 +140,24 @@ public class DepartmentLoadDbContext : DbContext
         });
 
         // ---------- ТВОЙ МОДУЛЬ ----------
+        modelBuilder.Entity<ContingentSubgroup>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.HasIndex(x => new
+            {
+                x.StudentGroupId,
+                x.SubgroupNumber
+            }).IsUnique();
+
+            entity.Property(x => x.StudentsCount).IsRequired();
+
+            entity.HasOne<StudentGroup>()
+                .WithMany()
+                .HasForeignKey(x => x.StudentGroupId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<LoadDistribution>(entity =>
         {
             entity.HasOne(x => x.Lecturer)
