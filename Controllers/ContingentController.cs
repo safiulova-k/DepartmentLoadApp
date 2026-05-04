@@ -34,6 +34,9 @@ public class ContingentController : Controller
 
         if (group == null)
         {
+            if (IsAjaxRequest())
+                return await BuildContentPartialAsync(errorMessage: "Группа не найдена");
+
             TempData["ErrorMessage"] = "Группа не найдена";
             return RedirectToAction(nameof(Index));
         }
@@ -55,6 +58,9 @@ public class ContingentController : Controller
         await DistributeStudentsEvenlyAsync(studentGroupId);
         await RebuildContingentRowsAsync();
 
+        if (IsAjaxRequest())
+            return await BuildContentPartialAsync(successMessage: "Подгруппа добавлена");
+
         TempData["SuccessMessage"] = "Подгруппа добавлена";
         return RedirectToAction(nameof(Index));
     }
@@ -72,6 +78,9 @@ public class ContingentController : Controller
 
         if (subgroups.Count <= 1)
         {
+            if (IsAjaxRequest())
+                return await BuildContentPartialAsync(errorMessage: "У группы должна остаться хотя бы одна подгруппа");
+
             TempData["ErrorMessage"] = "У группы должна остаться хотя бы одна подгруппа";
             return RedirectToAction(nameof(Index));
         }
@@ -79,6 +88,9 @@ public class ContingentController : Controller
         var subgroup = subgroups.FirstOrDefault(x => x.Id == subgroupId);
         if (subgroup == null)
         {
+            if (IsAjaxRequest())
+                return await BuildContentPartialAsync(errorMessage: "Подгруппа не найдена");
+
             TempData["ErrorMessage"] = "Подгруппа не найдена";
             return RedirectToAction(nameof(Index));
         }
@@ -90,6 +102,9 @@ public class ContingentController : Controller
         await DistributeStudentsEvenlyAsync(studentGroupId);
         await RebuildContingentRowsAsync();
 
+        if (IsAjaxRequest())
+            return await BuildContentPartialAsync(successMessage: "Подгруппа удалена");
+
         TempData["SuccessMessage"] = "Подгруппа удалена";
         return RedirectToAction(nameof(Index));
     }
@@ -97,12 +112,15 @@ public class ContingentController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveGroupSubgroups(
-        int studentGroupId,
-        List<int> subgroupIds,
-        List<int> studentsCounts)
+    int studentGroupId,
+    List<int> subgroupIds,
+    List<int> studentsCounts)
     {
         if (subgroupIds.Count != studentsCounts.Count)
         {
+            if (IsAjaxRequest())
+                return await BuildContentPartialAsync(errorMessage: "Не удалось сохранить подгруппы");
+
             TempData["ErrorMessage"] = "Не удалось сохранить подгруппы";
             return RedirectToAction(nameof(Index));
         }
@@ -113,6 +131,9 @@ public class ContingentController : Controller
 
         if (group == null)
         {
+            if (IsAjaxRequest())
+                return await BuildContentPartialAsync(errorMessage: "Группа не найдена");
+
             TempData["ErrorMessage"] = "Группа не найдена";
             return RedirectToAction(nameof(Index));
         }
@@ -123,8 +144,12 @@ public class ContingentController : Controller
 
         if (normalizedCounts.Sum() != group.StudentCount)
         {
-            TempData["ErrorMessage"] =
-                $"Сумма студентов по подгруппам должна быть равна {group.StudentCount}";
+            var message = $"Сумма студентов по подгруппам должна быть равна {group.StudentCount}";
+
+            if (IsAjaxRequest())
+                return await BuildContentPartialAsync(errorMessage: message);
+
+            TempData["ErrorMessage"] = message;
             return RedirectToAction(nameof(Index));
         }
 
@@ -135,6 +160,9 @@ public class ContingentController : Controller
 
         if (subgroups.Count != subgroupIds.Count)
         {
+            if (IsAjaxRequest())
+                return await BuildContentPartialAsync(errorMessage: "Некоторые подгруппы не найдены");
+
             TempData["ErrorMessage"] = "Некоторые подгруппы не найдены";
             return RedirectToAction(nameof(Index));
         }
@@ -151,6 +179,9 @@ public class ContingentController : Controller
         await _context.SaveChangesAsync();
         await RenumberSubgroupsAsync(studentGroupId);
         await RebuildContingentRowsAsync();
+
+        if (IsAjaxRequest())
+            return await BuildContentPartialAsync(successMessage: "Подгруппы сохранены");
 
         TempData["SuccessMessage"] = "Подгруппы сохранены";
         return RedirectToAction(nameof(Index));
@@ -463,5 +494,17 @@ public class ContingentController : Controller
             Rows = rows,
             Directions = directions
         };
+    }
+    private bool IsAjaxRequest()
+    {
+        return Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+    }
+
+    private async Task<PartialViewResult> BuildContentPartialAsync(string? successMessage = null, string? errorMessage = null)
+    {
+        var model = await BuildPageModelAsync();
+        ViewData["SuccessMessage"] = successMessage;
+        ViewData["ErrorMessage"] = errorMessage;
+        return PartialView("_ContingentContent", model);
     }
 }

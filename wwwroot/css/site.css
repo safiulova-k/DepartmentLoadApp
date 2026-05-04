@@ -85,3 +85,103 @@ body {
 .norm-time-table tbody tr:hover {
     background-color: #fcfcfd;
 }
+
+.contingent-page h1,
+.contingent-page h2 {
+    font-weight: 700;
+}
+
+.contingent-legend {
+    font-size: 0.85rem;
+    padding: 0.45rem 0.7rem;
+    border-radius: 999px;
+}
+
+    .contingent-legend.students {
+        background-color: #0d6efd;
+        color: #fff;
+    }
+
+    .contingent-legend.groups {
+        background-color: #198754;
+        color: #fff;
+    }
+
+    .contingent-legend.subgroups {
+        background-color: #ffc107;
+        color: #212529;
+    }
+
+.contingent-summary-table td,
+.contingent-summary-table th {
+    vertical-align: middle;
+}
+
+.contingent-value {
+    font-weight: 600;
+    border-radius: 0.6rem;
+}
+
+    .contingent-value.students {
+        background-color: #e7f1ff;
+        border-color: #9ec5fe;
+        color: #084298;
+    }
+
+    .contingent-value.groups {
+        background-color: #d1e7dd;
+        border-color: #75b798;
+        color: #0f5132;
+    }
+
+    .contingent-value.subgroups {
+        background-color: #fff3cd;
+        border-color: #ffda6a;
+        color: #664d03;
+    }
+
+.contingent-accordion-item {
+    border: 1px solid #dee2e6;
+    border-radius: 1rem !important;
+    overflow: hidden;
+    background: #fff;
+}
+
+.contingent-accordion-button {
+    background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+    box-shadow: none !important;
+}
+
+    .contingent-accordion-button:not(.collapsed) {
+        background: linear-gradient(180deg, #eef5ff 0%, #f8fbff 100%);
+        color: #0a58ca;
+    }
+
+    .contingent-accordion-button:focus {
+        box-shadow: none;
+    }
+
+.contingent-group-card {
+    border-radius: 1rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+}
+
+    .contingent-group-card:hover {
+        box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.08) !important;
+    }
+
+.contingent-side-panel {
+    position: relative;
+}
+
+.contingent-sticky-card {
+    position: sticky;
+    top: 1rem;
+    border-radius: 1rem;
+}
+
+@media (max-width: 991.98px) {
+    .contingent-sticky-card {
+        position: static;
+    }
+}

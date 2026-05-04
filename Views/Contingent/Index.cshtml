@@ -4,234 +4,167 @@
     ViewData["Title"] = "Контингент";
 }
 
-<h1 class="mb-3">Контингент</h1>
+<div class="contingent-page">
+    <h1 class="mb-3">Контингент</h1>
 
-<p class="text-muted mb-4">
-    В ячейке сверху — студенты, ниже — группы, затем подгруппы.
-    Данные по студентам и группам подставляются автоматически из синхронизированных учебных групп.
-</p>
+    <p class="text-muted mb-4">
+        В ячейке сверху — студенты, ниже — группы, затем подгруппы.
+        Данные по студентам и группам подставляются автоматически из синхронизированных учебных групп.
+    </p>
 
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success">
-        @TempData["SuccessMessage"]
+    <div id="contingent-content">
+        @await Html.PartialAsync("_ContingentContent", Model)
     </div>
-}
+</div>
 
-@if (TempData["ErrorMessage"] != null)
+@section Scripts
 {
-    <div class="alert alert-danger">
-        @TempData["ErrorMessage"]
-    </div>
-}
+    <script>
+        (() => {
+            const containerId = "contingent-content";
+            const storageKey = "contingent-open-collapses";
 
-@if (!Model.Rows.Any())
-{
-    <div class="alert alert-info">
-        Нет данных для отображения. Сначала синхронизируй учебные группы.
-    </div>
-}
-else
-{
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <div class="d-flex gap-2 flex-wrap mb-3">
-                <span class="badge bg-primary">Студенты</span>
-                <span class="badge bg-success">Группы</span>
-                <span class="badge bg-warning text-dark">Подгруппы</span>
-            </div>
-
-            <div class="table-responsive">
-                <table class="table table-bordered align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th style="min-width: 140px;">Код</th>
-                            <th style="min-width: 100px;">Тип</th>
-                            <th style="min-width: 170px;">1 курс</th>
-                            <th style="min-width: 170px;">2 курс</th>
-                            <th style="min-width: 170px;">3 курс</th>
-                            <th style="min-width: 170px;">4 курс</th>
-                            <th style="min-width: 120px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (int i = 0; i < Model.Rows.Count; i++)
-                        {
-                            var row = Model.Rows[i];
-
-                            <tr>
-                                <td class="fw-semibold">@row.DirectionCode</td>
-                                <td>@(row.IsBachelor ? "Бак" : "Маг")</td>
-
-                                <td>
-                                    <input class="form-control form-control-sm mb-1" value="@row.Course1Count" readonly />
-                                    <input class="form-control form-control-sm mb-1" value="@row.Course1Groups" readonly />
-                                    <input class="form-control form-control-sm" value="@row.Course1Subgroups" readonly />
-                                </td>
-
-                                <td>
-                                    <input class="form-control form-control-sm mb-1" value="@row.Course2Count" readonly />
-                                    <input class="form-control form-control-sm mb-1" value="@row.Course2Groups" readonly />
-                                    <input class="form-control form-control-sm" value="@row.Course2Subgroups" readonly />
-                                </td>
-
-                                <td>
-                                    <input class="form-control form-control-sm mb-1" value="@row.Course3Count" readonly />
-                                    <input class="form-control form-control-sm mb-1" value="@row.Course3Groups" readonly />
-                                    <input class="form-control form-control-sm" value="@row.Course3Subgroups" readonly />
-                                </td>
-
-                                <td>
-                                    <input class="form-control form-control-sm mb-1" value="@row.Course4Count" readonly />
-                                    <input class="form-control form-control-sm mb-1" value="@row.Course4Groups" readonly />
-                                    <input class="form-control form-control-sm" value="@row.Course4Subgroups" readonly />
-                                </td>
-
-                                <td class="text-center">
-                                    <a class="btn btn-outline-primary btn-sm" href="#direction-details-@i">
-                                        Группы
-                                    </a>
-                                </td>
-                            </tr>
-                        }
-
-                        <tr class="table-secondary fw-semibold">
-                            <td colspan="2" class="text-end">Итого</td>
-                            <td class="text-center">@Model.TotalCourse1</td>
-                            <td class="text-center">@Model.TotalCourse2</td>
-                            <td class="text-center">@Model.TotalCourse3</td>
-                            <td class="text-center">@Model.TotalCourse4</td>
-                            <td></td>
-                        </tr>
-
-                        <tr>
-                            <td colspan="2" class="text-end">Общее количество студентов</td>
-                            <td colspan="4" class="text-center fw-semibold">@Model.TotalStudents</td>
-                            <td></td>
-                        </tr>
-
-                        <tr>
-                            <td colspan="2" class="text-end">Поток бакалавров</td>
-                            <td class="text-center">@Model.BachelorCourse1</td>
-                            <td class="text-center">@Model.BachelorCourse2</td>
-                            <td class="text-center">@Model.BachelorCourse3</td>
-                            <td class="text-center">@Model.BachelorCourse4</td>
-                            <td></td>
-                        </tr>
-
-                        <tr>
-                            <td colspan="2" class="text-end">Поток магистров</td>
-                            <td class="text-center">@Model.MasterCourse1</td>
-                            <td class="text-center">@Model.MasterCourse2</td>
-                            <td class="text-center">@Model.MasterCourse3</td>
-                            <td class="text-center">@Model.MasterCourse4</td>
-                            <td></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <h2 class="mb-3">Детализация по группам</h2>
-
-    @for (int i = 0; i < Model.Rows.Count; i++)
-    {
-        var row = Model.Rows[i];
-        var direction = Model.Directions.FirstOrDefault(x =>
-            x.DirectionCode == row.DirectionCode &&
-            x.IsBachelor == row.IsBachelor);
-
-        <details class="mb-3 border rounded p-3 bg-white shadow-sm" id="direction-details-@i">
-            <summary class="fw-semibold mb-2" style="cursor: pointer;">
-                @row.DirectionCode — @(row.IsBachelor ? "Бакалавриат" : "Магистратура")
-            </summary>
-
-            @if (direction == null || !direction.Courses.Any())
-            {
-                <div class="text-muted mt-3">Нет групп для отображения.</div>
+            function getContainer() {
+                return document.getElementById(containerId);
             }
-            else
-            {
-                @foreach (var course in direction.Courses)
-                {
-                    <div class="mt-4">
-                        <h5 class="mb-3">@course.CourseNumber курс</h5>
 
-                        <div class="row g-3">
-                            @foreach (var group in course.Groups)
-                            {
-                                <div class="col-12 col-xl-6">
-                                    <form asp-action="SaveGroupSubgroups" method="post" class="border rounded p-3 h-100 bg-light">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="studentGroupId" value="@group.StudentGroupId" />
+            function getOpenCollapseIds(root = document) {
+                return [...root.querySelectorAll(".accordion-collapse.show[id]")]
+                    .map(x => x.id);
+            }
 
-                                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-                                            <div>
-                                                <div class="fw-semibold">@group.GroupName</div>
-                                                <div class="text-muted small">
-                                                    Студентов: @group.StudentsCount |
-                                                    Подгрупп: @group.SubgroupsCount
-                                                </div>
-                                            </div>
+            function restoreCollapses(ids) {
+                ids.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
 
-                                            <button type="submit"
-                                                    class="btn btn-outline-primary btn-sm"
-                                                    formaction="@Url.Action("AddSubgroup", "Contingent", new { studentGroupId = group.StudentGroupId })"
-                                                    formmethod="post">
-                                                Добавить п/г
-                                            </button>
-                                        </div>
+                    if (window.bootstrap) {
+                        bootstrap.Collapse.getOrCreateInstance(el, { toggle: false }).show();
+                    } else {
+                        el.classList.add("show");
+                    }
+                });
+            }
 
-                                        @for (int subgroupIndex = 0; subgroupIndex < group.Subgroups.Count; subgroupIndex++)
-                                        {
-                                            var subgroup = group.Subgroups[subgroupIndex];
+            function saveOpenState(root = document) {
+                const ids = getOpenCollapseIds(root);
+                sessionStorage.setItem(storageKey, JSON.stringify(ids));
+            }
 
-                                            <div class="row g-2 align-items-center mb-2">
-                                                <div class="col-12 col-md-3">
-                                                    <label class="form-label mb-0 fw-semibold">@subgroup.Name</label>
-                                                </div>
+            function restoreOpenState() {
+                try {
+                    const raw = sessionStorage.getItem(storageKey);
+                    if (!raw) return;
 
-                                                <div class="col-12 col-md-5">
-                                                    <input type="hidden" name="subgroupIds" value="@subgroup.Id" />
-                                                    <input type="number"
-                                                           name="studentsCounts"
-                                                           class="form-control form-control-sm"
-                                                           min="0"
-                                                           value="@subgroup.StudentsCount" />
-                                                </div>
-
-                                                <div class="col-12 col-md-auto">
-                                                    @if (group.Subgroups.Count > 1)
-                                                    {
-                                                        <button type="submit"
-                                                                class="btn btn-outline-danger btn-sm"
-                                                                formaction="@Url.Action("DeleteSubgroup", "Contingent", new { studentGroupId = group.StudentGroupId, subgroupId = subgroup.Id })"
-                                                                formmethod="post"
-                                                                onclick="return confirm('Удалить подгруппу?');">
-                                                            Удалить
-                                                        </button>
-                                                    }
-                                                </div>
-                                            </div>
-                                        }
-
-                                        <div class="text-muted small mt-2">
-                                            Сумма студентов по подгруппам должна быть равна @group.StudentsCount.
-                                        </div>
-
-                                        <div class="d-flex justify-content-end mt-3">
-                                            <button type="submit" class="btn btn-success btn-sm">
-                                                Сохранить
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            }
-                        </div>
-                    </div>
+                    const ids = JSON.parse(raw);
+                    if (Array.isArray(ids)) {
+                        restoreCollapses(ids);
+                    }
+                } catch {
+                    // ignore
                 }
             }
-        </details>
-    }
+
+            function openAccordion(targetId, scroll = true) {
+                const collapse = document.getElementById(targetId);
+                if (!collapse) return;
+
+                if (window.bootstrap) {
+                    bootstrap.Collapse.getOrCreateInstance(collapse, { toggle: false }).show();
+                } else {
+                    collapse.classList.add("show");
+                }
+
+                history.replaceState(null, "", "#" + targetId);
+                saveOpenState(document);
+
+                if (scroll) {
+                    const card = collapse.closest(".accordion-item") || collapse;
+                    card.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+            }
+
+            function openByHash(scroll = false) {
+                if (!location.hash) return;
+                const id = location.hash.replace("#", "");
+                openAccordion(id, scroll);
+            }
+
+            async function submitContingentForm(form, submitter) {
+                const container = getContainer();
+                if (!container) return;
+
+                const openIds = getOpenCollapseIds(document);
+                const parentCollapse = form.closest(".accordion-collapse[id]");
+                if (parentCollapse && !openIds.includes(parentCollapse.id)) {
+                    openIds.push(parentCollapse.id);
+                }
+
+                const action = submitter?.formAction || form.action;
+                const method = (submitter?.formMethod || form.method || "post").toUpperCase();
+                const formData = new FormData(form);
+
+                const response = await fetch(action, {
+                    method,
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest"
+                    },
+                    body: formData
+                });
+
+                const html = await response.text();
+                container.innerHTML = html;
+
+                wireContingent();
+                restoreCollapses(openIds);
+                saveOpenState(document);
+
+                if (parentCollapse) {
+                    openAccordion(parentCollapse.id, true);
+                }
+            }
+
+            function bindAjaxForms(root = document) {
+                root.querySelectorAll(".js-contingent-form").forEach(form => {
+                    form.addEventListener("submit", async e => {
+                        e.preventDefault();
+                        await submitContingentForm(form, e.submitter);
+                    });
+                });
+            }
+
+            function bindOpenButtons(root = document) {
+                root.querySelectorAll(".js-open-accordion").forEach(btn => {
+                    btn.addEventListener("click", e => {
+                        e.preventDefault();
+                        const targetId = btn.dataset.target;
+                        if (!targetId) return;
+                        openAccordion(targetId, true);
+                    });
+                });
+            }
+
+            function bindCollapseState(root = document) {
+                root.querySelectorAll(".accordion-collapse[id]").forEach(collapse => {
+                    collapse.addEventListener("shown.bs.collapse", () => saveOpenState(document));
+                    collapse.addEventListener("hidden.bs.collapse", () => saveOpenState(document));
+                });
+            }
+
+            window.wireContingent = function () {
+                const root = getContainer() || document;
+                bindAjaxForms(root);
+                bindOpenButtons(root);
+                bindCollapseState(root);
+            };
+
+            document.addEventListener("DOMContentLoaded", () => {
+                wireContingent();
+                restoreOpenState();
+                openByHash(false);
+            });
+
+            window.addEventListener("hashchange", () => openByHash(true));
+        })();
+    </script>
 }
