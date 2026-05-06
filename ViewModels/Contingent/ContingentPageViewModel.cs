@@ -37,6 +37,7 @@ public class ContingentDirectionViewModel
     public string QualificationName { get; set; } = string.Empty;
 
     public List<ContingentCourseViewModel> Courses { get; set; } = new();
+    public string DirectionName { get; set; } = string.Empty;
 }
 
 public class ContingentCourseViewModel

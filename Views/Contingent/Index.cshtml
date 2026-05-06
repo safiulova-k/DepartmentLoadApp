@@ -95,6 +95,9 @@
                 const method = (submitterMethod || form.method || "post").toUpperCase();
                 const formData = new FormData(form);
 
+                const currentScrollY = window.scrollY;
+                container.classList.add("contingent-loading");
+
                 const response = await fetch(action, {
                     method,
                     headers: {
@@ -104,14 +107,31 @@
                 });
 
                 const html = await response.text();
-                container.innerHTML = html;
+
+                const wrapper = document.createElement("div");
+                wrapper.innerHTML = html;
+
+                const newCourseSection = wrapper.querySelector(".js-course-section");
+                const currentCourseSection = form.closest(".js-course-section");
+
+                if (newCourseSection && currentCourseSection) {
+                    currentCourseSection.replaceWith(newCourseSection);
+                } else {
+                    container.innerHTML = html;
+                }
 
                 restoreCollapses(openIds);
                 saveOpenState(document);
 
                 if (parentCollapse) {
-                    openAccordion(parentCollapse.id, true);
+                    openAccordion(parentCollapse.id, false);
                 }
+
+                window.scrollTo({ top: currentScrollY, behavior: "auto" });
+
+                requestAnimationFrame(() => {
+                    container.classList.remove("contingent-loading");
+                });
             }
 
             document.addEventListener("submit", async (e) => {

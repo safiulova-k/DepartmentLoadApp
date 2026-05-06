@@ -1,37 +1,24 @@
 ﻿@model DepartmentLoadApp.ViewModels.Contingent.ContingentPageViewModel
 
-@{
-    var successMessage = ViewData["SuccessMessage"]?.ToString() ?? TempData["SuccessMessage"]?.ToString();
-    var errorMessage = ViewData["ErrorMessage"]?.ToString() ?? TempData["ErrorMessage"]?.ToString();
-}
-
-@if (!string.IsNullOrWhiteSpace(successMessage))
-{
-    <div class="alert alert-success shadow-sm">@successMessage</div>
-}
-
-@if (!string.IsNullOrWhiteSpace(errorMessage))
-{
-    <div class="alert alert-danger shadow-sm">@errorMessage</div>
-}
-
 @if (!Model.Rows.Any())
 {
     <div class="alert alert-info shadow-sm">
-        Нет данных для отображения. Сначала синхронизируй учебные группы.
+        Нет данных для отображения. Сначала синхронизируйте учебные группы.
     </div>
 }
-else
-{
+else {
     <div class="card shadow-sm mb-4">
         <div class="card-body">
+            <div class="d-flex gap-2 flex-wrap mb-3">
+                <span class="badge contingent-legend students">Количество студентов</span>
+            </div>
 
             <div class="table-responsive">
                 <table class="table table-bordered align-middle contingent-summary-table">
                     <thead class="table-light">
                         <tr>
                             <th style="min-width: 140px;">Код</th>
-                            <th style="min-width: 180px;">Тип</th>
+                            <th style="min-width: 200px;">Тип</th>
                             <th style="min-width: 140px;">1 курс</th>
                             <th style="min-width: 140px;">2 курс</th>
                             <th style="min-width: 140px;">3 курс</th>
@@ -52,23 +39,18 @@ else
                                         @(row.IsBachelor ? "Бакалавриат" : "Магистратура")
                                     </span>
                                 </td>
-
                                 <td>
                                     <input class="form-control form-control-sm contingent-value students" value="@row.Course1Count" readonly />
                                 </td>
-
                                 <td>
                                     <input class="form-control form-control-sm contingent-value students" value="@row.Course2Count" readonly />
                                 </td>
-
                                 <td>
                                     <input class="form-control form-control-sm contingent-value students" value="@row.Course3Count" readonly />
                                 </td>
-
                                 <td>
                                     <input class="form-control form-control-sm contingent-value students" value="@row.Course4Count" readonly />
                                 </td>
-
                                 <td class="text-center">
                                     <a class="btn btn-outline-primary btn-sm js-open-accordion"
                                        href="#@targetId"
@@ -78,6 +60,15 @@ else
                                 </td>
                             </tr>
                         }
+
+                        <tr class="table-secondary fw-semibold">
+                            <td colspan="2" class="text-end">Итого</td>
+                            <td class="text-center">@Model.TotalCourse1</td>
+                            <td class="text-center">@Model.TotalCourse2</td>
+                            <td class="text-center">@Model.TotalCourse3</td>
+                            <td class="text-center">@Model.TotalCourse4</td>
+                            <td></td>
+                        </tr>
 
                         <tr>
                             <td colspan="2" class="text-end">Общее количество студентов</td>
@@ -130,7 +121,13 @@ else
                             aria-expanded="false"
                             aria-controls="@collapseId">
                         <div class="w-100 d-flex justify-content-between align-items-center">
-                            <span class="fw-semibold">@row.DirectionCode</span>
+                            <span class="fw-semibold">
+                                @row.DirectionCode
+                                @if (direction != null && !string.IsNullOrWhiteSpace(direction.DirectionName))
+                                {
+                                    <span class="ms-2">@direction.DirectionName</span>
+                                }
+                            </span>
                         </div>
                     </button>
                 </h2>
@@ -147,109 +144,7 @@ else
                         {
                             @foreach (var course in direction.Courses)
                             {
-                                var groupsCount = course.Groups.Count;
-                                var subgroupsCount = course.Groups.Sum(x => x.SubgroupsCount);
-
-                                <div class="contingent-course-section mb-4">
-                                    <div class="contingent-course-header mb-3">
-                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                            <div class="fw-semibold fs-5">
-                                                @course.CourseNumber курс
-                                            </div>
-
-                                            <div class="d-flex gap-2 flex-wrap">
-                                                <span class="badge text-bg-primary">Групп: @groupsCount</span>
-                                                <span class="badge text-bg-warning">Подгрупп: @subgroupsCount</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="row g-3">
-                                        @foreach (var group in course.Groups)
-                                        {
-                                            <div class="col-12 col-xl-6">
-                                                <form action="@Url.Action("SaveGroupSubgroups", "Contingent")"
-                                                      method="post"
-                                                      class="card border-0 shadow-sm h-100 contingent-group-card js-contingent-form">
-                                                    @Html.AntiForgeryToken()
-                                                    <input type="hidden" name="studentGroupId" value="@group.StudentGroupId" />
-
-                                                    <div class="card-body">
-                                                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-                                                            <div>
-                                                                <div class="fw-semibold fs-5">@group.GroupName</div>
-                                                                <div class="text-muted small">
-                                                                    Студентов: @group.StudentsCount
-                                                                </div>
-                                                            </div>
-
-                                                            <div class="d-flex gap-2 align-items-center flex-wrap">
-                                                                <span class="badge text-bg-light">
-                                                                    Подгрупп: @group.SubgroupsCount
-                                                                </span>
-
-                                                                <button type="submit"
-                                                                        class="btn btn-outline-primary btn-sm"
-                                                                        formaction="@Url.Action("AddSubgroup", "Contingent", new { studentGroupId = group.StudentGroupId })"
-                                                                        formmethod="post">
-                                                                    Добавить п/г
-                                                                </button>
-                                                            </div>
-                                                        </div>
-
-                                                        @for (int subgroupIndex = 0; subgroupIndex < group.Subgroups.Count; subgroupIndex++)
-                                                        {
-                                                            var subgroup = group.Subgroups[subgroupIndex];
-
-                                                            <div class="row g-2 align-items-center mb-2">
-                                                                <div class="col-12 col-md-3">
-                                                                    <label class="form-label mb-0 fw-semibold">@subgroup.Name</label>
-                                                                </div>
-
-                                                                <div class="col-12 col-md-5">
-                                                                    <input type="hidden" name="subgroupIds" value="@subgroup.Id" />
-                                                                    <input type="number"
-                                                                           name="studentsCounts"
-                                                                           class="form-control form-control-sm"
-                                                                           min="0"
-                                                                           value="@subgroup.StudentsCount" />
-                                                                </div>
-
-                                                                <div class="col-12 col-md-auto">
-                                                                    @if (group.Subgroups.Count > 1)
-                                                                    {
-                                                                        <button type="submit"
-                                                                                class="btn btn-outline-danger btn-sm"
-                                                                                formaction="@Url.Action("DeleteSubgroup", "Contingent", new { studentGroupId = group.StudentGroupId, subgroupId = subgroup.Id })"
-                                                                                formmethod="post"
-                                                                                onclick="return confirm('Удалить подгруппу?');">
-                                                                            Удалить
-                                                                        </button>
-                                                                    }
-                                                                </div>
-                                                            </div>
-                                                        }
-
-                                                        <div class="small text-muted mt-2">
-                                                            Сумма студентов по подгруппам должна быть равна @group.StudentsCount.
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="card-footer bg-white border-0 pt-0 pb-3 px-3">
-                                                        <div class="d-flex justify-content-end">
-                                                            <button type="submit"
-                                                                    class="btn btn-success btn-sm"
-                                                                    formaction="@Url.Action("SaveGroupSubgroups", "Contingent")"
-                                                                    formmethod="post">
-                                                                Сохранить
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        }
-                                    </div>
-                                </div>
+                                @await Html.PartialAsync("_CourseSection", course)
                             }
                         }
                     </div>
@@ -257,4 +152,4 @@ else
             </div>
         }
     </div>
-}
+} 

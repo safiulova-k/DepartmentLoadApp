@@ -196,12 +196,43 @@ body {
 }
 
 .contingent-group-card {
-    border-radius: 1rem;
+    border-radius: 0,85rem;
     background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
 }
 
     .contingent-group-card:hover {
         box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.08) !important;
+    }
+
+    .contingent-group-card .card-body {
+        padding: 0.85rem;
+    }
+
+    .contingent-group-card .card-footer {
+        padding: 0 0.85rem 0.85rem 0.85rem !important;
+    }
+
+    .contingent-group-card .fs-5 {
+        font-size: 1rem !important;
+    }
+
+    .contingent-group-card .form-control-sm {
+        padding: 0.2rem 0.45rem;
+        font-size: 0.9rem;
+    }
+
+    .contingent-group-card .btn-sm {
+        padding: 0.2rem 0.45rem;
+        font-size: 0.85rem;
+    }
+
+    .contingent-group-card .badge {
+        font-size: 0.75rem;
+    }
+
+    .contingent-group-card .row.g-2 {
+        --bs-gutter-x: 0.4rem;
+        --bs-gutter-y: 0.4rem;
     }
 
 .contingent-course-header,
@@ -212,3 +243,15 @@ body {
     .contingent-course-header .badge {
         color: inherit !important;
     }
+
+#contingent-content {
+    transition: opacity 0.15s ease;
+}
+
+    #contingent-content.contingent-loading {
+        opacity: 0.75;
+    }
+
+.js-course-section {
+    transition: opacity 0.12s ease;
+}

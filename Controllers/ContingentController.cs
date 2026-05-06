@@ -59,7 +59,7 @@ public class ContingentController : Controller
         await RebuildContingentRowsAsync();
 
         if (IsAjaxRequest())
-            return await BuildContentPartialAsync(successMessage: "Подгруппа добавлена");
+            return await BuildCoursePartialAsync(studentGroupId);
 
         TempData["SuccessMessage"] = "Подгруппа добавлена";
         return RedirectToAction(nameof(Index));
@@ -103,9 +103,8 @@ public class ContingentController : Controller
         await RebuildContingentRowsAsync();
 
         if (IsAjaxRequest())
-            return await BuildContentPartialAsync(successMessage: "Подгруппа удалена");
+            return await BuildCoursePartialAsync(studentGroupId);
 
-        TempData["SuccessMessage"] = "Подгруппа удалена";
         return RedirectToAction(nameof(Index));
     }
 
@@ -147,7 +146,7 @@ public class ContingentController : Controller
             var message = $"Сумма студентов по подгруппам должна быть равна {group.StudentCount}";
 
             if (IsAjaxRequest())
-                return await BuildContentPartialAsync(errorMessage: message);
+                return await BuildCoursePartialAsync(studentGroupId, message, studentGroupId);
 
             TempData["ErrorMessage"] = message;
             return RedirectToAction(nameof(Index));
@@ -181,9 +180,8 @@ public class ContingentController : Controller
         await RebuildContingentRowsAsync();
 
         if (IsAjaxRequest())
-            return await BuildContentPartialAsync(successMessage: "Подгруппы сохранены");
+            return await BuildCoursePartialAsync(studentGroupId);
 
-        TempData["SuccessMessage"] = "Подгруппы сохранены";
         return RedirectToAction(nameof(Index));
     }
 
@@ -231,13 +229,20 @@ public class ContingentController : Controller
 
             if (!groupSubgroups.Any())
             {
-                _context.ContingentSubgroups.Add(new ContingentSubgroup
-                {
-                    StudentGroupId = studentGroup.Id,
-                    SubgroupNumber = 1,
-                    StudentsCount = studentGroup.StudentCount
-                });
+                var subgroupCount = studentGroup.StudentCount > 15 ? 2 : 1;
 
+                var createdSubgroups = Enumerable.Range(1, subgroupCount)
+                    .Select(number => new ContingentSubgroup
+                    {
+                        StudentGroupId = studentGroup.Id,
+                        SubgroupNumber = number,
+                        StudentsCount = 0
+                    })
+                    .ToList();
+
+                ApplyEvenDistribution(createdSubgroups, studentGroup.StudentCount);
+
+                _context.ContingentSubgroups.AddRange(createdSubgroups);
                 continue;
             }
 
@@ -434,6 +439,7 @@ public class ContingentController : Controller
                 studentGroup.StudentCount,
                 Course = (int)studentGroup.Course,
                 DirectionCode = direction.Cipher,
+                DirectionName = direction.Title,
                 direction.Qualification
             })
             .ToListAsync();
@@ -442,6 +448,7 @@ public class ContingentController : Controller
             .GroupBy(x => new
             {
                 x.DirectionCode,
+                x.DirectionName,
                 x.Qualification
             })
             .OrderBy(x => x.Key.DirectionCode)
@@ -449,6 +456,7 @@ public class ContingentController : Controller
             .Select(x => new ContingentDirectionViewModel
             {
                 DirectionCode = x.Key.DirectionCode,
+                DirectionName = x.First().DirectionName,
                 IsBachelor = x.Key.Qualification == EducationDirectionQualification.Бакалавриат,
                 QualificationName = x.Key.Qualification == EducationDirectionQualification.Бакалавриат
                     ? "Бакалавриат"
@@ -500,11 +508,31 @@ public class ContingentController : Controller
         return Request.Headers["X-Requested-With"] == "XMLHttpRequest";
     }
 
-    private async Task<PartialViewResult> BuildContentPartialAsync(string? successMessage = null, string? errorMessage = null)
+    private async Task<PartialViewResult> BuildContentPartialAsync(
+        string? successMessage = null,
+        string? errorMessage = null,
+        int? errorStudentGroupId = null)
     {
         var model = await BuildPageModelAsync();
         ViewData["SuccessMessage"] = successMessage;
         ViewData["ErrorMessage"] = errorMessage;
+        ViewData["ErrorStudentGroupId"] = errorStudentGroupId;
         return PartialView("_ContingentContent", model);
+    }
+    private async Task<PartialViewResult> BuildCoursePartialAsync(
+    int studentGroupId,
+    string? errorMessage = null,
+    int? errorStudentGroupId = null)
+    {
+        var model = await BuildPageModelAsync();
+
+        var course = model.Directions
+            .SelectMany(x => x.Courses)
+            .First(x => x.Groups.Any(g => g.StudentGroupId == studentGroupId));
+
+        ViewData["ErrorMessage"] = errorMessage;
+        ViewData["ErrorStudentGroupId"] = errorStudentGroupId;
+
+        return PartialView("_CourseSection", course);
     }
 }
