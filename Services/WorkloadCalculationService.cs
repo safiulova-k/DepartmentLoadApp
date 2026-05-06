@@ -44,7 +44,7 @@ namespace DepartmentLoadApp.Services
                 .ToListAsync();
 
             var contingentMap = contingents
-                .GroupBy(x => NormalizeText(x.DirectionCode))
+                .GroupBy(x => TextNormalizeHelper.Normalize(x.DirectionCode))
                 .ToDictionary(x => x.Key, x => x.First());
 
             var flows = await _context.StudentFlows
@@ -55,14 +55,14 @@ namespace DepartmentLoadApp.Services
                 .GroupBy(x => new
                 {
                     x.AcademicYear,
-                    DirectionCode = NormalizeText(x.DirectionCode),
+                    DirectionCode = TextNormalizeHelper.Normalize(x.DirectionCode),
                     x.Course
                 })
                 .ToDictionary(x => x.Key, x => x.Count());
 
             foreach (var row in rows)
             {
-                var directionCode = NormalizeText(row.DirectionCode);
+                var directionCode = TextNormalizeHelper.Normalize(row.DirectionCode);
 
                 if (!contingentMap.TryGetValue(directionCode, out var contingent))
                 {
@@ -160,20 +160,6 @@ namespace DepartmentLoadApp.Services
             row.CourseWorkHours = 0;
             row.CourseProjectHours = 0;
             row.RgrHours = 0;
-        }
-
-        private static string NormalizeText(string? value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return string.Empty;
-            }
-
-            return string.Join(' ', value
-                .Trim()
-                .ToLowerInvariant()
-                .Replace("ё", "е")
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries));
         }
     }
 }

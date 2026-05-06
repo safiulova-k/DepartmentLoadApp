@@ -14,6 +14,7 @@ public class SyncController : ControllerBase
     private readonly IStudentGroupSyncService _studentGroupSyncService;
     private readonly IAcademicPlanSyncService _academicPlanSyncService;
     private readonly IAcademicPlanRecordSyncService _academicPlanRecordSyncService;
+    private readonly ILogger<SyncController> _logger;
 
     public SyncController(
         IEducationDirectionSyncService educationDirectionSyncService,
@@ -22,7 +23,8 @@ public class SyncController : ControllerBase
         ILecturerSyncService lecturerSyncService,
         IStudentGroupSyncService studentGroupSyncService,
         IAcademicPlanSyncService academicPlanSyncService,
-        IAcademicPlanRecordSyncService academicPlanRecordSyncService)
+        IAcademicPlanRecordSyncService academicPlanRecordSyncService,
+        ILogger<SyncController> logger)
     {
         _educationDirectionSyncService = educationDirectionSyncService;
         _lecturerStudyPostSyncService = lecturerStudyPostSyncService;
@@ -31,6 +33,7 @@ public class SyncController : ControllerBase
         _studentGroupSyncService = studentGroupSyncService;
         _academicPlanSyncService = academicPlanSyncService;
         _academicPlanRecordSyncService = academicPlanRecordSyncService;
+        _logger = logger;
     }
 
     [HttpGet("ping")]
@@ -44,7 +47,8 @@ public class SyncController : ControllerBase
     {
         return await RunSyncAsync(
             _educationDirectionSyncService.Sync,
-            "Направления подготовки синхронизированы");
+            "Направления подготовки синхронизированы",
+            "education-directions");
     }
 
     [HttpPost("lecturer-study-posts")]
@@ -52,7 +56,8 @@ public class SyncController : ControllerBase
     {
         return await RunSyncAsync(
             _lecturerStudyPostSyncService.Sync,
-            "Учебные должности преподавателей синхронизированы");
+            "Учебные должности преподавателей синхронизированы",
+            "lecturer-study-posts");
     }
 
     [HttpPost("lecturer-department-posts")]
@@ -60,7 +65,8 @@ public class SyncController : ControllerBase
     {
         return await RunSyncAsync(
             _lecturerDepartmentPostSyncService.Sync,
-            "Кафедральные должности преподавателей синхронизированы");
+            "Кафедральные должности преподавателей синхронизированы",
+            "lecturer-department-posts");
     }
 
     [HttpPost("lecturers")]
@@ -68,7 +74,8 @@ public class SyncController : ControllerBase
     {
         return await RunSyncAsync(
             _lecturerSyncService.Sync,
-            "Преподаватели синхронизированы");
+            "Преподаватели синхронизированы",
+            "lecturers");
     }
 
     [HttpPost("student-groups")]
@@ -76,7 +83,8 @@ public class SyncController : ControllerBase
     {
         return await RunSyncAsync(
             _studentGroupSyncService.Sync,
-            "Студенческие группы синхронизированы");
+            "Студенческие группы синхронизированы",
+            "student-groups");
     }
 
     [HttpPost("academic-plans")]
@@ -84,7 +92,8 @@ public class SyncController : ControllerBase
     {
         return await RunSyncAsync(
             _academicPlanSyncService.Sync,
-            "Учебные планы синхронизированы");
+            "Учебные планы синхронизированы",
+            "academic-plans");
     }
 
     [HttpPost("academic-plan-records")]
@@ -92,7 +101,8 @@ public class SyncController : ControllerBase
     {
         return await RunSyncAsync(
             _academicPlanRecordSyncService.Sync,
-            "Записи учебных планов синхронизированы");
+            "Записи учебных планов синхронизированы",
+            "academic-plan-records");
     }
 
     [HttpPost("all")]
@@ -107,10 +117,13 @@ public class SyncController : ControllerBase
             await _studentGroupSyncService.Sync();
             await _academicPlanSyncService.Sync();
             await _academicPlanRecordSyncService.Sync();
-        }, "Синхронизация всех данных завершена");
+        }, "Синхронизация всех данных завершена", "all");
     }
 
-    private async Task<IActionResult> RunSyncAsync(Func<Task> syncAction, string successMessage)
+    private async Task<IActionResult> RunSyncAsync(
+        Func<Task> syncAction,
+        string successMessage,
+        string operationName)
     {
         try
         {
@@ -118,8 +131,13 @@ public class SyncController : ControllerBase
 
             return Ok(successMessage);
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(
+                ex,
+                "Ошибка при синхронизации данных. Операция: {OperationName}",
+                operationName);
+
             return StatusCode(500, "Ошибка при синхронизации данных");
         }
     }

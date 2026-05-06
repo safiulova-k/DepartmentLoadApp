@@ -8,6 +8,16 @@ namespace DepartmentLoadApp.Services
 {
     public class PracticeCalculationService
     {
+        private const string PracticeCategoryKeyword = "%практи%";
+        private const string ResearchCategoryKeyword = "%науч%";
+
+        private const string TechnologyPracticeKeyword = "технологическ";
+        private const string PreDiplomaPracticeKeyword = "преддиплом";
+        private const string IntroductoryPracticeKeyword = "ознаком";
+        private const string ResearchPracticeShortName = "нир";
+        private const string ResearchPracticeKeyword = "научно-исследователь";
+        private const string StudyPracticeKeyword = "учебн";
+
         private readonly DepartmentLoadDbContext _context;
 
         public PracticeCalculationService(DepartmentLoadDbContext context)
@@ -20,9 +30,9 @@ namespace DepartmentLoadApp.Services
             var norms = await _context.NormTimes
                 .AsNoTracking()
                 .Where(x =>
-                    !string.IsNullOrWhiteSpace(x.CategoryName) &&
-                    (EF.Functions.ILike(x.CategoryName, "%практи%") ||
-                     EF.Functions.ILike(x.CategoryName, "%науч%")))
+                    !string.IsNullOrWhiteSpace(x.CategoryName)
+                    && (EF.Functions.ILike(x.CategoryName, PracticeCategoryKeyword)
+                        || EF.Functions.ILike(x.CategoryName, ResearchCategoryKeyword)))
                 .ToListAsync();
 
             var contingents = await _context.ContingentRows
@@ -30,12 +40,14 @@ namespace DepartmentLoadApp.Services
                 .ToListAsync();
 
             var contingentMap = contingents
-                .GroupBy(x => NormalizeText(x.DirectionCode))
+                .GroupBy(x => TextNormalizeHelper.Normalize(x.DirectionCode))
                 .ToDictionary(x => x.Key, x => x.First());
 
             foreach (var row in rows)
             {
-                if (!contingentMap.TryGetValue(NormalizeText(row.DirectionCode), out var contingent))
+                var directionCode = TextNormalizeHelper.Normalize(row.DirectionCode);
+
+                if (!contingentMap.TryGetValue(directionCode, out var contingent))
                 {
                     ResetCalculatedFields(row);
                     continue;
@@ -70,7 +82,9 @@ namespace DepartmentLoadApp.Services
             row.TotalHours = 0;
         }
 
-        private static NormTime? FindPracticeNorm(List<NormTime> norms, string practiceName)
+        private static NormTime? FindPracticeNorm(
+            List<NormTime> norms,
+            string practiceName)
         {
             var target = NormalizePracticeKey(practiceName);
 
@@ -84,25 +98,39 @@ namespace DepartmentLoadApp.Services
             var b = NormalizePracticeKey(right);
 
             if (a == b)
+            {
                 return true;
+            }
 
-            if (a.Contains("технологическ") && b.Contains("технологическ"))
+            if (a.Contains(TechnologyPracticeKeyword) && b.Contains(TechnologyPracticeKeyword))
+            {
                 return true;
+            }
 
-            if (a.Contains("преддиплом") && b.Contains("преддиплом"))
+            if (a.Contains(PreDiplomaPracticeKeyword) && b.Contains(PreDiplomaPracticeKeyword))
+            {
                 return true;
+            }
 
-            if (a.Contains("ознаком") && b.Contains("ознаком"))
+            if (a.Contains(IntroductoryPracticeKeyword) && b.Contains(IntroductoryPracticeKeyword))
+            {
                 return true;
+            }
 
-            if (a == "нир" && b == "нир")
+            if (a == ResearchPracticeShortName && b == ResearchPracticeShortName)
+            {
                 return true;
+            }
 
-            if (a.Contains("научно-исследователь") && b.Contains("научно-исследователь"))
+            if (a.Contains(ResearchPracticeKeyword) && b.Contains(ResearchPracticeKeyword))
+            {
                 return true;
+            }
 
-            if (a.Contains("учебн") && b.Contains("учебн"))
+            if (a.Contains(StudyPracticeKeyword) && b.Contains(StudyPracticeKeyword))
+            {
                 return true;
+            }
 
             return false;
         }
@@ -110,30 +138,20 @@ namespace DepartmentLoadApp.Services
         private static string NormalizePracticeKey(string? value)
         {
             if (string.IsNullOrWhiteSpace(value))
+            {
                 return string.Empty;
+            }
 
             var normalized = value
                 .Trim()
                 .ToLowerInvariant()
                 .Replace("ё", "е")
-                .Replace("бакалавров", "")
-                .Replace("магистров", "")
-                .Replace("(учебная)", "")
-                .Replace("(производственная)", "");
+                .Replace("бакалавров", string.Empty)
+                .Replace("магистров", string.Empty)
+                .Replace("(учебная)", string.Empty)
+                .Replace("(производственная)", string.Empty);
 
             return string.Join(' ', normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries));
-        }
-
-        private static string NormalizeText(string? value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return string.Empty;
-
-            return string.Join(' ', value
-                .Trim()
-                .ToLowerInvariant()
-                .Replace("ё", "е")
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries));
         }
     }
 }

@@ -1,0 +1,26 @@
+﻿@model DepartmentLoadApp.ViewModels.ErrorViewModel
+
+@{
+    ViewData["Title"] = "Ошибка";
+}
+
+<div class="container mt-4">
+    <div class="alert alert-danger">
+        <h4 class="alert-heading">Произошла ошибка</h4>
+        <p class="mb-2">
+            При обработке запроса возникла непредвиденная ошибка.
+        </p>
+
+        @if (Model.ShowRequestId)
+        {
+            <hr />
+            <p class="mb-0">
+                <strong>Идентификатор запроса:</strong> @Model.RequestId
+            </p>
+        }
+    </div>
+
+    <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
+        Вернуться на главную
+    </a>
+</div>

@@ -42,13 +42,15 @@ namespace DepartmentLoadApp.Controllers
 
             await _workloadCalculationService.RecalculateAsync(rows);
 
-            return View(new WorkloadTablePageViewModel
+            var model = new WorkloadTablePageViewModel
             {
                 SelectedYearStart = selectedYearStart,
                 SelectedYear = selectedYear,
                 AvailableYearStarts = AcademicYearResolver.BuildAvailableStartYears(selectedYearStart),
                 Rows = rows
-            });
+            };
+
+            return View(model);
         }
 
         [HttpPost]
@@ -59,7 +61,9 @@ namespace DepartmentLoadApp.Controllers
 
             await _importService.ImportAllAsync(selectedYearStart);
 
-            return RedirectToAction(nameof(Index), new { startYear = selectedYearStart });
+            TempData["SuccessMessage"] = "Данные из учебного плана импортированы";
+
+            return RedirectToIndex(selectedYearStart);
         }
 
         [HttpPost]
@@ -67,6 +71,13 @@ namespace DepartmentLoadApp.Controllers
         public async Task<IActionResult> Save(WorkloadTablePageViewModel model)
         {
             var inputRows = model.Rows ?? new List<WorkloadRow>();
+
+            if (!inputRows.Any())
+            {
+                TempData["ErrorMessage"] = "Нет строк для сохранения";
+
+                return RedirectToIndex(model.SelectedYearStart);
+            }
 
             var ids = inputRows
                 .Select(x => x.Id)
@@ -84,7 +95,9 @@ namespace DepartmentLoadApp.Controllers
                 var dbRow = dbRows.FirstOrDefault(x => x.Id == inputRow.Id);
 
                 if (dbRow == null)
+                {
                     continue;
+                }
 
                 dbRow.LecturePlanHours = inputRow.LecturePlanHours;
                 dbRow.PracticePlanHours = inputRow.PracticePlanHours;
@@ -100,7 +113,9 @@ namespace DepartmentLoadApp.Controllers
             await _workloadCalculationService.RecalculateAsync(dbRows);
             await _context.SaveChangesAsync();
 
-            return RedirectToAction(nameof(Index), new { startYear = model.SelectedYearStart });
+            TempData["SuccessMessage"] = "Расчёт нагрузки сохранён";
+
+            return RedirectToIndex(model.SelectedYearStart);
         }
 
         [HttpGet]
@@ -132,6 +147,14 @@ namespace DepartmentLoadApp.Controllers
                 fileName);
         }
 
+        private RedirectToActionResult RedirectToIndex(int startYear)
+        {
+            return RedirectToAction(nameof(Index), new
+            {
+                startYear
+            });
+        }
+
         private async Task<List<WorkloadRow>> LoadWorkloadRowsAsync(
             string selectedYear,
             bool asNoTracking)
@@ -151,7 +174,8 @@ namespace DepartmentLoadApp.Controllers
                 .ToListAsync();
         }
 
-        private async Task<List<PracticeWorkloadRow>> LoadPracticeRowsAsync(string selectedYear)
+        private async Task<List<PracticeWorkloadRow>> LoadPracticeRowsAsync(
+            string selectedYear)
         {
             return await _context.PracticeWorkloadRows
                 .AsNoTracking()
@@ -162,7 +186,8 @@ namespace DepartmentLoadApp.Controllers
                 .ToListAsync();
         }
 
-        private async Task<List<GiaWorkloadRow>> LoadGiaRowsAsync(string selectedYear)
+        private async Task<List<GiaWorkloadRow>> LoadGiaRowsAsync(
+            string selectedYear)
         {
             return await _context.GiaWorkloadRows
                 .AsNoTracking()

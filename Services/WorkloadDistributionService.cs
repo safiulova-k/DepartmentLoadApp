@@ -13,6 +13,10 @@ namespace DepartmentLoadApp.Services;
 
 public class WorkloadDistributionService
 {
+    private const decimal MinLecturerRate = 0m;
+    private const decimal MaxLecturerRate = 2.00m;
+    private const int InitialAssignmentHours = 1;
+    private const string AssistantPostKeyword = "ассистент";
     private readonly DepartmentLoadDbContext _context;
 
     public WorkloadDistributionService(DepartmentLoadDbContext context)
@@ -184,10 +188,10 @@ public class WorkloadDistributionService
 
         var normalizedRate = Math.Round(rate, 2, MidpointRounding.AwayFromZero);
 
-        if (normalizedRate < 0 || normalizedRate > 2.00m)
+        if (normalizedRate < MinLecturerRate || normalizedRate > MaxLecturerRate)
         {
             return WorkloadDistributionOperationResult.Fail(
-                "Ставка должна быть в диапазоне от 0 до 2.00.",
+                $"Ставка должна быть в диапазоне от {MinLecturerRate} до {MaxLecturerRate}.",
                 lecturerId);
         }
 
@@ -332,7 +336,9 @@ public class WorkloadDistributionService
                 lecturerId);
         }
 
-        var initialHours = Math.Min(1, Math.Min(item.RemainingHours, lecturerRemainingHours));
+        var initialHours = Math.Min(
+            InitialAssignmentHours,
+            Math.Min(item.RemainingHours, lecturerRemainingHours));
 
         if (initialHours <= 0)
         {
@@ -806,8 +812,11 @@ public class WorkloadDistributionService
 
     private static bool IsAssistant(string? studyPostTitle)
     {
-        return !string.IsNullOrWhiteSpace(studyPostTitle) &&
-               studyPostTitle.Contains("ассист", StringComparison.OrdinalIgnoreCase);
+        return !string.IsNullOrWhiteSpace(studyPostTitle)
+            && studyPostTitle
+                .Trim()
+                .ToLowerInvariant()
+                .Contains(AssistantPostKeyword);
     }
 
     private static string BuildKey(

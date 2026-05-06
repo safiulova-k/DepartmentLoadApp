@@ -17,6 +17,7 @@ public class WorkloadDistributionController : Controller
     public async Task<IActionResult> Index(int? startYear, int? selectedLecturerId)
     {
         var model = await _service.BuildPageAsync(startYear, selectedLecturerId);
+
         return View(model);
     }
 
@@ -26,13 +27,9 @@ public class WorkloadDistributionController : Controller
     {
         var result = await _service.FillAssignmentToMaxAsync(startYear, assignmentId);
 
-        TempData[result.Success ? "SuccessMessage" : "ErrorMessage"] = result.Message;
+        PutMessage(result);
 
-        return RedirectToAction(nameof(Index), new
-        {
-            startYear,
-            selectedLecturerId = result.LecturerId
-        });
+        return RedirectToIndex(startYear, result.LecturerId);
     }
 
     [HttpPost]
@@ -47,11 +44,9 @@ public class WorkloadDistributionController : Controller
 
         PutMessage(result);
 
-        return RedirectToAction(nameof(Index), new
-        {
-            startYear = model.SelectedYearStart,
-            selectedLecturerId = result.LecturerId ?? model.SelectedLecturerId ?? model.LecturerId
-        });
+        return RedirectToIndex(
+            model.SelectedYearStart,
+            result.LecturerId ?? model.SelectedLecturerId ?? model.LecturerId);
     }
 
     [HttpPost]
@@ -65,11 +60,9 @@ public class WorkloadDistributionController : Controller
 
         PutMessage(result);
 
-        return RedirectToAction(nameof(Index), new
-        {
-            startYear = model.SelectedYearStart,
-            selectedLecturerId = result.LecturerId ?? model.SelectedLecturerId ?? model.LecturerId
-        });
+        return RedirectToIndex(
+            model.SelectedYearStart,
+            result.LecturerId ?? model.SelectedLecturerId ?? model.LecturerId);
     }
 
     [HttpPost]
@@ -83,11 +76,9 @@ public class WorkloadDistributionController : Controller
 
         PutMessage(result);
 
-        return RedirectToAction(nameof(Index), new
-        {
-            startYear = model.SelectedYearStart,
-            selectedLecturerId = result.LecturerId ?? model.SelectedLecturerId
-        });
+        return RedirectToIndex(
+            model.SelectedYearStart,
+            result.LecturerId ?? model.SelectedLecturerId);
     }
 
     [HttpPost]
@@ -100,22 +91,24 @@ public class WorkloadDistributionController : Controller
 
         PutMessage(result);
 
+        return RedirectToIndex(
+            model.SelectedYearStart,
+            result.LecturerId ?? model.SelectedLecturerId);
+    }
+
+    private RedirectToActionResult RedirectToIndex(
+        int startYear,
+        int? selectedLecturerId)
+    {
         return RedirectToAction(nameof(Index), new
         {
-            startYear = model.SelectedYearStart,
-            selectedLecturerId = result.LecturerId ?? model.SelectedLecturerId
+            startYear,
+            selectedLecturerId
         });
     }
 
     private void PutMessage(WorkloadDistributionOperationResult result)
     {
-        if (result.Success)
-        {
-            TempData["SuccessMessage"] = result.Message;
-        }
-        else
-        {
-            TempData["ErrorMessage"] = result.Message;
-        }
+        TempData[result.Success ? "SuccessMessage" : "ErrorMessage"] = result.Message;
     }
 }

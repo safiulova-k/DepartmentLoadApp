@@ -20,6 +20,19 @@ public class IndividualPlanService
     private const string TemplateFolderName = "Templates";
     private const string TemplateFileName = "IndividualPlanTemplate.xlsx";
 
+    private const string TitleSheetName = "Титул";
+    private const string SummarySheetName = "Сводная таблица";
+    private const string AutumnSheetName = "Осенний сем.";
+    private const string SpringSheetName = "Весенний сем.";
+
+    private const string FirstNameCell = "F17";
+    private const string LastNameCell = "F18";
+    private const string PatronymicCell = "F19";
+    private const string StudyPostCell = "F20";
+    private const string BirthYearCell = "F21";
+    private const string AcademicYearTitleCell = "A3";
+    private const string RateCell = "H4";
+
     private readonly DepartmentLoadDbContext _context;
     private readonly IWebHostEnvironment _environment;
 
@@ -352,29 +365,34 @@ public class IndividualPlanService
      LecturerAcademicYearPlan plan,
      string academicYear)
     {
-        var sheet = workbook.Worksheet("Титул");
+        var sheet = workbook.Worksheet(TitleSheetName);
         var lecturer = plan.Lecturer!;
 
-        sheet.Cell("F17").Value = lecturer.FirstName;
-        sheet.Cell("F18").Value = lecturer.LastName;
-        sheet.Cell("F19").Value = lecturer.Patronymic;
-        sheet.Cell("F20").Value = plan.LecturerStudyPost?.StudyPostTitle ?? string.Empty;
-        sheet.Cell("F21").Value = lecturer.DateBirth.Year;
+        // Координаты ячеек соответствуют утверждённому шаблону
+        // индивидуального плана преподавателя.
+        sheet.Cell(FirstNameCell).Value = lecturer.FirstName;
+        sheet.Cell(LastNameCell).Value = lecturer.LastName;
+        sheet.Cell(PatronymicCell).Value = lecturer.Patronymic;
+        sheet.Cell(StudyPostCell).Value = plan.LecturerStudyPost?.StudyPostTitle ?? string.Empty;
+        sheet.Cell(BirthYearCell).Value = lecturer.DateBirth.Year;
 
         sheet.Cell("F22").Value = string.Empty;
         sheet.Cell("F23").Value = string.Empty;
     }
     private static void FillSummarySheet(
-    XLWorkbook workbook,
-    LecturerAcademicYearPlan plan,
-    string academicYear)
+     XLWorkbook workbook,
+     LecturerAcademicYearPlan plan,
+     string academicYear)
     {
-        var sheet = workbook.Worksheet("Сводная таблица");
+        var sheet = workbook.Worksheet(SummarySheetName);
         var academicYearForTemplate = academicYear.Replace("-", "/");
 
-        sheet.Cell("A3").Value = $"на {academicYearForTemplate} учебный год";
-        sheet.Cell("H4").Value = plan.Rate;
-        sheet.Cell("H4").Style.NumberFormat.Format = "0.##";
+        // Координаты ячеек соответствуют утверждённому шаблону Excel.
+        sheet.Cell(AcademicYearTitleCell).Value =
+            $"на {academicYearForTemplate} учебный год";
+
+        sheet.Cell(RateCell).Value = plan.Rate;
+        sheet.Cell(RateCell).Style.NumberFormat.Format = "0.##";
     }
     private static void FillAutumnSheet(
      XLWorkbook workbook,

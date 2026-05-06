@@ -9,6 +9,12 @@ namespace DepartmentLoadApp.Services
 {
     public class GiaCalculationService
     {
+        private const string GiaCategoryName = "ГИА";
+        private const string StateExamConsultationWorkName = "Консультация к госэкзамену";
+        private const string FinalQualificationWorkName = "Руководство ВКР";
+        private const string MasterFinalQualificationWorkNormName = "Руководство ВКР магистра";
+        private const string BachelorFinalQualificationWorkNormName = "Руководство ВКР бакалавра";
+
         private readonly DepartmentLoadDbContext _context;
 
         public GiaCalculationService(DepartmentLoadDbContext context)
@@ -20,7 +26,7 @@ namespace DepartmentLoadApp.Services
         {
             var norms = await _context.NormTimes
                 .AsNoTracking()
-                .Where(x => x.CategoryName == "ГИА")
+                .Where(x => x.CategoryName == GiaCategoryName)
                 .ToListAsync();
 
             var contingents = await _context.ContingentRows
@@ -28,12 +34,14 @@ namespace DepartmentLoadApp.Services
                 .ToListAsync();
 
             var contingentMap = contingents
-                .GroupBy(x => NormalizeText(x.DirectionCode))
+                .GroupBy(x => TextNormalizeHelper.Normalize(x.DirectionCode))
                 .ToDictionary(x => x.Key, x => x.First());
 
             foreach (var row in rows)
             {
-                if (!contingentMap.TryGetValue(NormalizeText(row.DirectionCode), out var contingent))
+                var directionCode = TextNormalizeHelper.Normalize(row.DirectionCode);
+
+                if (!contingentMap.TryGetValue(directionCode, out var contingent))
                 {
                     ResetCalculatedFields(row);
                     continue;
@@ -50,7 +58,7 @@ namespace DepartmentLoadApp.Services
             List<NormTime> norms,
             ContingentRow contingent)
         {
-            if (row.WorkName == "Консультация к госэкзамену")
+            if (row.WorkName == StateExamConsultationWorkName)
             {
                 return CalculationHelper.RoundHours(row.ManualHours);
             }
@@ -72,13 +80,15 @@ namespace DepartmentLoadApp.Services
             return CalculationHelper.RoundHours(result);
         }
 
-        private static string GetGiaNormName(GiaWorkloadRow row, ContingentRow contingent)
+        private static string GetGiaNormName(
+            GiaWorkloadRow row,
+            ContingentRow contingent)
         {
-            if (row.WorkName == "Руководство ВКР")
+            if (row.WorkName == FinalQualificationWorkName)
             {
                 return contingent.IsMaster
-                    ? "Руководство ВКР магистра"
-                    : "Руководство ВКР бакалавра";
+                    ? MasterFinalQualificationWorkNormName
+                    : BachelorFinalQualificationWorkNormName;
             }
 
             return row.WorkName;
@@ -89,18 +99,6 @@ namespace DepartmentLoadApp.Services
             row.StudentsCount = 0;
             row.GroupCount = 0;
             row.TotalHours = 0;
-        }
-
-        private static string NormalizeText(string? value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return string.Empty;
-
-            return string.Join(' ', value
-                .Trim()
-                .ToLowerInvariant()
-                .Replace("ё", "е")
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries));
         }
     }
 }

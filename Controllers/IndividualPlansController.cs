@@ -16,6 +16,7 @@ public class IndividualPlansController : Controller
     public async Task<IActionResult> Index(int? startYear)
     {
         var model = await _service.BuildPageAsync(startYear);
+
         return View(model);
     }
 
@@ -25,16 +26,7 @@ public class IndividualPlansController : Controller
     {
         var result = await _service.ExportLecturerPlanAsync(startYear, lecturerId);
 
-        if (!result.Success || result.Content == null)
-        {
-            TempData["ErrorMessage"] = result.Message;
-            return RedirectToAction(nameof(Index), new { startYear });
-        }
-
-        return File(
-            result.Content,
-            result.ContentType,
-            result.FileName);
+        return HandleExportResult(result, startYear);
     }
 
     [HttpPost]
@@ -43,9 +35,17 @@ public class IndividualPlansController : Controller
     {
         var result = await _service.ExportAllPlansAsync(startYear);
 
+        return HandleExportResult(result, startYear);
+    }
+
+    private IActionResult HandleExportResult(
+        IndividualPlanExportResult result,
+        int startYear)
+    {
         if (!result.Success || result.Content == null)
         {
             TempData["ErrorMessage"] = result.Message;
+
             return RedirectToAction(nameof(Index), new { startYear });
         }
 
