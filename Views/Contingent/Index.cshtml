@@ -7,11 +7,6 @@
 <div class="contingent-page">
     <h1 class="mb-3">Контингент</h1>
 
-    <p class="text-muted mb-4">
-        В ячейке сверху — студенты, ниже — группы, затем подгруппы.
-        Данные по студентам и группам подставляются автоматически из синхронизированных учебных групп.
-    </p>
-
     <div id="contingent-content">
         @await Html.PartialAsync("_ContingentContent", Model)
     </div>
@@ -33,6 +28,11 @@
                     .map(x => x.id);
             }
 
+            function saveOpenState(root = document) {
+                const ids = getOpenCollapseIds(root);
+                sessionStorage.setItem(storageKey, JSON.stringify(ids));
+            }
+
             function restoreCollapses(ids) {
                 ids.forEach(id => {
                     const el = document.getElementById(id);
@@ -44,11 +44,6 @@
                         el.classList.add("show");
                     }
                 });
-            }
-
-            function saveOpenState(root = document) {
-                const ids = getOpenCollapseIds(root);
-                sessionStorage.setItem(storageKey, JSON.stringify(ids));
             }
 
             function restoreOpenState() {
@@ -82,12 +77,6 @@
                     const card = collapse.closest(".accordion-item") || collapse;
                     card.scrollIntoView({ behavior: "smooth", block: "start" });
                 }
-            }
-
-            function openByHash(scroll = false) {
-                if (!location.hash) return;
-                const id = location.hash.replace("#", "");
-                openAccordion(id, scroll);
             }
 
             async function submitContingentForm(form, submitter) {
@@ -161,10 +150,7 @@
             document.addEventListener("DOMContentLoaded", () => {
                 wireContingent();
                 restoreOpenState();
-                openByHash(false);
             });
-
-            window.addEventListener("hashchange", () => openByHash(true));
         })();
     </script>
 }

@@ -25,22 +25,17 @@ else
 {
     <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <div class="d-flex gap-2 flex-wrap mb-3">
-                <span class="badge contingent-legend students">Студенты</span>
-                <span class="badge contingent-legend groups">Группы</span>
-                <span class="badge contingent-legend subgroups">Подгруппы</span>
-            </div>
 
             <div class="table-responsive">
                 <table class="table table-bordered align-middle contingent-summary-table">
                     <thead class="table-light">
                         <tr>
                             <th style="min-width: 140px;">Код</th>
-                            <th style="min-width: 100px;">Тип</th>
-                            <th style="min-width: 170px;">1 курс</th>
-                            <th style="min-width: 170px;">2 курс</th>
-                            <th style="min-width: 170px;">3 курс</th>
-                            <th style="min-width: 170px;">4 курс</th>
+                            <th style="min-width: 180px;">Тип</th>
+                            <th style="min-width: 140px;">1 курс</th>
+                            <th style="min-width: 140px;">2 курс</th>
+                            <th style="min-width: 140px;">3 курс</th>
+                            <th style="min-width: 140px;">4 курс</th>
                             <th style="min-width: 120px;"></th>
                         </tr>
                     </thead>
@@ -53,33 +48,25 @@ else
                             <tr>
                                 <td class="fw-semibold">@row.DirectionCode</td>
                                 <td>
-                                    <span class="badge @(row.IsBachelor ? "bg-primary" : "bg-dark")">
-                                        @(row.IsBachelor ? "Бак" : "Маг")
+                                    <span class="contingent-type-label @(row.IsBachelor ? "bachelor" : "master")">
+                                        @(row.IsBachelor ? "Бакалавриат" : "Магистратура")
                                     </span>
                                 </td>
 
                                 <td>
-                                    <input class="form-control form-control-sm mb-1 contingent-value students" value="@row.Course1Count" readonly />
-                                    <input class="form-control form-control-sm mb-1 contingent-value groups" value="@row.Course1Groups" readonly />
-                                    <input class="form-control form-control-sm contingent-value subgroups" value="@row.Course1Subgroups" readonly />
+                                    <input class="form-control form-control-sm contingent-value students" value="@row.Course1Count" readonly />
                                 </td>
 
                                 <td>
-                                    <input class="form-control form-control-sm mb-1 contingent-value students" value="@row.Course2Count" readonly />
-                                    <input class="form-control form-control-sm mb-1 contingent-value groups" value="@row.Course2Groups" readonly />
-                                    <input class="form-control form-control-sm contingent-value subgroups" value="@row.Course2Subgroups" readonly />
+                                    <input class="form-control form-control-sm contingent-value students" value="@row.Course2Count" readonly />
                                 </td>
 
                                 <td>
-                                    <input class="form-control form-control-sm mb-1 contingent-value students" value="@row.Course3Count" readonly />
-                                    <input class="form-control form-control-sm mb-1 contingent-value groups" value="@row.Course3Groups" readonly />
-                                    <input class="form-control form-control-sm contingent-value subgroups" value="@row.Course3Subgroups" readonly />
+                                    <input class="form-control form-control-sm contingent-value students" value="@row.Course3Count" readonly />
                                 </td>
 
                                 <td>
-                                    <input class="form-control form-control-sm mb-1 contingent-value students" value="@row.Course4Count" readonly />
-                                    <input class="form-control form-control-sm mb-1 contingent-value groups" value="@row.Course4Groups" readonly />
-                                    <input class="form-control form-control-sm contingent-value subgroups" value="@row.Course4Subgroups" readonly />
+                                    <input class="form-control form-control-sm contingent-value students" value="@row.Course4Count" readonly />
                                 </td>
 
                                 <td class="text-center">
@@ -130,191 +117,150 @@ else
         </div>
     </div>
 
-    <div class="row g-4">
-        <div class="col-lg-9">
-            <h2 class="mb-3">Детализация по группам</h2>
+    <h2 class="mb-3">Детализация по группам</h2>
 
-            <div class="accordion contingent-accordion" id="contingentAccordion">
-                @for (int i = 0; i < Model.Rows.Count; i++)
-                {
-                    var row = Model.Rows[i];
-                    var direction = Model.Directions.FirstOrDefault(x =>
-                    x.DirectionCode == row.DirectionCode &&
-                    x.IsBachelor == row.IsBachelor);
+    <div class="accordion contingent-accordion" id="contingentAccordion">
+        @for (int i = 0; i < Model.Rows.Count; i++)
+        {
+            var row = Model.Rows[i];
+            var direction = Model.Directions.FirstOrDefault(x =>
+            x.DirectionCode == row.DirectionCode &&
+            x.IsBachelor == row.IsBachelor);
 
-                    var collapseId = $"direction-collapse-{i}";
-                    var headingId = $"direction-heading-{i}";
-                    var totalGroups =
-                    row.Course1Groups + row.Course2Groups + row.Course3Groups + row.Course4Groups;
-                    var totalSubgroups =
-                    row.Course1Subgroups + row.Course2Subgroups + row.Course3Subgroups + row.Course4Subgroups;
+            var collapseId = $"direction-collapse-{i}";
+            var headingId = $"direction-heading-{i}";
 
-                    <div class="accordion-item contingent-accordion-item mb-3">
-                        <h2 class="accordion-header" id="@headingId">
-                            <button class="accordion-button collapsed contingent-accordion-button"
-                                    type="button"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#@collapseId"
-                                    aria-expanded="false"
-                                    aria-controls="@collapseId">
-                                <div class="w-100 d-flex flex-wrap justify-content-between align-items-center gap-2 pe-3">
-                                    <div>
-                                        <span class="fw-semibold">@row.DirectionCode</span>
-                                        <span class="text-muted ms-2">
-                                            @(row.IsBachelor ? "Бакалавриат" : "Магистратура")
-                                        </span>
-                                    </div>
+            <div class="accordion-item contingent-accordion-item mb-3">
+                <h2 class="accordion-header" id="@headingId">
+                    <button class="accordion-button collapsed contingent-accordion-button"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#@collapseId"
+                            aria-expanded="false"
+                            aria-controls="@collapseId">
+                        <div class="w-100 d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">@row.DirectionCode</span>
+                        </div>
+                    </button>
+                </h2>
 
-                                    <div class="d-flex gap-2 flex-wrap">
-                                        <span class="badge text-bg-light">
-                                            Студенты: @(
-                                      row.Course1Count + row.Course2Count + row.Course3Count + row.Course4Count
-                                      )
-                                        </span>
-                                        <span class="badge text-bg-light">Группы: @totalGroups</span>
-                                        <span class="badge text-bg-light">Подгруппы: @totalSubgroups</span>
-                                    </div>
-                                </div>
-                            </button>
-                        </h2>
+                <div id="@collapseId"
+                     class="accordion-collapse collapse"
+                     aria-labelledby="@headingId">
+                    <div class="accordion-body">
+                        @if (direction == null || !direction.Courses.Any())
+                        {
+                            <div class="text-muted">Нет групп для отображения.</div>
+                        }
+                        else
+                        {
+                            @foreach (var course in direction.Courses)
+                            {
+                                var groupsCount = course.Groups.Count;
+                                var subgroupsCount = course.Groups.Sum(x => x.SubgroupsCount);
 
-                        <div id="@collapseId"
-                             class="accordion-collapse collapse"
-                             aria-labelledby="@headingId">
-                            <div class="accordion-body">
-                                @if (direction == null || !direction.Courses.Any())
-                                {
-                                    <div class="text-muted">Нет групп для отображения.</div>
-                                }
-                                else
-                                {
-                                    @foreach (var course in direction.Courses)
-                                    {
-                                        <div class="mb-4">
-                                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                                                <h5 class="mb-0">@course.CourseNumber курс</h5>
-                                                <span class="badge rounded-pill text-bg-secondary">
-                                                    Групп: @course.Groups.Count
-                                                </span>
+                                <div class="contingent-course-section mb-4">
+                                    <div class="contingent-course-header mb-3">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <div class="fw-semibold fs-5">
+                                                @course.CourseNumber курс
                                             </div>
 
-                                            <div class="row g-3">
-                                                @foreach (var group in course.Groups)
-                                                {
-                                                    <div class="col-12 col-xl-6">
-                                                        <form asp-action="SaveGroupSubgroups"
-                                                              method="post"
-                                                              class="card border-0 shadow-sm h-100 contingent-group-card js-contingent-form">
-                                                            @Html.AntiForgeryToken()
-                                                            <input type="hidden" name="studentGroupId" value="@group.StudentGroupId" />
-
-                                                            <div class="card-body">
-                                                                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-                                                                    <div>
-                                                                        <div class="fw-semibold fs-5">@group.GroupName</div>
-                                                                        <div class="text-muted small">
-                                                                            Студентов: @group.StudentsCount
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <div class="d-flex gap-2">
-                                                                        <span class="badge text-bg-light">
-                                                                            Подгрупп: @group.SubgroupsCount
-                                                                        </span>
-
-                                                                        <button type="submit"
-                                                                                class="btn btn-outline-primary btn-sm"
-                                                                                formaction="@Url.Action("AddSubgroup", "Contingent", new { studentGroupId = group.StudentGroupId })"
-                                                                                formmethod="post">
-                                                                            Добавить п/г
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-
-                                                                @for (int subgroupIndex = 0; subgroupIndex < group.Subgroups.Count; subgroupIndex++)
-                                                                {
-                                                                    var subgroup = group.Subgroups[subgroupIndex];
-
-                                                                    <div class="row g-2 align-items-center mb-2">
-                                                                        <div class="col-12 col-md-3">
-                                                                            <label class="form-label mb-0 fw-semibold">@subgroup.Name</label>
-                                                                        </div>
-
-                                                                        <div class="col-12 col-md-5">
-                                                                            <input type="hidden" name="subgroupIds" value="@subgroup.Id" />
-                                                                            <input type="number"
-                                                                                   name="studentsCounts"
-                                                                                   class="form-control form-control-sm"
-                                                                                   min="0"
-                                                                                   value="@subgroup.StudentsCount" />
-                                                                        </div>
-
-                                                                        <div class="col-12 col-md-auto">
-                                                                            @if (group.Subgroups.Count > 1)
-                                                                            {
-                                                                                <button type="submit"
-                                                                                        class="btn btn-outline-danger btn-sm"
-                                                                                        formaction="@Url.Action("DeleteSubgroup", "Contingent", new { studentGroupId = group.StudentGroupId, subgroupId = subgroup.Id })"
-                                                                                        formmethod="post"
-                                                                                        onclick="return confirm('Удалить подгруппу?');">
-                                                                                    Удалить
-                                                                                </button>
-                                                                            }
-                                                                        </div>
-                                                                    </div>
-                                                                }
-
-                                                                <div class="small text-muted mt-2">
-                                                                    Сумма студентов по подгруппам должна быть равна @group.StudentsCount.
-                                                                </div>
-                                                            </div>
-
-                                                            <div class="card-footer bg-white border-0 pt-0 pb-3 px-3">
-                                                                <div class="d-flex justify-content-end">
-                                                                    <button type="submit" class="btn btn-success btn-sm">
-                                                                        Сохранить
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </form>
-                                                    </div>
-                                                }
+                                            <div class="d-flex gap-2 flex-wrap">
+                                                <span class="badge text-bg-primary">Групп: @groupsCount</span>
+                                                <span class="badge text-bg-warning">Подгрупп: @subgroupsCount</span>
                                             </div>
                                         </div>
-                                    }
-                                }
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-
-        <div class="col-lg-3">
-            <div class="contingent-side-panel">
-                <div class="card shadow-sm border-0 contingent-sticky-card">
-                    <div class="card-body">
-                        <div class="fw-semibold mb-3">Быстрый переход</div>
-
-                        <div class="d-grid gap-2">
-                            @for (int i = 0; i < Model.Rows.Count; i++)
-                            {
-                                var row = Model.Rows[i];
-                                var targetId = $"direction-collapse-{i}";
-
-                                <a href="#@targetId"
-                                   data-target="@targetId"
-                                   class="btn btn-outline-secondary btn-sm text-start js-open-accordion">
-                                    <div class="fw-semibold">@row.DirectionCode</div>
-                                    <div class="small text-muted">
-                                        @(row.IsBachelor ? "Бак" : "Маг")
                                     </div>
-                                </a>
+
+                                    <div class="row g-3">
+                                        @foreach (var group in course.Groups)
+                                        {
+                                            <div class="col-12 col-xl-6">
+                                                <form asp-action="SaveGroupSubgroups"
+                                                      method="post"
+                                                      class="card border-0 shadow-sm h-100 contingent-group-card js-contingent-form">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="studentGroupId" value="@group.StudentGroupId" />
+
+                                                    <div class="card-body">
+                                                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                                                            <div>
+                                                                <div class="fw-semibold fs-5">@group.GroupName</div>
+                                                                <div class="text-muted small">
+                                                                    Студентов: @group.StudentsCount
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="d-flex gap-2 align-items-center flex-wrap">
+                                                                <span class="badge text-bg-light">
+                                                                    Подгрупп: @group.SubgroupsCount
+                                                                </span>
+
+                                                                <button type="submit"
+                                                                        class="btn btn-outline-primary btn-sm"
+                                                                        formaction="@Url.Action("AddSubgroup", "Contingent", new { studentGroupId = group.StudentGroupId })"
+                                                                        formmethod="post">
+                                                                    Добавить п/г
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        @for (int subgroupIndex = 0; subgroupIndex < group.Subgroups.Count; subgroupIndex++)
+                                                        {
+                                                            var subgroup = group.Subgroups[subgroupIndex];
+
+                                                            <div class="row g-2 align-items-center mb-2">
+                                                                <div class="col-12 col-md-3">
+                                                                    <label class="form-label mb-0 fw-semibold">@subgroup.Name</label>
+                                                                </div>
+
+                                                                <div class="col-12 col-md-5">
+                                                                    <input type="hidden" name="subgroupIds" value="@subgroup.Id" />
+                                                                    <input type="number"
+                                                                           name="studentsCounts"
+                                                                           class="form-control form-control-sm"
+                                                                           min="0"
+                                                                           value="@subgroup.StudentsCount" />
+                                                                </div>
+
+                                                                <div class="col-12 col-md-auto">
+                                                                    @if (group.Subgroups.Count > 1)
+                                                                    {
+                                                                        <button type="submit"
+                                                                                class="btn btn-outline-danger btn-sm"
+                                                                                formaction="@Url.Action("DeleteSubgroup", "Contingent", new { studentGroupId = group.StudentGroupId, subgroupId = subgroup.Id })"
+                                                                                formmethod="post"
+                                                                                onclick="return confirm('Удалить подгруппу?');">
+                                                                            Удалить
+                                                                        </button>
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        }
+
+                                                        <div class="small text-muted mt-2">
+                                                            Сумма студентов по подгруппам должна быть равна @group.StudentsCount.
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="card-footer bg-white border-0 pt-0 pb-3 px-3">
+                                                        <div class="d-flex justify-content-end">
+                                                            <button type="submit" class="btn btn-success btn-sm">
+                                                                Сохранить
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
                             }
-                        </div>
+                        }
                     </div>
                 </div>
             </div>
-        </div>
+        }
     </div>
 }

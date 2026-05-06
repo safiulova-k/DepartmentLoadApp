@@ -102,16 +102,6 @@ body {
         color: #fff;
     }
 
-    .contingent-legend.groups {
-        background-color: #198754;
-        color: #fff;
-    }
-
-    .contingent-legend.subgroups {
-        background-color: #ffc107;
-        color: #212529;
-    }
-
 .contingent-summary-table td,
 .contingent-summary-table th {
     vertical-align: middle;
@@ -128,16 +118,37 @@ body {
         color: #084298;
     }
 
-    .contingent-value.groups {
-        background-color: #d1e7dd;
-        border-color: #75b798;
-        color: #0f5132;
+.contingent-group-card {
+    border-radius: 1rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+}
+
+    .contingent-group-card:hover {
+        box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.08) !important;
     }
 
-    .contingent-value.subgroups {
-        background-color: #fff3cd;
-        border-color: #ffda6a;
-        color: #664d03;
+@media (max-width: 991.98px) {
+    .contingent-sticky-card {
+        position: static;
+    }
+}
+
+.contingent-type-label {
+    display: inline-block;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 0.4rem 0.75rem;
+    border-radius: 0.75rem;
+}
+
+    .contingent-type-label.bachelor {
+        background-color: #e7f1ff;
+        color: #084298;
+    }
+
+    .contingent-type-label.master {
+        background-color: #f1f3f5;
+        color: #212529;
     }
 
 .contingent-accordion-item {
@@ -148,18 +159,41 @@ body {
 }
 
 .contingent-accordion-button {
-    background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
-    box-shadow: none !important;
+    color: #212529 !important;
 }
 
-    .contingent-accordion-button:not(.collapsed) {
-        background: linear-gradient(180deg, #eef5ff 0%, #f8fbff 100%);
-        color: #0a58ca;
-    }
+.contingent-accordion-button *,
+.contingent-accordion-button span,
+.contingent-accordion-button div,
+.contingent-accordion-button .fw-semibold,
+.contingent-accordion-button .text-muted {
+    color: #212529 !important;
+}
 
-    .contingent-accordion-button:focus {
-        box-shadow: none;
+.contingent-accordion-button:not(.collapsed) {
+    color: #212529 !important;
+}
+
+    .contingent-accordion-button:not(.collapsed) *,
+    .contingent-accordion-button:not(.collapsed) span,
+    .contingent-accordion-button:not(.collapsed) div,
+    .contingent-accordion-button:not(.collapsed) .fw-semibold,
+    .contingent-accordion-button:not(.collapsed) .text-muted {
+        color: #212529 !important;
     }
+.contingent-course-section {
+    border: 1px solid #e9ecef;
+    border-radius: 1rem;
+    padding: 1rem;
+    background: #fcfcfd;
+}
+
+.contingent-course-header {
+    padding: 0.85rem 1rem;
+    border-radius: 0.85rem;
+    background: linear-gradient(180deg, #f8f9fa 0%, #eef2f6 100%);
+    border: 1px solid #e3e6ea;
+}
 
 .contingent-group-card {
     border-radius: 1rem;
@@ -169,19 +203,3 @@ body {
     .contingent-group-card:hover {
         box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.08) !important;
     }
-
-.contingent-side-panel {
-    position: relative;
-}
-
-.contingent-sticky-card {
-    position: sticky;
-    top: 1rem;
-    border-radius: 1rem;
-}
-
-@media (max-width: 991.98px) {
-    .contingent-sticky-card {
-        position: static;
-    }
-}
