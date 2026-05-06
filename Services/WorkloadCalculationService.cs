@@ -8,6 +8,17 @@ namespace DepartmentLoadApp.Services
 {
     public class WorkloadCalculationService
     {
+        private const string LectureNormName = "Лекции";
+        private const string PracticeNormName = "Практические занятия";
+        private const string LabNormName = "Лабораторные работы";
+        private const string ConsultationNormName = "Консультации";
+        private const string ConsultationExamExtraNormName = "Доп. консультация к экзамену";
+        private const string ExamNormName = "Экзамен";
+        private const string CreditNormName = "Зачет";
+        private const string CourseWorkNormName = "Курсовая работа";
+        private const string CourseProjectNormName = "Курсовой проект";
+        private const string RgrNormName = "РГР";
+
         private readonly DepartmentLoadDbContext _context;
 
         public WorkloadCalculationService(DepartmentLoadDbContext context)
@@ -17,16 +28,16 @@ namespace DepartmentLoadApp.Services
 
         public async Task RecalculateAsync(List<WorkloadRow> rows)
         {
-            var lectureNorm = await GetNormAsync("Лекции");
-            var practiceNorm = await GetNormAsync("Практические занятия");
-            var labNorm = await GetNormAsync("Лабораторные работы");
-            var consultationNorm = await GetNormAsync("Консультации");
-            var consultationExamExtraNorm = await GetNormAsync("Доп. консультация к экзамену");
-            var examNorm = await GetNormAsync("Экзамен");
-            var creditNorm = await GetNormAsync("Зачет");
-            var courseWorkNorm = await GetNormAsync("Курсовая работа");
-            var courseProjectNorm = await GetNormAsync("Курсовой проект");
-            var rgrNorm = await GetNormAsync("РГР");
+            var lectureNorm = await GetNormAsync(LectureNormName);
+            var practiceNorm = await GetNormAsync(PracticeNormName);
+            var labNorm = await GetNormAsync(LabNormName);
+            var consultationNorm = await GetNormAsync(ConsultationNormName);
+            var consultationExamExtraNorm = await GetNormAsync(ConsultationExamExtraNormName);
+            var examNorm = await GetNormAsync(ExamNormName);
+            var creditNorm = await GetNormAsync(CreditNormName);
+            var courseWorkNorm = await GetNormAsync(CourseWorkNormName);
+            var courseProjectNorm = await GetNormAsync(CourseProjectNormName);
+            var rgrNorm = await GetNormAsync(RgrNormName);
 
             var contingents = await _context.ContingentRows
                 .AsNoTracking()
@@ -51,7 +62,9 @@ namespace DepartmentLoadApp.Services
 
             foreach (var row in rows)
             {
-                if (!contingentMap.TryGetValue(NormalizeText(row.DirectionCode), out var contingent))
+                var directionCode = NormalizeText(row.DirectionCode);
+
+                if (!contingentMap.TryGetValue(directionCode, out var contingent))
                 {
                     ResetCalculatedFields(row);
                     continue;
@@ -64,7 +77,7 @@ namespace DepartmentLoadApp.Services
                 var flowKey = new
                 {
                     row.AcademicYear,
-                    DirectionCode = NormalizeText(row.DirectionCode),
+                    DirectionCode = directionCode,
                     row.Course
                 };
 
@@ -77,15 +90,45 @@ namespace DepartmentLoadApp.Services
                     row.FlowCount = row.GroupCount > 0 ? 1 : 0;
                 }
 
-                row.LectureTotalHours = NormCalculationHelper.CalculatePlanHours(row.LecturePlanHours, lectureNorm, row);
-                row.PracticeTotalHours = NormCalculationHelper.CalculatePlanHours(row.PracticePlanHours, practiceNorm, row);
-                row.LabTotalHours = NormCalculationHelper.CalculatePlanHours(row.LabPlanHours, labNorm, row);
+                row.LectureTotalHours = NormCalculationHelper.CalculatePlanHours(
+                    row.LecturePlanHours,
+                    lectureNorm,
+                    row);
 
-                row.ExamHours = NormCalculationHelper.CalculateOptionalHours(row.HasExam, examNorm, row);
-                row.CreditHours = NormCalculationHelper.CalculateOptionalHours(row.HasCredit, creditNorm, row);
-                row.CourseWorkHours = NormCalculationHelper.CalculateOptionalHours(row.HasCourseWork, courseWorkNorm, row);
-                row.CourseProjectHours = NormCalculationHelper.CalculateOptionalHours(row.HasCourseProject, courseProjectNorm, row);
-                row.RgrHours = NormCalculationHelper.CalculateOptionalHours(row.HasRgr, rgrNorm, row);
+                row.PracticeTotalHours = NormCalculationHelper.CalculatePlanHours(
+                    row.PracticePlanHours,
+                    practiceNorm,
+                    row);
+
+                row.LabTotalHours = NormCalculationHelper.CalculatePlanHours(
+                    row.LabPlanHours,
+                    labNorm,
+                    row);
+
+                row.ExamHours = NormCalculationHelper.CalculateOptionalHours(
+                    row.HasExam,
+                    examNorm,
+                    row);
+
+                row.CreditHours = NormCalculationHelper.CalculateOptionalHours(
+                    row.HasCredit,
+                    creditNorm,
+                    row);
+
+                row.CourseWorkHours = NormCalculationHelper.CalculateOptionalHours(
+                    row.HasCourseWork,
+                    courseWorkNorm,
+                    row);
+
+                row.CourseProjectHours = NormCalculationHelper.CalculateOptionalHours(
+                    row.HasCourseProject,
+                    courseProjectNorm,
+                    row);
+
+                row.RgrHours = NormCalculationHelper.CalculateOptionalHours(
+                    row.HasRgr,
+                    rgrNorm,
+                    row);
 
                 row.ConsultationHours = NormCalculationHelper.CalculateConsultationHours(
                     row,
@@ -107,6 +150,7 @@ namespace DepartmentLoadApp.Services
             row.FlowCount = 0;
             row.GroupCount = 0;
             row.SubgroupCount = 0;
+
             row.LectureTotalHours = 0;
             row.PracticeTotalHours = 0;
             row.LabTotalHours = 0;
@@ -121,7 +165,9 @@ namespace DepartmentLoadApp.Services
         private static string NormalizeText(string? value)
         {
             if (string.IsNullOrWhiteSpace(value))
+            {
                 return string.Empty;
+            }
 
             return string.Join(' ', value
                 .Trim()

@@ -39,6 +39,7 @@ namespace DepartmentLoadApp.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Save(NormTimePageViewModel model)
         {
             if (!ModelState.IsValid)
@@ -46,7 +47,9 @@ namespace DepartmentLoadApp.Controllers
                 return View("Index", model);
             }
 
-            var ids = model.Items.Select(x => x.Id).ToList();
+            var ids = model.Items
+                .Select(x => x.Id)
+                .ToList();
 
             var dbItems = await _context.NormTimes
                 .Where(x => ids.Contains(x.Id))
@@ -63,6 +66,7 @@ namespace DepartmentLoadApp.Controllers
             await _context.SaveChangesAsync();
 
             TempData["SuccessMessage"] = "Нормы времени сохранены";
+
             return RedirectToAction(nameof(Index));
         }
     }

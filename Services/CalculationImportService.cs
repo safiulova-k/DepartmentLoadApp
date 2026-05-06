@@ -270,7 +270,10 @@ namespace DepartmentLoadApp.Services
 
             return result;
         }
-
+        // В учебном плане блок Б1 содержит дисциплины,
+        // Б2 — практики,
+        // Б3 — государственную итоговую аттестацию.
+        // По этим кодам записи учебного плана распределяются между разными алгоритмами расчёта нагрузки.
         private static bool IsDisciplineRecord(string? index)
         {
             if (string.IsNullOrWhiteSpace(index))
