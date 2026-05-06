@@ -56,7 +56,6 @@
                         restoreCollapses(ids);
                     }
                 } catch {
-                    // ignore
                 }
             }
 
@@ -89,8 +88,11 @@
                     openIds.push(parentCollapse.id);
                 }
 
-                const action = submitter?.formAction || form.action;
-                const method = (submitter?.formMethod || form.method || "post").toUpperCase();
+                const submitterAction = submitter?.getAttribute("formaction");
+                const submitterMethod = submitter?.getAttribute("formmethod");
+
+                const action = submitterAction ? submitterAction : form.action;
+                const method = (submitterMethod || form.method || "post").toUpperCase();
                 const formData = new FormData(form);
 
                 const response = await fetch(action, {
@@ -104,7 +106,6 @@
                 const html = await response.text();
                 container.innerHTML = html;
 
-                wireContingent();
                 restoreCollapses(openIds);
                 saveOpenState(document);
 
@@ -113,42 +114,38 @@
                 }
             }
 
-            function bindAjaxForms(root = document) {
-                root.querySelectorAll(".js-contingent-form").forEach(form => {
-                    form.addEventListener("submit", async e => {
-                        e.preventDefault();
-                        await submitContingentForm(form, e.submitter);
-                    });
-                });
-            }
+            document.addEventListener("submit", async (e) => {
+                const form = e.target.closest(".js-contingent-form");
+                if (!form) return;
 
-            function bindOpenButtons(root = document) {
-                root.querySelectorAll(".js-open-accordion").forEach(btn => {
-                    btn.addEventListener("click", e => {
-                        e.preventDefault();
-                        const targetId = btn.dataset.target;
-                        if (!targetId) return;
-                        openAccordion(targetId, true);
-                    });
-                });
-            }
+                e.preventDefault();
+                await submitContingentForm(form, e.submitter);
+            });
 
-            function bindCollapseState(root = document) {
-                root.querySelectorAll(".accordion-collapse[id]").forEach(collapse => {
-                    collapse.addEventListener("shown.bs.collapse", () => saveOpenState(document));
-                    collapse.addEventListener("hidden.bs.collapse", () => saveOpenState(document));
-                });
-            }
+            document.addEventListener("click", (e) => {
+                const openBtn = e.target.closest(".js-open-accordion");
+                if (!openBtn) return;
 
-            window.wireContingent = function () {
-                const root = getContainer() || document;
-                bindAjaxForms(root);
-                bindOpenButtons(root);
-                bindCollapseState(root);
-            };
+                e.preventDefault();
+                const targetId = openBtn.dataset.target;
+                if (targetId) {
+                    openAccordion(targetId, true);
+                }
+            });
+
+            document.addEventListener("shown.bs.collapse", (e) => {
+                if (e.target.matches(".accordion-collapse[id]")) {
+                    saveOpenState(document);
+                }
+            });
+
+            document.addEventListener("hidden.bs.collapse", (e) => {
+                if (e.target.matches(".accordion-collapse[id]")) {
+                    saveOpenState(document);
+                }
+            });
 
             document.addEventListener("DOMContentLoaded", () => {
-                wireContingent();
                 restoreOpenState();
             });
         })();

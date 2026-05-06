@@ -203,3 +203,12 @@ body {
     .contingent-group-card:hover {
         box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.08) !important;
     }
+
+.contingent-course-header,
+.contingent-course-header * {
+    color: #212529 !important;
+}
+
+    .contingent-course-header .badge {
+        color: inherit !important;
+    }

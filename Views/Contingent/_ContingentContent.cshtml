@@ -79,15 +79,6 @@ else
                             </tr>
                         }
 
-                        <tr class="table-secondary fw-semibold">
-                            <td colspan="2" class="text-end">Итого</td>
-                            <td class="text-center">@Model.TotalCourse1</td>
-                            <td class="text-center">@Model.TotalCourse2</td>
-                            <td class="text-center">@Model.TotalCourse3</td>
-                            <td class="text-center">@Model.TotalCourse4</td>
-                            <td></td>
-                        </tr>
-
                         <tr>
                             <td colspan="2" class="text-end">Общее количество студентов</td>
                             <td colspan="4" class="text-center fw-semibold">@Model.TotalStudents</td>
@@ -177,7 +168,7 @@ else
                                         @foreach (var group in course.Groups)
                                         {
                                             <div class="col-12 col-xl-6">
-                                                <form asp-action="SaveGroupSubgroups"
+                                                <form action="@Url.Action("SaveGroupSubgroups", "Contingent")"
                                                       method="post"
                                                       class="card border-0 shadow-sm h-100 contingent-group-card js-contingent-form">
                                                     @Html.AntiForgeryToken()
@@ -246,7 +237,10 @@ else
 
                                                     <div class="card-footer bg-white border-0 pt-0 pb-3 px-3">
                                                         <div class="d-flex justify-content-end">
-                                                            <button type="submit" class="btn btn-success btn-sm">
+                                                            <button type="submit"
+                                                                    class="btn btn-success btn-sm"
+                                                                    formaction="@Url.Action("SaveGroupSubgroups", "Contingent")"
+                                                                    formmethod="post">
                                                                 Сохранить
                                                             </button>
                                                         </div>
