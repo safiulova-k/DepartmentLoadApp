@@ -66,7 +66,7 @@ namespace DepartmentLoadApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Save(WorkloadTablePageViewModel model)
         {
-            var inputRows = model.Rows ?? new();
+            var inputRows = model.Rows ?? new List<WorkloadRow>();
 
             var ids = inputRows
                 .Select(x => x.Id)
@@ -78,6 +78,24 @@ namespace DepartmentLoadApp.Controllers
                 .ThenBy(x => x.SemesterName)
                 .ThenBy(x => x.DisciplineName)
                 .ToListAsync();
+
+            foreach (var inputRow in inputRows)
+            {
+                var dbRow = dbRows.FirstOrDefault(x => x.Id == inputRow.Id);
+
+                if (dbRow == null)
+                    continue;
+
+                dbRow.LecturePlanHours = inputRow.LecturePlanHours;
+                dbRow.PracticePlanHours = inputRow.PracticePlanHours;
+                dbRow.LabPlanHours = inputRow.LabPlanHours;
+
+                dbRow.HasExam = inputRow.HasExam;
+                dbRow.HasCredit = inputRow.HasCredit;
+                dbRow.HasCourseWork = inputRow.HasCourseWork;
+                dbRow.HasCourseProject = inputRow.HasCourseProject;
+                dbRow.HasRgr = inputRow.HasRgr;
+            }
 
             await _workloadCalculationService.RecalculateAsync(dbRows);
             await _context.SaveChangesAsync();
