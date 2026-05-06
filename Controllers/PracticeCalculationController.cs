@@ -221,53 +221,5 @@ namespace DepartmentLoadApp.Controllers
                 .Replace("ё", "е")
                 .Split(' ', StringSplitOptions.RemoveEmptyEntries));
         }
-
-        private static bool IsPracticeRecord(string? index)
-        {
-            if (string.IsNullOrWhiteSpace(index))
-                return false;
-
-            var normalized = index.Trim().ToUpperInvariant();
-            return normalized.StartsWith("Б2");
-        }
-
-        private static string NormalizePracticeName(string? sourceName)
-        {
-            if (string.IsNullOrWhiteSpace(sourceName))
-                return string.Empty;
-
-            var value = sourceName.Trim().ToLowerInvariant();
-
-            if (value.Contains("ознаком"))
-                return "Ознакомительная практика";
-
-            if (value.Contains("технолог") || value.Contains("производствен"))
-                return "Технологическая практика";
-
-            if (value.Contains("преддиплом") && value.Contains("магистр"))
-                return "Преддипломная практика магистров";
-
-            if (value.Contains("преддиплом"))
-                return "Преддипломная практика бакалавров";
-
-            if (value.Contains("нирм"))
-                return "НИРМ";
-
-            if (value.Contains("научно-исследовательская"))
-                return "Научно-исследовательская работа";
-
-            if (value == "нир" || value.Contains(" нир"))
-                return "НИР";
-
-            if (value.Contains("учебн"))
-                return "Учебная практика";
-
-            return sourceName.Trim();
-        }
-
-        private static string GetEducationFormName(DepartmentLoadApp.Models.Core.AcademicPlan plan)
-        {
-            return plan.EducationForm.ToString();
-        }
     }
 }

@@ -24,7 +24,7 @@ public class DepartmentLoadDbContext : DbContext
     public DbSet<LecturerStudyPost> LecturerStudyPosts { get; set; } = null!;
     public DbSet<LecturerDepartmentPost> LecturerDepartmentPosts { get; set; } = null!;
 
-    // Твой модуль
+    // Сущности модуля расчёта нагрузки кафедры
     public DbSet<ContingentRow> ContingentRows { get; set; } = null!;
     public DbSet<ContingentSubgroup> ContingentSubgroups { get; set; } = null!;
     public DbSet<NormTime> NormTimes { get; set; } = null!;

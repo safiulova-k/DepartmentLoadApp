@@ -80,7 +80,6 @@
             <thead class="table-light text-center align-middle">
                 <tr>
                     <th>Семестр</th>
-                    <th>Форма обучения</th>
                     <th>Код направления</th>
                     <th>Вид практики</th>
                     <th>Курс</th>
@@ -116,13 +115,11 @@
                                 <input type="hidden" name="Rows[@i].DirectionName" value="@Model.Rows[i].DirectionName" />
                                 <input type="hidden" name="Rows[@i].Course" value="@Model.Rows[i].Course" />
                                 <input type="hidden" name="Rows[@i].SemesterName" value="@Model.Rows[i].SemesterName" />
-                                <input type="hidden" name="Rows[@i].EducationForm" value="@Model.Rows[i].EducationForm" />
                                 <input type="hidden" name="Rows[@i].StudentsCount" value="@Model.Rows[i].StudentsCount" />
                                 <input type="hidden" name="Rows[@i].GroupCount" value="@Model.Rows[i].GroupCount" />
                                 <input type="hidden" name="Rows[@i].TotalHours" value="@Model.Rows[i].TotalHours.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                             </td>
 
-                            <td>@Model.Rows[i].EducationForm</td>
                             <td>@Model.Rows[i].DirectionCode</td>
                             <td>@Model.Rows[i].PracticeName</td>
                             <td>@Model.Rows[i].Course</td>

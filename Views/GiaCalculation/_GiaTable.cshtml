@@ -15,7 +15,6 @@ else
             <thead class="table-light">
                 <tr>
                     <th>Семестр</th>
-                    <th>Форма обучения</th>
                     <th>Код направления</th>
                     <th>Вид работы</th>
                     <th>Курс</th>
@@ -43,12 +42,10 @@ else
                             <input type="hidden" name="Rows[@index].DirectionName" value="@Model[i].DirectionName" />
                             <input type="hidden" name="Rows[@index].Course" value="@Model[i].Course" />
                             <input type="hidden" name="Rows[@index].SemesterName" value="@Model[i].SemesterName" />
-                            <input type="hidden" name="Rows[@index].EducationForm" value="@Model[i].EducationForm" />
                             <input type="hidden" name="Rows[@index].StudentsCount" value="@Model[i].StudentsCount" />
                             <input type="hidden" name="Rows[@index].GroupCount" value="@Model[i].GroupCount" />
                             <input type="hidden" name="Rows[@index].TotalHours" value="@Model[i].TotalHours.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                         </td>
-                        <td>@Model[i].EducationForm</td>
                         <td>@Model[i].DirectionCode</td>
                         <td>@Model[i].WorkName</td>
                         <td>@Model[i].Course</td>
