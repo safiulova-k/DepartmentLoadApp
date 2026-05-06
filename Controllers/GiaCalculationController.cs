@@ -1,12 +1,10 @@
 ﻿using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Helpers;
-using DepartmentLoadApp.Models;
-using DepartmentLoadApp.Models.Contingent;
 using DepartmentLoadApp.Models.Gia;
+using DepartmentLoadApp.Services;
 using DepartmentLoadApp.ViewModels.Gia;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using DepartmentLoadApp.Services;
 
 namespace DepartmentLoadApp.Controllers
 {
@@ -14,13 +12,16 @@ namespace DepartmentLoadApp.Controllers
     {
         private readonly DepartmentLoadDbContext _context;
         private readonly CalculationImportService _importService;
+        private readonly GiaCalculationService _giaCalculationService;
 
         public GiaCalculationController(
             DepartmentLoadDbContext context,
-            CalculationImportService importService)
+            CalculationImportService importService,
+            GiaCalculationService giaCalculationService)
         {
             _context = context;
             _importService = importService;
+            _giaCalculationService = giaCalculationService;
         }
 
         [HttpGet]
@@ -29,16 +30,9 @@ namespace DepartmentLoadApp.Controllers
             var selectedYearStart = AcademicYearResolver.NormalizeStartYear(startYear);
             var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
-            var rows = await _context.GiaWorkloadRows
-                .Where(x => x.PlanYear == selectedYear)
-                .OrderBy(x => x.Course)
-                .ThenBy(x => x.DirectionCode)
-                .ThenBy(x => x.GiaSection)
-                .ThenBy(x => x.WorkName)
-                .ToListAsync();
+            var rows = await LoadRowsAsync(selectedYear, asNoTracking: true);
 
-            await RecalculateAsync(rows);
-            await _context.SaveChangesAsync();
+            await _giaCalculationService.RecalculateAsync(rows);
 
             return View(new GiaWorkloadPageViewModel
             {
@@ -64,7 +58,11 @@ namespace DepartmentLoadApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Save(GiaWorkloadPageViewModel model)
         {
-            var ids = model.Rows.Select(x => x.Id).ToList();
+            var inputRows = model.Rows ?? new();
+
+            var ids = inputRows
+                .Select(x => x.Id)
+                .ToList();
 
             var dbRows = await _context.GiaWorkloadRows
                 .Where(x => ids.Contains(x.Id))
@@ -74,9 +72,10 @@ namespace DepartmentLoadApp.Controllers
                 .ThenBy(x => x.WorkName)
                 .ToListAsync();
 
-            foreach (var row in model.Rows)
+            foreach (var row in inputRows)
             {
                 var dbRow = dbRows.FirstOrDefault(x => x.Id == row.Id);
+
                 if (dbRow == null)
                     continue;
 
@@ -86,7 +85,7 @@ namespace DepartmentLoadApp.Controllers
                 }
             }
 
-            await RecalculateAsync(dbRows);
+            await _giaCalculationService.RecalculateAsync(dbRows);
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index), new { startYear = model.SelectedYearStart });
@@ -98,16 +97,9 @@ namespace DepartmentLoadApp.Controllers
             var selectedYearStart = AcademicYearResolver.NormalizeStartYear(startYear);
             var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
-            var rows = await _context.GiaWorkloadRows
-                .AsNoTracking()
-                .Where(x => x.PlanYear == selectedYear)
-                .OrderBy(x => x.Course)
-                .ThenBy(x => x.DirectionCode)
-                .ThenBy(x => x.GiaSection)
-                .ThenBy(x => x.WorkName)
-                .ToListAsync();
+            var rows = await LoadRowsAsync(selectedYear, asNoTracking: true);
 
-            await RecalculateAsync(rows);
+            await _giaCalculationService.RecalculateAsync(rows);
 
             var content = ExcelExportHelper.ExportGia(rows);
             var fileName = $"Расчет_ГИА_{selectedYear}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
@@ -118,71 +110,24 @@ namespace DepartmentLoadApp.Controllers
                 fileName);
         }
 
-        private async Task RecalculateAsync(List<GiaWorkloadRow> rows)
+        private async Task<List<GiaWorkloadRow>> LoadRowsAsync(
+            string selectedYear,
+            bool asNoTracking)
         {
-            var norms = await _context.NormTimes
-                .AsNoTracking()
-                .Where(x => x.CategoryName == "ГИА")
+            var query = _context.GiaWorkloadRows
+                .Where(x => x.PlanYear == selectedYear);
+
+            if (asNoTracking)
+            {
+                query = query.AsNoTracking();
+            }
+
+            return await query
+                .OrderBy(x => x.Course)
+                .ThenBy(x => x.DirectionCode)
+                .ThenBy(x => x.GiaSection)
+                .ThenBy(x => x.WorkName)
                 .ToListAsync();
-
-            var contingentMap = await _context.ContingentRows
-                .AsNoTracking()
-                .ToDictionaryAsync(x => x.DirectionCode);
-
-            foreach (var row in rows)
-            {
-                if (!contingentMap.TryGetValue(row.DirectionCode, out var contingent))
-                {
-                    row.StudentsCount = 0;
-                    row.GroupCount = 0;
-                    row.TotalHours = 0;
-                    continue;
-                }
-
-                row.StudentsCount = CalculationHelper.GetStudentsByCourse(contingent, row.Course);
-                row.GroupCount = CalculationHelper.GetGroupsByCourse(contingent, row.Course);
-
-                row.TotalHours = CalculateGiaHours(row, norms, contingent);
-            }
-        }
-
-        private decimal CalculateGiaHours(
-            GiaWorkloadRow row,
-            List<NormTime> norms,
-            ContingentRow contingent)
-        {
-            if (row.WorkName == "Консультация к госэкзамену")
-            {
-                return CalculationHelper.RoundHours(row.ManualHours);
-            }
-
-            var normName = GetGiaNormName(row, contingent);
-
-            var norm = norms.FirstOrDefault(x => x.WorkName == normName);
-            if (norm == null)
-            {
-                return 0;
-            }
-
-            var result = CalculationHelper.CalculateByNorm(
-                calculationBase: norm.CalculationBase,
-                coefficient: norm.Hours,
-                studentsCount: row.StudentsCount,
-                groupCount: row.GroupCount);
-
-            return CalculationHelper.RoundHours(result);
-        }
-
-        private static string GetGiaNormName(GiaWorkloadRow row, ContingentRow contingent)
-        {
-            if (row.WorkName == "Руководство ВКР")
-            {
-                return contingent.IsMaster
-                    ? "Руководство ВКР магистра"
-                    : "Руководство ВКР бакалавра";
-            }
-
-            return row.WorkName;
         }
     }
 }

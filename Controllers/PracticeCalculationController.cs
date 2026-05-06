@@ -1,24 +1,26 @@
 ﻿using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Helpers;
-using DepartmentLoadApp.Models;
-using DepartmentLoadApp.Models.Practice;
+using DepartmentLoadApp.Services;
 using DepartmentLoadApp.ViewModels.Practice;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using DepartmentLoadApp.Services;
+
 namespace DepartmentLoadApp.Controllers
 {
     public class PracticeCalculationController : Controller
     {
         private readonly DepartmentLoadDbContext _context;
         private readonly CalculationImportService _importService;
+        private readonly PracticeCalculationService _practiceCalculationService;
 
         public PracticeCalculationController(
             DepartmentLoadDbContext context,
-            CalculationImportService importService)
+            CalculationImportService importService,
+            PracticeCalculationService practiceCalculationService)
         {
             _context = context;
             _importService = importService;
+            _practiceCalculationService = practiceCalculationService;
         }
 
         [HttpGet]
@@ -27,15 +29,9 @@ namespace DepartmentLoadApp.Controllers
             var selectedYearStart = AcademicYearResolver.NormalizeStartYear(startYear);
             var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
-            var rows = await _context.PracticeWorkloadRows
-                .Where(x => x.PlanYear == selectedYear)
-                .OrderBy(x => x.Course)
-                .ThenBy(x => x.DirectionCode)
-                .ThenBy(x => x.PracticeName)
-                .ToListAsync();
+            var rows = await LoadRowsAsync(selectedYear, asNoTracking: true);
 
-            await RecalculateAsync(rows);
-            await _context.SaveChangesAsync();
+            await _practiceCalculationService.RecalculateAsync(rows);
 
             return View(new PracticeWorkloadPageViewModel
             {
@@ -61,7 +57,11 @@ namespace DepartmentLoadApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Save(PracticeWorkloadPageViewModel model)
         {
-            var ids = model.Rows.Select(x => x.Id).ToList();
+            var inputRows = model.Rows ?? new();
+
+            var ids = inputRows
+                .Select(x => x.Id)
+                .ToList();
 
             var dbRows = await _context.PracticeWorkloadRows
                 .Where(x => ids.Contains(x.Id))
@@ -70,16 +70,17 @@ namespace DepartmentLoadApp.Controllers
                 .ThenBy(x => x.PracticeName)
                 .ToListAsync();
 
-            foreach (var row in model.Rows)
+            foreach (var row in inputRows)
             {
                 var dbRow = dbRows.FirstOrDefault(x => x.Id == row.Id);
+
                 if (dbRow == null)
                     continue;
 
                 dbRow.WeeksCount = row.WeeksCount;
             }
 
-            await RecalculateAsync(dbRows);
+            await _practiceCalculationService.RecalculateAsync(dbRows);
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index), new { startYear = model.SelectedYearStart });
@@ -91,15 +92,9 @@ namespace DepartmentLoadApp.Controllers
             var selectedYearStart = AcademicYearResolver.NormalizeStartYear(startYear);
             var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
-            var rows = await _context.PracticeWorkloadRows
-                .AsNoTracking()
-                .Where(x => x.PlanYear == selectedYear)
-                .OrderBy(x => x.Course)
-                .ThenBy(x => x.DirectionCode)
-                .ThenBy(x => x.PracticeName)
-                .ToListAsync();
+            var rows = await LoadRowsAsync(selectedYear, asNoTracking: true);
 
-            await RecalculateAsync(rows);
+            await _practiceCalculationService.RecalculateAsync(rows);
 
             var content = ExcelExportHelper.ExportPractice(rows);
             var fileName = $"Расчет_практик_{selectedYear}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
@@ -110,116 +105,23 @@ namespace DepartmentLoadApp.Controllers
                 fileName);
         }
 
-        private async Task RecalculateAsync(List<PracticeWorkloadRow> rows)
+        private async Task<List<Models.Practice.PracticeWorkloadRow>> LoadRowsAsync(
+            string selectedYear,
+            bool asNoTracking)
         {
-            var norms = await _context.NormTimes
-                .AsNoTracking()
-                .Where(x =>
-                    !string.IsNullOrWhiteSpace(x.CategoryName) &&
-                    (EF.Functions.ILike(x.CategoryName, "%практи%") ||
-                     EF.Functions.ILike(x.CategoryName, "%науч%")))
-                .ToListAsync();
+            var query = _context.PracticeWorkloadRows
+                .Where(x => x.PlanYear == selectedYear);
 
-            var contingentMap = await _context.ContingentRows
-                .AsNoTracking()
-                .ToDictionaryAsync(x => NormalizeText(x.DirectionCode));
-
-            foreach (var row in rows)
+            if (asNoTracking)
             {
-                if (!contingentMap.TryGetValue(NormalizeText(row.DirectionCode), out var contingent))
-                {
-                    row.StudentsCount = 0;
-                    row.GroupCount = 0;
-                    row.TotalHours = 0;
-                    continue;
-                }
-
-                row.StudentsCount = CalculationHelper.GetStudentsByCourse(contingent, row.Course);
-                row.GroupCount = CalculationHelper.GetGroupsByCourse(contingent, row.Course);
-
-                var norm = FindPracticeNorm(norms, row.PracticeName);
-
-                if (norm == null || row.WeeksCount <= 0 || norm.Hours <= 0)
-                {
-                    row.TotalHours = 0;
-                    continue;
-                }
-
-                var result = CalculationHelper.CalculateByNorm(
-                    calculationBase: norm.CalculationBase,
-                    coefficient: norm.Hours,
-                    studentsCount: row.StudentsCount,
-                    groupCount: row.GroupCount,
-                    weeksCount: row.WeeksCount);
-
-                row.TotalHours = CalculationHelper.RoundHours(result);
+                query = query.AsNoTracking();
             }
-        }
 
-        private static NormTime? FindPracticeNorm(List<NormTime> norms, string practiceName)
-        {
-            var target = NormalizePracticeKey(practiceName);
-
-            return norms.FirstOrDefault(x => NormalizePracticeKey(x.WorkName) == target)
-                ?? norms.FirstOrDefault(x => IsSamePracticeType(x.WorkName, practiceName));
-        }
-
-        private static bool IsSamePracticeType(string? left, string? right)
-        {
-            var a = NormalizePracticeKey(left);
-            var b = NormalizePracticeKey(right);
-
-            if (a == b)
-                return true;
-
-            if (a.Contains("технологическ") && b.Contains("технологическ"))
-                return true;
-
-            if (a.Contains("преддиплом") && b.Contains("преддиплом"))
-                return true;
-
-            if (a.Contains("ознаком") && b.Contains("ознаком"))
-                return true;
-
-            if (a == "нир" && b == "нир")
-                return true;
-
-            if (a.Contains("научно-исследователь") && b.Contains("научно-исследователь"))
-                return true;
-
-            if (a.Contains("учебн") && b.Contains("учебн"))
-                return true;
-
-            return false;
-        }
-
-        private static string NormalizePracticeKey(string? value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return string.Empty;
-
-            var normalized = value
-                .Trim()
-                .ToLowerInvariant()
-                .Replace("ё", "е")
-                .Replace("бакалавров", "")
-                .Replace("магистров", "")
-                .Replace("(учебная)", "")
-                .Replace("(производственная)", "");
-
-            return string.Join(' ', normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries));
-        }
-
-        private static string NormalizeText(string? value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return string.Empty;
-
-            return string.Join(' ', value
-                .Trim()
-                .ToLowerInvariant()
-                .Replace("ё", "е")
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries));
+            return await query
+                .OrderBy(x => x.Course)
+                .ThenBy(x => x.DirectionCode)
+                .ThenBy(x => x.PracticeName)
+                .ToListAsync();
         }
     }
 }
