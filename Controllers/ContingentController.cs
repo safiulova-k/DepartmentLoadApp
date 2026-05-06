@@ -1,26 +1,25 @@
-﻿using DepartmentLoadApp.Data;
-using DepartmentLoadApp.Models.Contingent;
-using DepartmentLoadApp.Models.Core.Enums;
+﻿using DepartmentLoadApp.Services;
 using DepartmentLoadApp.ViewModels.Contingent;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace DepartmentLoadApp.Controllers;
 
 public class ContingentController : Controller
 {
-    private readonly DepartmentLoadDbContext _context;
+    private readonly ContingentService _contingentService;
 
-    public ContingentController(DepartmentLoadDbContext context)
+    public ContingentController(ContingentService contingentService)
     {
-        _context = context;
+        _contingentService = contingentService;
     }
 
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        await SyncContingentAsync();
-        var model = await BuildPageModelAsync();
+        await _contingentService.SyncContingentAsync();
+
+        var model = await _contingentService.BuildPageModelAsync();
+
         return View(model);
     }
 
@@ -28,503 +27,93 @@ public class ContingentController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddSubgroup(int studentGroupId)
     {
-        var group = await _context.StudentGroupsCore
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == studentGroupId);
+        var result = await _contingentService.AddSubgroupAsync(studentGroupId);
 
-        if (group == null)
-        {
-            if (IsAjaxRequest())
-                return await BuildContentPartialAsync(errorMessage: "Группа не найдена");
-
-            TempData["ErrorMessage"] = "Группа не найдена";
-            return RedirectToAction(nameof(Index));
-        }
-
-        await EnsureContingentSubgroupsAsync();
-
-        var nextNumber = await _context.ContingentSubgroups
-            .Where(x => x.StudentGroupId == studentGroupId)
-            .CountAsync() + 1;
-
-        _context.ContingentSubgroups.Add(new ContingentSubgroup
-        {
-            StudentGroupId = studentGroupId,
-            SubgroupNumber = nextNumber,
-            StudentsCount = 0
-        });
-
-        await _context.SaveChangesAsync();
-        await DistributeStudentsEvenlyAsync(studentGroupId);
-        await RebuildContingentRowsAsync();
-
-        if (IsAjaxRequest())
-            return await BuildCoursePartialAsync(studentGroupId);
-
-        TempData["SuccessMessage"] = "Подгруппа добавлена";
-        return RedirectToAction(nameof(Index));
+        return await HandleOperationResultAsync(result);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteSubgroup(int studentGroupId, int subgroupId)
     {
-        await EnsureContingentSubgroupsAsync();
+        var result = await _contingentService.DeleteSubgroupAsync(
+            studentGroupId,
+            subgroupId);
 
-        var subgroups = await _context.ContingentSubgroups
-            .Where(x => x.StudentGroupId == studentGroupId)
-            .OrderBy(x => x.SubgroupNumber)
-            .ToListAsync();
-
-        if (subgroups.Count <= 1)
-        {
-            if (IsAjaxRequest())
-                return await BuildContentPartialAsync(errorMessage: "У группы должна остаться хотя бы одна подгруппа");
-
-            TempData["ErrorMessage"] = "У группы должна остаться хотя бы одна подгруппа";
-            return RedirectToAction(nameof(Index));
-        }
-
-        var subgroup = subgroups.FirstOrDefault(x => x.Id == subgroupId);
-        if (subgroup == null)
-        {
-            if (IsAjaxRequest())
-                return await BuildContentPartialAsync(errorMessage: "Подгруппа не найдена");
-
-            TempData["ErrorMessage"] = "Подгруппа не найдена";
-            return RedirectToAction(nameof(Index));
-        }
-
-        _context.ContingentSubgroups.Remove(subgroup);
-        await _context.SaveChangesAsync();
-
-        await RenumberSubgroupsAsync(studentGroupId);
-        await DistributeStudentsEvenlyAsync(studentGroupId);
-        await RebuildContingentRowsAsync();
-
-        if (IsAjaxRequest())
-            return await BuildCoursePartialAsync(studentGroupId);
-
-        return RedirectToAction(nameof(Index));
+        return await HandleOperationResultAsync(result);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SaveGroupSubgroups(
-    int studentGroupId,
-    List<int> subgroupIds,
-    List<int> studentsCounts)
+        int studentGroupId,
+        List<int> subgroupIds,
+        List<int> studentsCounts)
     {
-        if (subgroupIds.Count != studentsCounts.Count)
-        {
-            if (IsAjaxRequest())
-                return await BuildContentPartialAsync(errorMessage: "Не удалось сохранить подгруппы");
+        var result = await _contingentService.SaveGroupSubgroupsAsync(
+            studentGroupId,
+            subgroupIds,
+            studentsCounts);
 
-            TempData["ErrorMessage"] = "Не удалось сохранить подгруппы";
-            return RedirectToAction(nameof(Index));
-        }
+        return await HandleOperationResultAsync(result);
+    }
 
-        var group = await _context.StudentGroupsCore
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == studentGroupId);
-
-        if (group == null)
-        {
-            if (IsAjaxRequest())
-                return await BuildContentPartialAsync(errorMessage: "Группа не найдена");
-
-            TempData["ErrorMessage"] = "Группа не найдена";
-            return RedirectToAction(nameof(Index));
-        }
-
-        var normalizedCounts = studentsCounts
-            .Select(x => x < 0 ? 0 : x)
-            .ToList();
-
-        if (normalizedCounts.Sum() != group.StudentCount)
-        {
-            var message = $"Сумма студентов по подгруппам должна быть равна {group.StudentCount}";
-
-            if (IsAjaxRequest())
-                return await BuildCoursePartialAsync(studentGroupId, message, studentGroupId);
-
-            TempData["ErrorMessage"] = message;
-            return RedirectToAction(nameof(Index));
-        }
-
-        var subgroups = await _context.ContingentSubgroups
-            .Where(x => x.StudentGroupId == studentGroupId && subgroupIds.Contains(x.Id))
-            .OrderBy(x => x.SubgroupNumber)
-            .ToListAsync();
-
-        if (subgroups.Count != subgroupIds.Count)
-        {
-            if (IsAjaxRequest())
-                return await BuildContentPartialAsync(errorMessage: "Некоторые подгруппы не найдены");
-
-            TempData["ErrorMessage"] = "Некоторые подгруппы не найдены";
-            return RedirectToAction(nameof(Index));
-        }
-
-        var countsById = subgroupIds
-            .Select((id, index) => new { id, count = normalizedCounts[index] })
-            .ToDictionary(x => x.id, x => x.count);
-
-        foreach (var subgroup in subgroups)
-        {
-            subgroup.StudentsCount = countsById[subgroup.Id];
-        }
-
-        await _context.SaveChangesAsync();
-        await RenumberSubgroupsAsync(studentGroupId);
-        await RebuildContingentRowsAsync();
-
+    private async Task<IActionResult> HandleOperationResultAsync(
+        ContingentOperationResult result)
+    {
         if (IsAjaxRequest())
-            return await BuildCoursePartialAsync(studentGroupId);
+        {
+            if (result.ReturnCoursePartial && result.StudentGroupId.HasValue)
+            {
+                return await BuildCoursePartialAsync(
+                    result.StudentGroupId.Value,
+                    result.IsSuccess ? null : result.Message,
+                    result.ErrorStudentGroupId);
+            }
+
+            return await BuildContentPartialAsync(
+                result.IsSuccess ? result.Message : null,
+                result.IsSuccess ? null : result.Message,
+                result.ErrorStudentGroupId);
+        }
+
+        if (result.IsSuccess)
+        {
+            TempData["SuccessMessage"] = result.Message;
+        }
+        else
+        {
+            TempData["ErrorMessage"] = result.Message;
+        }
 
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task SyncContingentAsync()
-    {
-        await EnsureContingentSubgroupsAsync();
-        await RebuildContingentRowsAsync();
-    }
-
-    private async Task EnsureContingentSubgroupsAsync()
-    {
-        var studentGroups = await _context.StudentGroupsCore
-            .AsNoTracking()
-            .Select(x => new
-            {
-                x.Id,
-                x.StudentCount
-            })
-            .ToListAsync();
-
-        var studentGroupIds = studentGroups
-            .Select(x => x.Id)
-            .ToHashSet();
-
-        var existingSubgroups = await _context.ContingentSubgroups
-            .OrderBy(x => x.StudentGroupId)
-            .ThenBy(x => x.SubgroupNumber)
-            .ToListAsync();
-
-        var orphanedSubgroups = existingSubgroups
-            .Where(x => !studentGroupIds.Contains(x.StudentGroupId))
-            .ToList();
-
-        if (orphanedSubgroups.Any())
-        {
-            _context.ContingentSubgroups.RemoveRange(orphanedSubgroups);
-        }
-
-        foreach (var studentGroup in studentGroups)
-        {
-            var groupSubgroups = existingSubgroups
-                .Where(x => x.StudentGroupId == studentGroup.Id)
-                .OrderBy(x => x.SubgroupNumber)
-                .ToList();
-
-            if (!groupSubgroups.Any())
-            {
-                var subgroupCount = studentGroup.StudentCount > 15 ? 2 : 1;
-
-                var createdSubgroups = Enumerable.Range(1, subgroupCount)
-                    .Select(number => new ContingentSubgroup
-                    {
-                        StudentGroupId = studentGroup.Id,
-                        SubgroupNumber = number,
-                        StudentsCount = 0
-                    })
-                    .ToList();
-
-                ApplyEvenDistribution(createdSubgroups, studentGroup.StudentCount);
-
-                _context.ContingentSubgroups.AddRange(createdSubgroups);
-                continue;
-            }
-
-            var changed = false;
-
-            for (var i = 0; i < groupSubgroups.Count; i++)
-            {
-                var requiredNumber = i + 1;
-                if (groupSubgroups[i].SubgroupNumber != requiredNumber)
-                {
-                    groupSubgroups[i].SubgroupNumber = requiredNumber;
-                    changed = true;
-                }
-            }
-
-            if (groupSubgroups.Sum(x => x.StudentsCount) != studentGroup.StudentCount)
-            {
-                ApplyEvenDistribution(groupSubgroups, studentGroup.StudentCount);
-                changed = true;
-            }
-
-            if (changed)
-            {
-                _context.ContingentSubgroups.UpdateRange(groupSubgroups);
-            }
-        }
-
-        await _context.SaveChangesAsync();
-    }
-
-    private async Task DistributeStudentsEvenlyAsync(int studentGroupId)
-    {
-        var studentGroup = await _context.StudentGroupsCore
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == studentGroupId);
-
-        if (studentGroup == null)
-        {
-            return;
-        }
-
-        var subgroups = await _context.ContingentSubgroups
-            .Where(x => x.StudentGroupId == studentGroupId)
-            .OrderBy(x => x.SubgroupNumber)
-            .ToListAsync();
-
-        if (!subgroups.Any())
-        {
-            return;
-        }
-
-        ApplyEvenDistribution(subgroups, studentGroup.StudentCount);
-
-        _context.ContingentSubgroups.UpdateRange(subgroups);
-        await _context.SaveChangesAsync();
-    }
-
-    private async Task RenumberSubgroupsAsync(int studentGroupId)
-    {
-        var subgroups = await _context.ContingentSubgroups
-            .Where(x => x.StudentGroupId == studentGroupId)
-            .OrderBy(x => x.SubgroupNumber)
-            .ToListAsync();
-
-        for (var i = 0; i < subgroups.Count; i++)
-        {
-            subgroups[i].SubgroupNumber = i + 1;
-        }
-
-        await _context.SaveChangesAsync();
-    }
-
-    private static void ApplyEvenDistribution(List<ContingentSubgroup> subgroups, int totalStudents)
-    {
-        if (!subgroups.Any())
-        {
-            return;
-        }
-
-        var safeTotal = totalStudents < 0 ? 0 : totalStudents;
-        var baseCount = safeTotal / subgroups.Count;
-        var remainder = safeTotal % subgroups.Count;
-
-        for (var i = 0; i < subgroups.Count; i++)
-        {
-            subgroups[i].StudentsCount = baseCount + (i < remainder ? 1 : 0);
-        }
-    }
-
-    private async Task RebuildContingentRowsAsync()
-    {
-        var subgroupCounts = await _context.ContingentSubgroups
-             .AsNoTracking()
-             .GroupBy(x => x.StudentGroupId)
-             .Select(g => new
-             {
-                 StudentGroupId = g.Key,
-                 Count = g.Count()
-             })
-             .ToDictionaryAsync(x => x.StudentGroupId, x => x.Count);
-
-        var groups = await (
-            from studentGroup in _context.StudentGroupsCore.AsNoTracking()
-            join direction in _context.EducationDirections.AsNoTracking()
-                on studentGroup.EducationDirectionId equals direction.Id
-            select new
-            {
-                DirectionCode = direction.Cipher,
-                direction.Qualification,
-                studentGroup.Id,
-                studentGroup.Course,
-                studentGroup.StudentCount
-            })
-            .ToListAsync();
-
-        var newRows = groups
-            .GroupBy(x => new
-            {
-                x.DirectionCode,
-                x.Qualification
-            })
-            .OrderBy(x => x.Key.DirectionCode)
-            .ThenBy(x => x.Key.Qualification)
-            .Select(x => new ContingentRow
-            {
-                DirectionCode = x.Key.DirectionCode,
-                IsBachelor = x.Key.Qualification == EducationDirectionQualification.Бакалавриат,
-                IsMaster = x.Key.Qualification == EducationDirectionQualification.Магистратура,
-
-                Course1Count = x.Where(g => g.Course == AcademicCourse.Course_1).Sum(g => g.StudentCount),
-                Course2Count = x.Where(g => g.Course == AcademicCourse.Course_2).Sum(g => g.StudentCount),
-                Course3Count = x.Where(g => g.Course == AcademicCourse.Course_3).Sum(g => g.StudentCount),
-                Course4Count = x.Where(g => g.Course == AcademicCourse.Course_4).Sum(g => g.StudentCount),
-
-                Course1Groups = x.Count(g => g.Course == AcademicCourse.Course_1),
-                Course2Groups = x.Count(g => g.Course == AcademicCourse.Course_2),
-                Course3Groups = x.Count(g => g.Course == AcademicCourse.Course_3),
-                Course4Groups = x.Count(g => g.Course == AcademicCourse.Course_4),
-
-                Course1Subgroups = x.Where(g => g.Course == AcademicCourse.Course_1)
-                    .Sum(g => subgroupCounts.TryGetValue(g.Id, out var count) ? count : 1),
-                Course2Subgroups = x.Where(g => g.Course == AcademicCourse.Course_2)
-                    .Sum(g => subgroupCounts.TryGetValue(g.Id, out var count) ? count : 1),
-                Course3Subgroups = x.Where(g => g.Course == AcademicCourse.Course_3)
-                    .Sum(g => subgroupCounts.TryGetValue(g.Id, out var count) ? count : 1),
-                Course4Subgroups = x.Where(g => g.Course == AcademicCourse.Course_4)
-                    .Sum(g => subgroupCounts.TryGetValue(g.Id, out var count) ? count : 1),
-
-                TotalCount = x.Sum(g => g.StudentCount)
-            })
-            .ToList();
-
-        var oldRows = await _context.ContingentRows.ToListAsync();
-        if (oldRows.Any())
-        {
-            _context.ContingentRows.RemoveRange(oldRows);
-            await _context.SaveChangesAsync();
-        }
-
-        if (newRows.Any())
-        {
-            await _context.ContingentRows.AddRangeAsync(newRows);
-            await _context.SaveChangesAsync();
-        }
-    }
-
-    private async Task<ContingentPageViewModel> BuildPageModelAsync()
-    {
-        var rows = await _context.ContingentRows
-            .AsNoTracking()
-            .OrderBy(x => x.DirectionCode)
-            .ThenByDescending(x => x.IsBachelor)
-            .ToListAsync();
-
-        var subgroups = await _context.ContingentSubgroups
-            .AsNoTracking()
-            .OrderBy(x => x.StudentGroupId)
-            .ThenBy(x => x.SubgroupNumber)
-            .ToListAsync();
-
-        var subgroupsByGroupId = subgroups
-            .GroupBy(x => x.StudentGroupId)
-            .ToDictionary(x => x.Key, x => x.ToList());
-
-        var groupItems = await (
-            from studentGroup in _context.StudentGroupsCore.AsNoTracking()
-            join direction in _context.EducationDirections.AsNoTracking()
-                on studentGroup.EducationDirectionId equals direction.Id
-            orderby direction.Cipher, direction.Qualification, studentGroup.Course, studentGroup.GroupName
-            select new
-            {
-                studentGroup.Id,
-                studentGroup.GroupName,
-                studentGroup.StudentCount,
-                Course = (int)studentGroup.Course,
-                DirectionCode = direction.Cipher,
-                DirectionName = direction.Title,
-                direction.Qualification
-            })
-            .ToListAsync();
-
-        var directions = groupItems
-            .GroupBy(x => new
-            {
-                x.DirectionCode,
-                x.DirectionName,
-                x.Qualification
-            })
-            .OrderBy(x => x.Key.DirectionCode)
-            .ThenBy(x => x.Key.Qualification)
-            .Select(x => new ContingentDirectionViewModel
-            {
-                DirectionCode = x.Key.DirectionCode,
-                DirectionName = x.First().DirectionName,
-                IsBachelor = x.Key.Qualification == EducationDirectionQualification.Бакалавриат,
-                QualificationName = x.Key.Qualification == EducationDirectionQualification.Бакалавриат
-                    ? "Бакалавриат"
-                    : "Магистратура",
-                Courses = Enumerable.Range(1, 4)
-                    .Select(courseNumber => new ContingentCourseViewModel
-                    {
-                        CourseNumber = courseNumber,
-                        Groups = x.Where(g => g.Course == courseNumber)
-                            .Select(g => new ContingentGroupViewModel
-                            {
-                                StudentGroupId = g.Id,
-                                GroupName = g.GroupName,
-                                StudentsCount = g.StudentCount,
-                                Subgroups = subgroupsByGroupId.TryGetValue(g.Id, out var groupSubgroups)
-                                    ? groupSubgroups.Select(s => new ContingentSubgroupViewModel
-                                    {
-                                        Id = s.Id,
-                                        StudentGroupId = s.StudentGroupId,
-                                        SubgroupNumber = s.SubgroupNumber,
-                                        StudentsCount = s.StudentsCount
-                                    }).ToList()
-                                    : new List<ContingentSubgroupViewModel>
-                                    {
-                                        new ContingentSubgroupViewModel
-                                        {
-                                            Id = 0,
-                                            StudentGroupId = g.Id,
-                                            SubgroupNumber = 1,
-                                            StudentsCount = g.StudentCount
-                                        }
-                                    }
-                            })
-                            .ToList()
-                    })
-                    .Where(c => c.Groups.Any())
-                    .ToList()
-            })
-            .ToList();
-
-        return new ContingentPageViewModel
-        {
-            Rows = rows,
-            Directions = directions
-        };
-    }
     private bool IsAjaxRequest()
     {
         return Request.Headers["X-Requested-With"] == "XMLHttpRequest";
     }
 
-    private async Task<PartialViewResult> BuildContentPartialAsync(
+    private async Task<IActionResult> BuildContentPartialAsync(
         string? successMessage = null,
         string? errorMessage = null,
         int? errorStudentGroupId = null)
     {
-        var model = await BuildPageModelAsync();
+        var model = await _contingentService.BuildPageModelAsync();
+
         ViewData["SuccessMessage"] = successMessage;
         ViewData["ErrorMessage"] = errorMessage;
         ViewData["ErrorStudentGroupId"] = errorStudentGroupId;
+
         return PartialView("_ContingentContent", model);
     }
-    private async Task<PartialViewResult> BuildCoursePartialAsync(
-    int studentGroupId,
-    string? errorMessage = null,
-    int? errorStudentGroupId = null)
+
+    private async Task<IActionResult> BuildCoursePartialAsync(
+        int studentGroupId,
+        string? errorMessage = null,
+        int? errorStudentGroupId = null)
     {
-        var model = await BuildPageModelAsync();
+        var model = await _contingentService.BuildPageModelAsync();
 
         var course = model.Directions
             .SelectMany(x => x.Courses)

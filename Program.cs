@@ -15,13 +15,12 @@ builder.Services.AddDbContext<DepartmentLoadDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<CalculationImportService>();
-
 builder.Services.AddScoped<WorkloadCalculationService>();
 builder.Services.AddScoped<PracticeCalculationService>();
 builder.Services.AddScoped<GiaCalculationService>();
-
 builder.Services.AddScoped<WorkloadDistributionService>();
 builder.Services.AddScoped<IndividualPlanService>();
+builder.Services.AddScoped<ContingentService>();
 
 builder.Services.AddHttpClient<CoreApiService>(client =>
 {

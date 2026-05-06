@@ -10,6 +10,10 @@ namespace DepartmentLoadApp.Services
 {
     public class CalculationImportService
     {
+        private const string DisciplineBlockPrefix = "Б1.";
+        private const string PracticeBlockPrefix = "Б2";
+        private const string GiaBlockPrefix = "Б3";
+        private const string OptionalDisciplineBlockPrefix = "ФТД";
         private readonly DepartmentLoadDbContext _context;
 
         public CalculationImportService(DepartmentLoadDbContext context)
@@ -270,35 +274,47 @@ namespace DepartmentLoadApp.Services
 
             return result;
         }
-        // В учебном плане блок Б1 содержит дисциплины,
-        // Б2 — практики,
-        // Б3 — государственную итоговую аттестацию.
-        // По этим кодам записи учебного плана распределяются между разными алгоритмами расчёта нагрузки.
+        // В учебном плане записи разделяются по индексам:
+        // Б1 — дисциплины;
+        // Б2 — практики;
+        // Б3 — государственная итоговая аттестация;
+        // ФТД — факультативные дисциплины.
+        // Это позволяет распределить записи учебного плана между разными алгоритмами расчёта нагрузки.
         private static bool IsDisciplineRecord(string? index)
         {
             if (string.IsNullOrWhiteSpace(index))
+            {
                 return false;
+            }
 
             var normalized = index.Trim().ToUpperInvariant();
-            return normalized.StartsWith("Б1.") || normalized.StartsWith("ФТД");
+
+            return normalized.StartsWith(DisciplineBlockPrefix)
+                || normalized.StartsWith(OptionalDisciplineBlockPrefix);
         }
 
         private static bool IsPracticeRecord(string? index)
         {
             if (string.IsNullOrWhiteSpace(index))
+            {
                 return false;
+            }
 
             var normalized = index.Trim().ToUpperInvariant();
-            return normalized.StartsWith("Б2");
+
+            return normalized.StartsWith(PracticeBlockPrefix);
         }
 
         private static bool IsGiaRecord(string? index)
         {
             if (string.IsNullOrWhiteSpace(index))
+            {
                 return false;
+            }
 
             var normalized = index.Trim().ToUpperInvariant();
-            return normalized.StartsWith("Б3");
+
+            return normalized.StartsWith(GiaBlockPrefix);
         }
 
         private static bool IsStateExamRecord(AcademicPlanRecord record)
