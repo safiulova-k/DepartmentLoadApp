@@ -39,15 +39,14 @@ namespace DepartmentLoadApp.Controllers
             var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
             var rows = await LoadWorkloadRowsAsync(selectedYear, asNoTracking: true);
-
-            await _workloadCalculationService.RecalculateAsync(rows);
+            var tableRows = await _workloadCalculationService.BuildRowsForTableAsync(rows);
 
             var model = new WorkloadTablePageViewModel
             {
                 SelectedYearStart = selectedYearStart,
                 SelectedYear = selectedYear,
                 AvailableYearStarts = AcademicYearResolver.BuildAvailableStartYears(selectedYearStart),
-                Rows = rows
+                Rows = tableRows
             };
 
             return View(model);
@@ -75,13 +74,19 @@ namespace DepartmentLoadApp.Controllers
             if (!inputRows.Any())
             {
                 TempData["ErrorMessage"] = "Нет строк для сохранения";
-
                 return RedirectToIndex(model.SelectedYearStart);
             }
 
             var ids = inputRows
-                .Select(x => x.Id)
+                .SelectMany(GetSourceIds)
+                .Distinct()
                 .ToList();
+
+            if (!ids.Any())
+            {
+                TempData["ErrorMessage"] = "Не найдены строки для сохранения";
+                return RedirectToIndex(model.SelectedYearStart);
+            }
 
             var dbRows = await _context.WorkloadRows
                 .Where(x => ids.Contains(x.Id))
@@ -92,22 +97,24 @@ namespace DepartmentLoadApp.Controllers
 
             foreach (var inputRow in inputRows)
             {
-                var dbRow = dbRows.FirstOrDefault(x => x.Id == inputRow.Id);
+                var sourceIds = GetSourceIds(inputRow);
 
-                if (dbRow == null)
+                var rowsForUpdate = dbRows
+                    .Where(x => sourceIds.Contains(x.Id))
+                    .ToList();
+
+                foreach (var dbRow in rowsForUpdate)
                 {
-                    continue;
+                    dbRow.LecturePlanHours = inputRow.LecturePlanHours;
+                    dbRow.PracticePlanHours = inputRow.PracticePlanHours;
+                    dbRow.LabPlanHours = inputRow.LabPlanHours;
+
+                    dbRow.HasExam = inputRow.HasExam;
+                    dbRow.HasCredit = inputRow.HasCredit;
+                    dbRow.HasCourseWork = inputRow.HasCourseWork;
+                    dbRow.HasCourseProject = inputRow.HasCourseProject;
+                    dbRow.HasRgr = inputRow.HasRgr;
                 }
-
-                dbRow.LecturePlanHours = inputRow.LecturePlanHours;
-                dbRow.PracticePlanHours = inputRow.PracticePlanHours;
-                dbRow.LabPlanHours = inputRow.LabPlanHours;
-
-                dbRow.HasExam = inputRow.HasExam;
-                dbRow.HasCredit = inputRow.HasCredit;
-                dbRow.HasCourseWork = inputRow.HasCourseWork;
-                dbRow.HasCourseProject = inputRow.HasCourseProject;
-                dbRow.HasRgr = inputRow.HasRgr;
             }
 
             await _workloadCalculationService.RecalculateAsync(dbRows);
@@ -125,7 +132,7 @@ namespace DepartmentLoadApp.Controllers
             var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
             var workloadRows = await LoadWorkloadRowsAsync(selectedYear, asNoTracking: true);
-            await _workloadCalculationService.RecalculateAsync(workloadRows);
+            var tableWorkloadRows = await _workloadCalculationService.BuildRowsForTableAsync(workloadRows);
 
             var practiceRows = await LoadPracticeRowsAsync(selectedYear);
             await _practiceCalculationService.RecalculateAsync(practiceRows);
@@ -135,7 +142,7 @@ namespace DepartmentLoadApp.Controllers
 
             var content = ExcelExportHelper.ExportCombinedCalculation(
                 selectedYear,
-                workloadRows,
+                tableWorkloadRows,
                 practiceRows,
                 giaRows);
 
@@ -149,10 +156,7 @@ namespace DepartmentLoadApp.Controllers
 
         private RedirectToActionResult RedirectToIndex(int startYear)
         {
-            return RedirectToAction(nameof(Index), new
-            {
-                startYear
-            });
+            return RedirectToAction(nameof(Index), new { startYear });
         }
 
         private async Task<List<WorkloadRow>> LoadWorkloadRowsAsync(
@@ -171,6 +175,7 @@ namespace DepartmentLoadApp.Controllers
                 .OrderBy(x => x.Course)
                 .ThenBy(x => x.SemesterName)
                 .ThenBy(x => x.DisciplineName)
+                .ThenBy(x => x.DirectionCode)
                 .ToListAsync();
         }
 
@@ -197,6 +202,23 @@ namespace DepartmentLoadApp.Controllers
                 .ThenBy(x => x.GiaSection)
                 .ThenBy(x => x.WorkName)
                 .ToListAsync();
+        }
+
+        private static List<int> GetSourceIds(WorkloadRow row)
+        {
+            if (string.IsNullOrWhiteSpace(row.SourceRowIds))
+            {
+                return row.Id > 0
+                    ? new List<int> { row.Id }
+                    : new List<int>();
+            }
+
+            return row.SourceRowIds
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(x => int.TryParse(x, out var id) ? id : 0)
+                .Where(x => x > 0)
+                .Distinct()
+                .ToList();
         }
     }
 }

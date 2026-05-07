@@ -4,7 +4,7 @@
     ViewData["Title"] = "Расчет нагрузки по дисциплинам";
 }
 
-<h1 class="mb-4">Расчет нагрузки по дисциплинам</h1>
+<h1>Расчет нагрузки по дисциплинам</h1>
 
 @await Html.PartialAsync(
         "_CalculationTopPanel",
@@ -16,113 +16,163 @@
         ActiveTab = "workload"
     })
 
-<div class="table-responsive">
-    <table class="table table-bordered table-striped align-middle workload-table">
-        <thead class="table-light text-center align-middle">
-            <tr>
-                <th rowspan="2">Семестр</th>
-                <th rowspan="2">Код направления</th>
-                <th rowspan="2">Наименование дисциплины</th>
-                <th rowspan="2">Курс</th>
-                <th rowspan="2">Студентов</th>
-                <th rowspan="2">Потоков</th>
-                <th rowspan="2">Групп</th>
-                <th rowspan="2">Подгрупп</th>
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
 
-                <th colspan="2">Лекции</th>
-                <th colspan="2">Практические занятия</th>
-                <th colspan="2">Лабораторные занятия</th>
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["ErrorMessage"]
+    </div>
+}
 
-                <th colspan="5">Формы контроля</th>
-                <th colspan="5">Часы по формам контроля</th>
-
-                <th rowspan="2">Консультации</th>
-                <th rowspan="2">Итого</th>
-            </tr>
-            <tr>
-                <th>По плану</th>
-                <th>Всего</th>
-
-                <th>По плану</th>
-                <th>Всего</th>
-
-                <th>По плану</th>
-                <th>Всего</th>
-
-                <th>Экзамен</th>
-                <th>Зачет</th>
-                <th>Курсовая работа</th>
-                <th>Курсовой проект</th>
-                <th>РГР</th>
-
-                <th>Экзамен</th>
-                <th>Зачет</th>
-                <th>Курсовая работа</th>
-                <th>Курсовой проект</th>
-                <th>РГР</th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (Model.Rows == null || !Model.Rows.Any())
-            {
+@if (Model.Rows == null || !Model.Rows.Any())
+{
+    <div class="alert alert-info">
+        По выбранному учебному году данных пока нет
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-bordered table-sm align-middle workload-table">
+            <thead class="table-light text-center">
                 <tr>
-                    <td colspan="27" class="text-center text-muted py-4">
-                        По выбранному учебному году данных пока нет
-                    </td>
+                    <th rowspan="2">Семестр</th>
+                    <th rowspan="2">Код направления</th>
+                    <th rowspan="2">Форма обучения</th>
+                    <th rowspan="2">Наименование дисциплины</th>
+                    <th rowspan="2">Курс</th>
+                    <th rowspan="2">Студентов</th>
+                    <th rowspan="2">Потоков</th>
+                    <th rowspan="2">Групп</th>
+                    <th rowspan="2">Подгрупп</th>
+
+                    <th colspan="2">Лекции</th>
+                    <th colspan="2">Практические занятия</th>
+                    <th colspan="2">Лабораторные занятия</th>
+
+                    <th colspan="5">Формы контроля</th>
+                    <th colspan="5">Часы по формам контроля</th>
+
+                    <th rowspan="2">Консультации</th>
+                    <th rowspan="2">Итого</th>
                 </tr>
-            }
-            else
-            {
+                <tr>
+                    <th>По плану</th>
+                    <th>Всего</th>
+
+                    <th>По плану</th>
+                    <th>Всего</th>
+
+                    <th>По плану</th>
+                    <th>Всего</th>
+
+                    <th>Экзамен</th>
+                    <th>Зачет</th>
+                    <th>Курсовая работа</th>
+                    <th>Курсовой проект</th>
+                    <th>РГР</th>
+
+                    <th>Экзамен</th>
+                    <th>Зачет</th>
+                    <th>Курсовая работа</th>
+                    <th>Курсовой проект</th>
+                    <th>РГР</th>
+                </tr>
+            </thead>
+
+            <tbody>
                 @for (int i = 0; i < Model.Rows.Count; i++)
                 {
-                    <tr>
+                    <tr class="@(Model.Rows[i].IsMergedStream ? "table-warning" : "")">
                         <td>@Model.Rows[i].SemesterName</td>
-                        <td>@Model.Rows[i].DirectionCode</td>
+
+                        <td>
+                            @Model.Rows[i].DirectionCode
+
+                            @if (Model.Rows[i].IsMergedStream)
+                            {
+                                <div class="small text-muted">
+                                    объединённый поток
+                                </div>
+                            }
+                        </td>
+
+                        <td>@Model.Rows[i].EducationForm</td>
                         <td>@Model.Rows[i].DisciplineName</td>
-                        <td>@Model.Rows[i].Course</td>
-                        <td>@Model.Rows[i].StudentsCount</td>
-                        <td>@Model.Rows[i].FlowCount</td>
-                        <td>@Model.Rows[i].GroupCount</td>
-                        <td>@Model.Rows[i].SubgroupCount</td>
+                        <td class="text-center">@Model.Rows[i].Course</td>
+                        <td class="text-center">@Model.Rows[i].StudentsCount</td>
+                        <td class="text-center">@Model.Rows[i].FlowCount</td>
+                        <td class="text-center">@Model.Rows[i].GroupCount</td>
+                        <td class="text-center">@Model.Rows[i].SubgroupCount</td>
 
-                        <td>@Model.Rows[i].LecturePlanHours.ToString("0.##")</td>
-                        <td>@Model.Rows[i].LectureTotalHours.ToString("0.##")</td>
+                        <td class="text-end">
+                            @Model.Rows[i].LecturePlanHours.ToString("0.##")
+                        </td>
+                        <td class="text-end">
+                            @Model.Rows[i].LectureTotalHours.ToString("0.##")
+                        </td>
 
-                        <td>@Model.Rows[i].PracticePlanHours.ToString("0.##")</td>
-                        <td>@Model.Rows[i].PracticeTotalHours.ToString("0.##")</td>
+                        <td class="text-end">
+                            @Model.Rows[i].PracticePlanHours.ToString("0.##")
+                        </td>
+                        <td class="text-end">
+                            @Model.Rows[i].PracticeTotalHours.ToString("0.##")
+                        </td>
 
-                        <td>@Model.Rows[i].LabPlanHours.ToString("0.##")</td>
-                        <td>@Model.Rows[i].LabTotalHours.ToString("0.##")</td>
+                        <td class="text-end">
+                            @Model.Rows[i].LabPlanHours.ToString("0.##")
+                        </td>
+                        <td class="text-end">
+                            @Model.Rows[i].LabTotalHours.ToString("0.##")
+                        </td>
 
-                        <td class="text-center">@(Model.Rows[i].HasExam ? "✔" : "")</td>
-                        <td class="text-center">@(Model.Rows[i].HasCredit ? "✔" : "")</td>
-                        <td class="text-center">@(Model.Rows[i].HasCourseWork ? "✔" : "")</td>
-                        <td class="text-center">@(Model.Rows[i].HasCourseProject ? "✔" : "")</td>
-                        <td class="text-center">@(Model.Rows[i].HasRgr ? "✔" : "")</td>
+                        <td class="text-center">
+                            @(Model.Rows[i].HasExam ? "✓" : "")
+                        </td>
+                        <td class="text-center">
+                            @(Model.Rows[i].HasCredit ? "✓" : "")
+                        </td>
+                        <td class="text-center">
+                            @(Model.Rows[i].HasCourseWork ? "✓" : "")
+                        </td>
+                        <td class="text-center">
+                            @(Model.Rows[i].HasCourseProject ? "✓" : "")
+                        </td>
+                        <td class="text-center">
+                            @(Model.Rows[i].HasRgr ? "✓" : "")
+                        </td>
 
-                        <td>@Model.Rows[i].ExamHours.ToString("0.##")</td>
-                        <td>@Model.Rows[i].CreditHours.ToString("0.##")</td>
-                        <td>@Model.Rows[i].CourseWorkHours.ToString("0.##")</td>
-                        <td>@Model.Rows[i].CourseProjectHours.ToString("0.##")</td>
-                        <td>@Model.Rows[i].RgrHours.ToString("0.##")</td>
+                        <td class="text-end">
+                            @Model.Rows[i].ExamHours.ToString("0.##")
+                        </td>
+                        <td class="text-end">
+                            @Model.Rows[i].CreditHours.ToString("0.##")
+                        </td>
+                        <td class="text-end">
+                            @Model.Rows[i].CourseWorkHours.ToString("0.##")
+                        </td>
+                        <td class="text-end">
+                            @Model.Rows[i].CourseProjectHours.ToString("0.##")
+                        </td>
+                        <td class="text-end">
+                            @Model.Rows[i].RgrHours.ToString("0.##")
+                        </td>
 
-                        <td>@Model.Rows[i].ConsultationHours.ToString("0.##")</td>
-                        <td>@Model.Rows[i].TotalHours.ToString("0.##")</td>
+                        <td class="text-end">
+                            @Model.Rows[i].ConsultationHours.ToString("0.##")
+                        </td>
+                        <td class="text-end fw-semibold">
+                            @Model.Rows[i].TotalHours.ToString("0.##")
+                        </td>
                     </tr>
                 }
-            }
-        </tbody>
-    </table>
-</div>
-
-<style>
-    .workload-table th {
-        text-align: center;
-        vertical-align: middle !important;
-        white-space: normal;
-    }
-
-    .workload-table td {
-        vertical-align: middle;
-    }
-</style>
+            </tbody>
+        </table>
+    </div>
+}

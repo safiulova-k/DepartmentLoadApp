@@ -14,6 +14,7 @@ namespace DepartmentLoadApp.Services
         private const string PracticeBlockPrefix = "Б2";
         private const string GiaBlockPrefix = "Б3";
         private const string OptionalDisciplineBlockPrefix = "ФТД";
+
         private readonly DepartmentLoadDbContext _context;
 
         public CalculationImportService(DepartmentLoadDbContext context)
@@ -65,31 +66,57 @@ namespace DepartmentLoadApp.Services
                     x => x.ManualHours);
 
             if (existingWorkloadRows.Any())
+            {
                 _context.WorkloadRows.RemoveRange(existingWorkloadRows);
+            }
 
             if (existingPracticeRows.Any())
+            {
                 _context.PracticeWorkloadRows.RemoveRange(existingPracticeRows);
+            }
 
             if (existingGiaRows.Any())
+            {
                 _context.GiaWorkloadRows.RemoveRange(existingGiaRows);
+            }
 
             var workloadRows = BuildDisciplineRows(
-                selectedYearStart, selectedYear, plans, records, directions);
+                selectedYearStart,
+                selectedYear,
+                plans,
+                records,
+                directions);
 
             var practiceRows = BuildPracticeRows(
-                selectedYearStart, selectedYear, plans, records, directions, weeksByRecordId);
+                selectedYearStart,
+                selectedYear,
+                plans,
+                records,
+                directions,
+                weeksByRecordId);
 
             var giaRows = BuildGiaRows(
-                selectedYearStart, selectedYear, plans, records, directions, manualHoursMap);
+                selectedYearStart,
+                selectedYear,
+                plans,
+                records,
+                directions,
+                manualHoursMap);
 
             if (workloadRows.Any())
+            {
                 await _context.WorkloadRows.AddRangeAsync(workloadRows);
+            }
 
             if (practiceRows.Any())
+            {
                 await _context.PracticeWorkloadRows.AddRangeAsync(practiceRows);
+            }
 
             if (giaRows.Any())
+            {
                 await _context.GiaWorkloadRows.AddRangeAsync(giaRows);
+            }
 
             await _context.SaveChangesAsync();
         }
@@ -106,17 +133,23 @@ namespace DepartmentLoadApp.Services
             foreach (var plan in plans)
             {
                 if (plan.EducationDirectionId == null)
+                {
                     continue;
+                }
 
                 if (!directions.TryGetValue(plan.EducationDirectionId.Value, out var direction))
+                {
                     continue;
+                }
 
                 if (!AcademicYearResolver.TryResolveCourseAndSemesters(
                         plan.Year,
                         selectedYearStart,
                         out var course,
                         out var semesters))
+                {
                     continue;
+                }
 
                 var planRecords = records
                     .Where(x => x.AcademicPlanId == plan.Id)
@@ -133,6 +166,7 @@ namespace DepartmentLoadApp.Services
                         AcademicPlanRecordId = record.Id,
                         DirectionCode = direction.Cipher,
                         DirectionName = direction.Title,
+                        EducationLevel = direction.Qualification.ToString(),
                         DisciplineName = record.Name ?? string.Empty,
                         SemesterName = AcademicYearResolver.GetSemesterName(record.Semester),
                         EducationForm = GetEducationFormName(plan),
@@ -165,17 +199,23 @@ namespace DepartmentLoadApp.Services
             foreach (var plan in plans)
             {
                 if (plan.EducationDirectionId == null)
+                {
                     continue;
+                }
 
                 if (!directions.TryGetValue(plan.EducationDirectionId.Value, out var direction))
+                {
                     continue;
+                }
 
                 if (!AcademicYearResolver.TryResolveCourseAndSemesters(
                         plan.Year,
                         selectedYearStart,
                         out var course,
                         out var semesters))
+                {
                     continue;
+                }
 
                 var planRecords = records
                     .Where(x => x.AcademicPlanId == plan.Id)
@@ -217,17 +257,23 @@ namespace DepartmentLoadApp.Services
             foreach (var plan in plans)
             {
                 if (plan.EducationDirectionId == null)
+                {
                     continue;
+                }
 
                 if (!directions.TryGetValue(plan.EducationDirectionId.Value, out var direction))
+                {
                     continue;
+                }
 
                 if (!AcademicYearResolver.TryResolveCourseAndSemesters(
                         plan.Year,
                         selectedYearStart,
                         out var course,
                         out var semesters))
+                {
                     continue;
+                }
 
                 var planRecords = records
                     .Where(x => x.AcademicPlanId == plan.Id)
@@ -243,43 +289,83 @@ namespace DepartmentLoadApp.Services
                     if (IsStateExamRecord(record))
                     {
                         AddGiaRow(
-                            result, selectedYear, plan.Id, record.Id,
-                            "Госэкзамен", "Консультация к госэкзамену",
-                            direction.Cipher, direction.Title, course, semesterName, educationForm, manualHoursMap);
+                            result,
+                            selectedYear,
+                            plan.Id,
+                            record.Id,
+                            "Госэкзамен",
+                            "Консультация к госэкзамену",
+                            direction.Cipher,
+                            direction.Title,
+                            course,
+                            semesterName,
+                            educationForm,
+                            manualHoursMap);
 
                         AddGiaRow(
-                            result, selectedYear, plan.Id, record.Id,
-                            "Госэкзамен", "Госэкзамен",
-                            direction.Cipher, direction.Title, course, semesterName, educationForm, manualHoursMap);
+                            result,
+                            selectedYear,
+                            plan.Id,
+                            record.Id,
+                            "Госэкзамен",
+                            "Госэкзамен",
+                            direction.Cipher,
+                            direction.Title,
+                            course,
+                            semesterName,
+                            educationForm,
+                            manualHoursMap);
 
                         continue;
                     }
 
                     AddGiaRow(
-                        result, selectedYear, plan.Id, record.Id,
-                        "Дипломное проектирование", "Руководство ВКР",
-                        direction.Cipher, direction.Title, course, semesterName, educationForm, manualHoursMap);
+                        result,
+                        selectedYear,
+                        plan.Id,
+                        record.Id,
+                        "Дипломное проектирование",
+                        "Руководство ВКР",
+                        direction.Cipher,
+                        direction.Title,
+                        course,
+                        semesterName,
+                        educationForm,
+                        manualHoursMap);
 
                     AddGiaRow(
-                        result, selectedYear, plan.Id, record.Id,
-                        "Дипломное проектирование", "Нормоконтроль ВКР",
-                        direction.Cipher, direction.Title, course, semesterName, educationForm, manualHoursMap);
+                        result,
+                        selectedYear,
+                        plan.Id,
+                        record.Id,
+                        "Дипломное проектирование",
+                        "Нормоконтроль ВКР",
+                        direction.Cipher,
+                        direction.Title,
+                        course,
+                        semesterName,
+                        educationForm,
+                        manualHoursMap);
 
                     AddGiaRow(
-                        result, selectedYear, plan.Id, record.Id,
-                        "ГЭК", "Работа в ГЭК",
-                        direction.Cipher, direction.Title, course, semesterName, educationForm, manualHoursMap);
+                        result,
+                        selectedYear,
+                        plan.Id,
+                        record.Id,
+                        "ГЭК",
+                        "Работа в ГЭК",
+                        direction.Cipher,
+                        direction.Title,
+                        course,
+                        semesterName,
+                        educationForm,
+                        manualHoursMap);
                 }
             }
 
             return result;
         }
-        // В учебном плане записи разделяются по индексам:
-        // Б1 — дисциплины;
-        // Б2 — практики;
-        // Б3 — государственная итоговая аттестация;
-        // ФТД — факультативные дисциплины.
-        // Это позволяет распределить записи учебного плана между разными алгоритмами расчёта нагрузки.
+
         private static bool IsDisciplineRecord(string? index)
         {
             if (string.IsNullOrWhiteSpace(index))
@@ -290,7 +376,7 @@ namespace DepartmentLoadApp.Services
             var normalized = index.Trim().ToUpperInvariant();
 
             return normalized.StartsWith(DisciplineBlockPrefix)
-                || normalized.StartsWith(OptionalDisciplineBlockPrefix);
+                   || normalized.StartsWith(OptionalDisciplineBlockPrefix);
         }
 
         private static bool IsPracticeRecord(string? index)
@@ -320,9 +406,12 @@ namespace DepartmentLoadApp.Services
         private static bool IsStateExamRecord(AcademicPlanRecord record)
         {
             if ((record.Exam ?? 0) > 0)
+            {
                 return true;
+            }
 
             var name = (record.Name ?? string.Empty).ToLowerInvariant();
+
             return name.Contains("государствен") && name.Contains("экзам");
         }
 
@@ -359,43 +448,65 @@ namespace DepartmentLoadApp.Services
         }
 
         private static string BuildGiaManualKey(int recordId, string workName)
-            => $"{recordId}|{workName}";
+        {
+            return $"{recordId}|{workName}";
+        }
 
         private static string NormalizePracticeName(string? sourceName)
         {
             if (string.IsNullOrWhiteSpace(sourceName))
+            {
                 return string.Empty;
+            }
 
             var value = sourceName.Trim().ToLowerInvariant();
 
             if (value.Contains("ознаком"))
+            {
                 return "Ознакомительная практика";
+            }
 
             if (value.Contains("технолог") || value.Contains("производствен"))
+            {
                 return "Технологическая практика";
+            }
 
             if (value.Contains("преддиплом") && value.Contains("магистр"))
+            {
                 return "Преддипломная практика магистров";
+            }
 
             if (value.Contains("преддиплом"))
+            {
                 return "Преддипломная практика бакалавров";
+            }
 
             if (value.Contains("нирм"))
+            {
                 return "НИРМ";
+            }
 
             if (value.Contains("научно-исследовательская"))
+            {
                 return "Научно-исследовательская работа";
+            }
 
             if (value == "нир" || value.Contains(" нир"))
+            {
                 return "НИР";
+            }
 
             if (value.Contains("учебн"))
+            {
                 return "Учебная практика";
+            }
 
             return sourceName.Trim();
         }
 
         private static string GetEducationFormName(AcademicPlan plan)
-            => plan.EducationForm.ToString();
+        {
+            return plan.EducationForm.ToString();
+        }
     }
 }
