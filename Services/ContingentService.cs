@@ -83,6 +83,7 @@ public class ContingentService
         }
 
         _context.ContingentSubgroups.Remove(subgroup);
+
         await _context.SaveChangesAsync();
 
         await RenumberSubgroupsAsync(studentGroupId);
@@ -201,7 +202,6 @@ public class ContingentService
             .GroupBy(x => new
             {
                 x.DirectionCode,
-                x.DirectionName,
                 x.Qualification
             })
             .OrderBy(x => x.Key.DirectionCode)
@@ -209,23 +209,35 @@ public class ContingentService
             .Select(x => new ContingentDirectionViewModel
             {
                 DirectionCode = x.Key.DirectionCode,
-                DirectionName = x.Key.DirectionName,
+
+                DirectionName = string.Join("; ", x
+                    .Select(g => g.DirectionName)
+                    .Where(name => !string.IsNullOrWhiteSpace(name))
+                    .Distinct()),
+
                 IsBachelor = x.Key.Qualification == EducationDirectionQualification.Бакалавриат,
+
                 QualificationName = x.Key.Qualification == EducationDirectionQualification.Бакалавриат
                     ? "Бакалавриат"
                     : "Магистратура",
+
                 Courses = Enumerable.Range(1, 4)
                     .Select(courseNumber => new ContingentCourseViewModel
                     {
                         CourseNumber = courseNumber,
-                        Groups = x.Where(g => g.Course == courseNumber)
+
+                        Groups = x
+                            .Where(g => g.Course == courseNumber)
+                            .OrderBy(g => g.GroupName)
                             .Select(g => new ContingentGroupViewModel
                             {
                                 StudentGroupId = g.Id,
                                 GroupName = g.GroupName,
                                 StudentsCount = g.StudentCount,
+
                                 Subgroups = subgroupsByGroupId.TryGetValue(g.Id, out var groupSubgroups)
                                     ? groupSubgroups
+                                        .OrderBy(s => s.SubgroupNumber)
                                         .Select(s => new ContingentSubgroupViewModel
                                         {
                                             Id = s.Id,
@@ -297,9 +309,7 @@ public class ContingentService
 
             if (!groupSubgroups.Any())
             {
-                var subgroupCount = studentGroup.StudentCount > StudentsCountForAutoSubgroupSplit
-                    ? 2
-                    : 1;
+                var subgroupCount = studentGroup.StudentCount > StudentsCountForAutoSubgroupSplit ? 2 : 1;
 
                 var createdSubgroups = Enumerable.Range(1, subgroupCount)
                     .Select(number => new ContingentSubgroup
@@ -444,13 +454,25 @@ public class ContingentService
             .Select(x => new ContingentRow
             {
                 DirectionCode = x.Key.DirectionCode,
+
                 IsBachelor = x.Key.Qualification == EducationDirectionQualification.Бакалавриат,
                 IsMaster = x.Key.Qualification == EducationDirectionQualification.Магистратура,
 
-                Course1Count = x.Where(g => g.Course == AcademicCourse.Course_1).Sum(g => g.StudentCount),
-                Course2Count = x.Where(g => g.Course == AcademicCourse.Course_2).Sum(g => g.StudentCount),
-                Course3Count = x.Where(g => g.Course == AcademicCourse.Course_3).Sum(g => g.StudentCount),
-                Course4Count = x.Where(g => g.Course == AcademicCourse.Course_4).Sum(g => g.StudentCount),
+                Course1Count = x
+                    .Where(g => g.Course == AcademicCourse.Course_1)
+                    .Sum(g => g.StudentCount),
+
+                Course2Count = x
+                    .Where(g => g.Course == AcademicCourse.Course_2)
+                    .Sum(g => g.StudentCount),
+
+                Course3Count = x
+                    .Where(g => g.Course == AcademicCourse.Course_3)
+                    .Sum(g => g.StudentCount),
+
+                Course4Count = x
+                    .Where(g => g.Course == AcademicCourse.Course_4)
+                    .Sum(g => g.StudentCount),
 
                 Course1Groups = x.Count(g => g.Course == AcademicCourse.Course_1),
                 Course2Groups = x.Count(g => g.Course == AcademicCourse.Course_2),
