@@ -15,6 +15,12 @@ namespace DepartmentLoadApp.Services
         private const string GiaBlockPrefix = "Б3";
         private const string OptionalDisciplineBlockPrefix = "ФТД";
 
+        private const string BachelorVkrWorkName = "Руководство ВКР бакалавра";
+        private const string MasterVkrWorkName = "Руководство ВКР магистра";
+
+        private const string BachelorPreDiplomaPracticeName = "Преддипломная практика бакалавров";
+        private const string MasterPreDiplomaPracticeName = "Преддипломная практика магистров";
+
         private readonly DepartmentLoadDbContext _context;
 
         public CalculationImportService(DepartmentLoadDbContext context)
@@ -230,7 +236,7 @@ namespace DepartmentLoadApp.Services
                         PlanYear = selectedYear,
                         AcademicPlanId = plan.Id,
                         AcademicPlanRecordId = record.Id,
-                        PracticeName = NormalizePracticeName(record.Name),
+                        PracticeName = NormalizePracticeName(record.Name, direction),
                         DirectionCode = direction.Cipher,
                         DirectionName = direction.Title,
                         Course = course,
@@ -325,7 +331,7 @@ namespace DepartmentLoadApp.Services
                         plan.Id,
                         record.Id,
                         "Дипломное проектирование",
-                        "Руководство ВКР",
+                        GetVkrWorkName(direction),
                         direction.Cipher,
                         direction.Title,
                         course,
@@ -447,12 +453,14 @@ namespace DepartmentLoadApp.Services
             });
         }
 
-        private static string BuildGiaManualKey(int recordId, string workName)
+        private static string GetVkrWorkName(EducationDirection direction)
         {
-            return $"{recordId}|{workName}";
+            return IsMasterDirection(direction)
+                ? MasterVkrWorkName
+                : BachelorVkrWorkName;
         }
 
-        private static string NormalizePracticeName(string? sourceName)
+        private static string NormalizePracticeName(string? sourceName, EducationDirection direction)
         {
             if (string.IsNullOrWhiteSpace(sourceName))
             {
@@ -471,14 +479,11 @@ namespace DepartmentLoadApp.Services
                 return "Технологическая практика";
             }
 
-            if (value.Contains("преддиплом") && value.Contains("магистр"))
-            {
-                return "Преддипломная практика магистров";
-            }
-
             if (value.Contains("преддиплом"))
             {
-                return "Преддипломная практика бакалавров";
+                return IsMasterDirection(direction)
+                    ? MasterPreDiplomaPracticeName
+                    : BachelorPreDiplomaPracticeName;
             }
 
             if (value.Contains("нирм"))
@@ -502,6 +507,20 @@ namespace DepartmentLoadApp.Services
             }
 
             return sourceName.Trim();
+        }
+
+        private static bool IsMasterDirection(EducationDirection direction)
+        {
+            var qualification = direction.Qualification.ToString();
+
+            return qualification.Contains("Master", StringComparison.OrdinalIgnoreCase)
+                   || qualification.Contains("магистр", StringComparison.OrdinalIgnoreCase)
+                   || direction.Cipher.Contains(".04.", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string BuildGiaManualKey(int recordId, string workName)
+        {
+            return $"{recordId}|{workName}";
         }
 
         private static string GetEducationFormName(AcademicPlan plan)

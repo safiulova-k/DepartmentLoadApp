@@ -901,7 +901,12 @@ public class WorkloadDistributionService
             return string.Empty;
         }
 
-        return $"{lecturer.LastName}{lecturer.FirstName}{lecturer.Patronymic}".Trim();
+        return string.Join(" ", new[]
+        {
+        lecturer.LastName,
+        lecturer.FirstName,
+        lecturer.Patronymic
+    }.Where(x => !string.IsNullOrWhiteSpace(x)));
     }
 
     private static string GetSourceDisplayName(LoadAssignmentSourceType sourceType)
