@@ -10,11 +10,11 @@ public class WorkloadDistributionPageViewModel
 
     public int? SelectedLecturerId { get; set; }
 
-    public int TotalHours { get; set; }
+    public decimal TotalHours { get; set; }
 
-    public int AssignedHours { get; set; }
+    public decimal AssignedHours { get; set; }
 
-    public int RemainingHours { get; set; }
+    public decimal RemainingHours { get; set; }
 
     public int OverloadedLecturerCount { get; set; }
 
@@ -24,4 +24,3 @@ public class WorkloadDistributionPageViewModel
 
     public List<WorkloadDistributionAvailableItemViewModel> RemainingItems { get; set; } = new();
 }
-

@@ -1,26 +1,24 @@
-﻿namespace DepartmentLoadApp.ViewModels.WorkloadDistribution
+﻿namespace DepartmentLoadApp.ViewModels.WorkloadDistribution;
+
+public class WorkloadDistributionAssignmentViewModel
 {
-    public class WorkloadDistributionAssignmentViewModel
-    {
-        public int AssignmentId { get; set; }
+    public int AssignmentId { get; set; }
 
-        public string SourceTypeDisplayName { get; set; } = string.Empty;
+    public string SourceTypeDisplayName { get; set; } = string.Empty;
 
-        public string Title { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
 
-        public string Subtitle { get; set; } = string.Empty;
+    public string Subtitle { get; set; } = string.Empty;
 
-        public string ElementDisplayName { get; set; } = string.Empty;
+    public string ElementDisplayName { get; set; } = string.Empty;
 
-        public int AssignedHours { get; set; }
+    public string UnitName { get; set; } = string.Empty;
 
-        public int TotalItemHours { get; set; }
+    public int StudentsCount { get; set; }
 
-        public int RemainingItemHours { get; set; }
+    public decimal AssignedHours { get; set; }
 
-        public bool CanIncrease { get; set; }
+    public decimal TotalItemHours { get; set; }
 
-        public bool CanDecrease { get; set; }
-    }
-
+    public decimal RemainingItemHours { get; set; }
 }

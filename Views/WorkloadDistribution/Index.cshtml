@@ -4,143 +4,391 @@
     ViewData["Title"] = "Распределение нагрузки";
 }
 
-<h1 class="mb-4">Распределение нагрузки на преподавателей</h1>
+<style>
+    .distribution-summary-card {
+        min-height: 96px;
+    }
 
-<div class="d-flex flex-wrap gap-3 align-items-end mb-4">
-    <div>
-        <label class="form-label fw-semibold d-block">Год начала распределения</label>
-        <div class="btn-group" role="group">
-            @foreach (var year in Model.AvailableYearStarts)
-            {
-                <a asp-action="Index"
-                   asp-route-startYear="@year"
-                   asp-route-selectedLecturerId="@Model.SelectedLecturerId"
-                   class="btn @(year == Model.SelectedYearStart ? "btn-primary" : "btn-outline-primary")">
-                    @year
-                </a>
-            }
+    .distribution-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+    }
+
+    .distribution-modal .modal-dialog {
+        max-width: 1200px;
+        height: calc(100vh - 32px);
+        margin: 16px auto;
+    }
+
+    .distribution-modal .modal-content {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .distribution-modal form {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .distribution-modal .modal-header {
+        flex: 0 0 auto;
+        background: #fff;
+        border-bottom: 1px solid #dee2e6;
+        padding: 12px 16px;
+        align-items: flex-start;
+    }
+
+    .distribution-modal .modal-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 12px 16px;
+    }
+
+    .distribution-modal .modal-footer {
+        flex: 0 0 auto;
+        background: #fff;
+        border-top: 1px solid #dee2e6;
+    }
+
+    .distribution-modal-header-wrap {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        width: 100%;
+        padding-right: 32px;
+    }
+
+    .distribution-modal-header-left {
+        min-width: 260px;
+    }
+
+    .distribution-modal-title {
+        font-size: 1.15rem;
+        font-weight: 600;
+        line-height: 1.2;
+        margin-bottom: 2px;
+    }
+
+    .distribution-modal-subtitle {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+    .distribution-modal-header-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+        align-items: stretch;
+    }
+
+    .distribution-mini-stat {
+        min-width: 118px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 6px 10px;
+        background: #f8f9fa;
+    }
+
+    .distribution-mini-stat-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        line-height: 1.1;
+        margin-bottom: 2px;
+    }
+
+    .distribution-mini-stat-value {
+        font-size: 1rem;
+        font-weight: 600;
+        line-height: 1.1;
+    }
+
+    .distribution-modal-footer-warning {
+        margin-right: auto;
+        color: #dc3545;
+        font-weight: 600;
+    }
+
+    .distribution-worktype-row {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 10px;
+        align-items: start;
+        padding: 8px 0;
+        border-top: 1px dashed #e9ecef;
+    }
+
+        .distribution-worktype-row:first-child {
+            border-top: none;
+            padding-top: 0;
+        }
+
+    .distribution-worktype-title {
+        font-weight: 600;
+        color: #0d6efd;
+        font-size: 0.95rem;
+        padding-top: 6px;
+    }
+
+    .distribution-chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .distribution-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid #ced4da;
+        border-radius: 999px;
+        padding: 8px 12px;
+        cursor: pointer;
+        background: #fff;
+        transition: all .15s ease-in-out;
+        user-select: none;
+        margin: 0;
+    }
+
+        .distribution-chip:hover {
+            border-color: #86b7fe;
+            background: #f8fbff;
+        }
+
+        .distribution-chip.selected {
+            border-color: #0d6efd;
+            background: #eaf3ff;
+            box-shadow: inset 0 0 0 1px #0d6efd;
+        }
+
+        .distribution-chip input[type="checkbox"] {
+            margin: 0;
+            flex: 0 0 auto;
+        }
+
+    .distribution-chip-main {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.2;
+    }
+
+    .distribution-chip-title {
+        font-size: 0.95rem;
+    }
+
+    .distribution-chip-meta {
+        font-size: 0.82rem;
+        color: #6c757d;
+        white-space: nowrap;
+    }
+
+    .distribution-gia-row {
+        border-top: 1px solid #e9ecef;
+        padding: 12px 0;
+    }
+
+        .distribution-gia-row:first-child {
+            border-top: none;
+            padding-top: 0;
+        }
+
+    .distribution-gia-title {
+        font-weight: 600;
+    }
+
+    .distribution-gia-subtitle,
+    .distribution-gia-meta {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+    .distribution-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .distribution-subject-summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-bottom: 8px;
+        background: #fff;
+    }
+
+    .distribution-subject-name {
+        font-weight: 600;
+    }
+
+    .distribution-subject-subtitle {
+        font-size: 0.88rem;
+        color: #6c757d;
+    }
+
+    @@media (max-width: 991.98px) {
+        .distribution-worktype-row {
+            grid-template-columns: 1fr;
+        }
+
+        .distribution-worktype-title {
+            padding-top: 0;
+        }
+
+        .distribution-modal-header-wrap {
+            flex-direction: column;
+            padding-right: 24px;
+        }
+
+        .distribution-modal-header-stats {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        .distribution-mini-stat {
+            min-width: 105px;
+        }
+    }
+</style>
+
+<h1>Распределение нагрузки</h1>
+
+<div class="distribution-toolbar">
+    <form asp-action="Index" method="get" class="d-flex align-items-end gap-2">
+        <div>
+            <label class="form-label">Учебный год</label>
+            <select name="startYear" class="form-select form-select-sm" onchange="this.form.submit()">
+                @foreach (var year in Model.AvailableYearStarts)
+                {
+                    var text = $"{year}-{year + 1}";
+                    if (year == Model.SelectedYearStart)
+                    {
+                        <option value="@year" selected>@text</option>
+                    }
+                    else
+                    {
+                        <option value="@year">@text</option>
+                    }
+                }
+            </select>
         </div>
-    </div>
-
-    <div style="min-width: 170px;">
-        <label class="form-label fw-semibold">Учебный год</label>
-        <input class="form-control" value="@Model.SelectedYear" readonly />
-    </div>
-
-    <div class="d-flex gap-2">
-        <a asp-controller="WorkloadCalculation"
-           asp-action="Index"
-           asp-route-startYear="@Model.SelectedYearStart"
-           class="btn btn-outline-secondary">
-            К расчетам
-        </a>
-    </div>
+    </form>
 </div>
 
-@if (TempData["SuccessMessage"] is string successMessage)
+@if (TempData["SuccessMessage"] != null)
 {
-    <div class="alert alert-success">@successMessage</div>
+    <div class="alert alert-success">
+        @TempData["SuccessMessage"]
+    </div>
 }
 
-@if (TempData["ErrorMessage"] is string errorMessage)
+@if (TempData["ErrorMessage"] != null)
 {
-    <div class="alert alert-danger">@errorMessage</div>
+    <div class="alert alert-danger">
+        @TempData["ErrorMessage"]
+    </div>
 }
-
-<div class="alert alert-info">
-    Часы берутся из уже рассчитанных дисциплин, практик и ГИА за выбранный учебный год.
-    Все значения округляются до целых часов по математическим правилам.
-    Ассистентам нельзя назначать лекции.
-</div>
 
 <div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="card h-100">
+    <div class="col-md-4">
+        <div class="card shadow-sm distribution-summary-card">
             <div class="card-body">
-                <div class="text-muted small">Всего часов</div>
-                <div class="fs-3 fw-bold">@Model.TotalHours</div>
+                <div class="text-muted small">Всего нагрузки</div>
+                <div class="fs-3 fw-semibold">@Model.TotalHours.ToString("0") ч.</div>
             </div>
         </div>
     </div>
 
-    <div class="col-md-3">
-        <div class="card h-100 border-success">
+    <div class="col-md-4">
+        <div class="card shadow-sm distribution-summary-card">
             <div class="card-body">
-                <div class="text-muted small">Распределено</div>
-                <div class="fs-3 fw-bold text-success">@Model.AssignedHours</div>
+                <div class="text-muted small">Назначено</div>
+                <div class="fs-3 fw-semibold">@Model.AssignedHours.ToString("0") ч.</div>
             </div>
         </div>
     </div>
 
-    <div class="col-md-3">
-        <div class="card h-100 border-warning">
+    <div class="col-md-4">
+        <div class="card shadow-sm distribution-summary-card">
             <div class="card-body">
-                <div class="text-muted small">Осталось распределить</div>
-                <div class="fs-3 fw-bold text-warning">@Model.RemainingHours</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="card h-100 @(Model.OverloadedLecturerCount > 0 ? "border-danger" : "")">
-            <div class="card-body">
-                <div class="text-muted small">Перегружено преподавателей</div>
-                <div class="fs-3 fw-bold @(Model.OverloadedLecturerCount > 0 ? "text-danger" : "")">
-                    @Model.OverloadedLecturerCount
-                </div>
+                <div class="text-muted small">Осталось</div>
+                <div class="fs-3 fw-semibold">@Model.RemainingHours.ToString("0") ч.</div>
             </div>
         </div>
     </div>
 </div>
-
-<h2 class="h4 mb-3">Преподаватели</h2>
 
 @if (!Model.Lecturers.Any())
 {
-    <div class="alert alert-warning">Преподаватели не найдены.</div>
+    <div class="alert alert-info">
+        Нет преподавателей для распределения нагрузки.
+    </div>
 }
 else
 {
-    <div class="accordion mb-5" id="lecturersAccordion">
+    <div class="accordion" id="lecturersAccordion">
         @for (var i = 0; i < Model.Lecturers.Count; i++)
         {
-            var card = Model.Lecturers[i];
-            var collapseId = $"collapse-{card.LecturerId}";
-            var headingId = $"heading-{card.LecturerId}";
-            var isOpen = card.LecturerId == Model.SelectedLecturerId;
+            var lecturer = Model.Lecturers[i];
+            var lecturerCollapseId = $"lecturer_{lecturer.LecturerId}";
+            var modalId = $"loadModal_{lecturer.LecturerId}";
 
-            <div class="accordion-item mb-3" id="lecturer-@card.LecturerId">
-                <h2 class="accordion-header" id="@headingId">
-                    <button class="accordion-button @(isOpen ? "" : "collapsed")"
+            <div class="accordion-item mb-2 border rounded">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed"
                             type="button"
                             data-bs-toggle="collapse"
-                            data-bs-target="#@collapseId"
-                            aria-expanded="@(isOpen ? "true" : "false")"
-                            aria-controls="@collapseId">
-                        <div class="w-100 d-flex flex-column flex-lg-row justify-content-between align-items-lg-center pe-3">
-                            <div class="me-3">
-                                <div class="fw-bold">@card.LecturerDisplayName</div>
-                                <div class="text-muted small">
-                                    @card.LecturerStudyPostTitle
-                                    · ставка @card.Rate.ToString("0.##")
-                                    · норма @card.NormHours
+                            data-bs-target="#@lecturerCollapseId">
+                        <div class="d-flex justify-content-between align-items-center w-100 pe-3 flex-wrap gap-2">
+                            <div>
+                                <div class="fw-semibold">@lecturer.LecturerDisplayName</div>
+                                <div class="small text-muted">
+                                    @lecturer.LecturerStudyPostTitle · ставка по договору
+                                    <span class="js-rate-label" data-lecturer-id="@lecturer.LecturerId">
+                                        @lecturer.Rate.ToString("0.##")
+                                    </span>
+                                    · норма
+                                    <span class="js-effective-norm"
+                                          data-lecturer-id="@lecturer.LecturerId"
+                                          data-norm-hours="@lecturer.NormHours"
+                                          data-assigned-hours="@lecturer.AssignedHours.ToString("0").Replace(",", ".")">
+                                        @lecturer.LimitHours.ToString("0")
+                                    </span>
                                 </div>
                             </div>
 
-                            <div class="d-flex flex-wrap gap-2 mt-2 mt-lg-0">
-                                <span class="badge bg-secondary">Назначено: @card.AssignedHours</span>
-                                <span class="badge bg-dark">Лимит: @card.LimitHours</span>
+                            <div class="distribution-badges">
+                                <span class="badge bg-secondary">
+                                    Назначено: @lecturer.AssignedHours.ToString("0")
+                                </span>
+                                <span class="badge bg-dark">
+                                    Лимит:
+                                    <span class="js-limit-badge" data-lecturer-id="@lecturer.LecturerId">
+                                        @lecturer.LimitHours.ToString("0")
+                                    </span>
+                                </span>
+                                <span class="badge @(lecturer.RemainingHours < 0 ? "bg-danger" : "bg-success") js-remaining-badge-wrapper"
+                                      data-lecturer-id="@lecturer.LecturerId">
+                                    Остаток:
+                                    <span class="js-remaining-badge" data-lecturer-id="@lecturer.LecturerId">
+                                        @lecturer.RemainingHours.ToString("0")
+                                    </span>
+                                </span>
 
-                                @if (card.IsOverloaded)
-                                {
-                                    <span class="badge bg-danger">Перегруз: @(card.AssignedHours - card.LimitHours)</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-success">Остаток: @card.RemainingHours</span>
-                                }
-
-                                @if (card.IsAssistant)
+                                @if (lecturer.IsAssistant)
                                 {
                                     <span class="badge bg-warning text-dark">Ассистент</span>
                                 }
@@ -149,218 +397,361 @@ else
                     </button>
                 </h2>
 
-                <div id="@collapseId"
-                     class="accordion-collapse collapse @(isOpen ? "show" : "")"
-                     aria-labelledby="@headingId"
+                <div id="@lecturerCollapseId"
+                     class="accordion-collapse collapse"
                      data-bs-parent="#lecturersAccordion">
                     <div class="accordion-body">
-                        <div class="row g-4">
-                            <div class="col-xl-4">
-                                <div class="card h-100">
-                                    <div class="card-header fw-semibold">Параметры преподавателя на @Model.SelectedYear</div>
-                                    <div class="card-body">
-                                        <form asp-action="SaveLecturerPlan" method="post">
-                                            @Html.AntiForgeryToken()
 
-                                            <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
-                                            <input type="hidden" name="SelectedLecturerId" value="@card.LecturerId" />
-                                            <input type="hidden" name="LecturerId" value="@card.LecturerId" />
+                        <form asp-action="SaveLecturerPlan" method="post" class="row g-2 align-items-end mb-3">
+                            @Html.AntiForgeryToken()
 
-                                            <div class="mb-3">
-                                                <label class="form-label">Учебная должность</label>
-                                                <select class="form-select" name="LecturerStudyPostId">
-                                                    <option value="">Не выбрана</option>
-                                                    @foreach (var post in Model.StudyPosts)
-                                                    {
-                                                        <option value="@post.Id" selected="@(post.Id == card.LecturerStudyPostId)">
-                                                            @post.Title (@post.NormHours ч.)
-                                                        </option>
-                                                    }
-                                                </select>
-                                            </div>
+                            <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
+                            <input type="hidden" name="SelectedLecturerId" value="@lecturer.LecturerId" />
+                            <input type="hidden" name="LecturerId" value="@lecturer.LecturerId" />
 
-                                            <div class="mb-3">
-                                                <label class="form-label">Ставка</label>
-                                                <input class="form-control"
-                                                       type="text"
-                                                       name="Rate"
-                                                       value="@card.Rate.ToString("0.##")"
-                                                       placeholder="Например: 1, 0,5, 0,25"
-                                                       inputmode="decimal" />
-                                            </div>
-
-                                            <div class="small text-muted mb-3">
-                                                Лимит считается как <strong>норма по должности × ставка</strong>.
-                                            </div>
-
-                                            <button type="submit" class="btn btn-primary">
-                                                Сохранить параметры
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-xl-8">
-                                <div class="card mb-4">
-                                    <div class="card-header fw-semibold">Назначить нагрузку</div>
-                                    <div class="card-body">
-                                        @if (!card.AvailableItems.Any())
+                            <div class="col-md-4">
+                                <label class="form-label">Должность</label>
+                                <select name="LecturerStudyPostId" class="form-select form-select-sm">
+                                    <option value="">Выберите должность</option>
+                                    @foreach (var post in Model.StudyPosts)
+                                    {
+                                        if (post.Id == lecturer.LecturerStudyPostId)
                                         {
-                                            <div class="text-muted">Свободных элементов нагрузки для назначения нет.</div>
+                                            <option value="@post.Id" selected>@post.Title — @post.NormHours ч.</option>
                                         }
                                         else
                                         {
-                                            <form asp-action="AddAssignment" method="post" class="row g-2 align-items-end">
-                                                @Html.AntiForgeryToken()
+                                            <option value="@post.Id">@post.Title — @post.NormHours ч.</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
 
-                                                <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
-                                                <input type="hidden" name="SelectedLecturerId" value="@card.LecturerId" />
-                                                <input type="hidden" name="LecturerId" value="@card.LecturerId" />
+                            <div class="col-md-3">
+                                <label class="form-label">Ставка по договору</label>
+                                <select name="Rate"
+                                        class="form-select form-select-sm js-rate-select"
+                                        data-lecturer-id="@lecturer.LecturerId"
+                                        data-norm-hours="@lecturer.NormHours"
+                                        data-assigned-hours="@lecturer.AssignedHours.ToString("0").Replace(",", ".")">
+                                    @if (lecturer.Rate == 0.25m)
+                                    {
+                                        <option value="0.25" selected>0,25</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="0.25">0,25</option>
+                                    }
 
-                                                <div class="col-lg-9">
-                                                    <label class="form-label">Элемент нагрузки</label>
-                                                    <select class="form-select" name="ItemKey">
-                                                        @foreach (var group in card.AvailableItems.GroupBy(x => x.SourceTypeDisplayName))
-                                                        {
-                                                            <optgroup label="@group.Key">
-                                                                @foreach (var item in group)
-                                                                {
-                                                                    <option value="@item.ItemKey">@item.SelectText</option>
-                                                                }
-                                                            </optgroup>
-                                                        }
-                                                    </select>
-                                                </div>
+                                    @if (lecturer.Rate == 0.5m)
+                                    {
+                                        <option value="0.5" selected>0,5</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="0.5">0,5</option>
+                                    }
 
-                                                <div class="col-lg-3">
-                                                    <button type="submit" class="btn btn-success w-100">
-                                                        Назначить
+                                    @if (lecturer.Rate == 1m)
+                                    {
+                                        <option value="1" selected>1</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="1">1</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                    Сохранить
+                                </button>
+                            </div>
+
+                            <div class="col-md-3 text-md-end">
+                                <button type="button"
+                                        class="btn btn-sm btn-success"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#@modalId">
+                                    Добавить нагрузку
+                                </button>
+                            </div>
+                        </form>
+
+                        @{
+                            var subjectGroups = lecturer.Assignments
+                            .GroupBy(x => new
+                            {
+                                x.Title,
+                                x.Subtitle
+                            })
+                            .Select(x => new
+                            {
+                                x.Key.Title,
+                                x.Key.Subtitle,
+                                Hours = x.Sum(a => a.AssignedHours)
+                            })
+                            .OrderBy(x => x.Title)
+                            .ToList();
+                        }
+
+                        @if (!subjectGroups.Any())
+                        {
+                            <div class="alert alert-light border">
+                                Назначенной нагрузки пока нет.
+                            </div>
+                        }
+                        else
+                        {
+                            foreach (var subject in subjectGroups)
+                            {
+                                <div class="distribution-subject-summary">
+                                    <div>
+                                        <div class="distribution-subject-name">@subject.Title</div>
+                                        <div class="distribution-subject-subtitle">
+                                            @subject.Subtitle
+                                        </div>
+                                    </div>
+
+                                    <div class="fw-semibold text-end">
+                                        @subject.Hours.ToString("0") ч.
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade distribution-modal js-load-modal"
+                 id="@modalId"
+                 tabindex="-1"
+                 data-remaining-hours="@Math.Max(0, lecturer.RemainingHours).ToString("0").Replace(",", ".")">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <form asp-action="AddSelectedAssignments" method="post">
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
+                            <input type="hidden" name="SelectedLecturerId" value="@lecturer.LecturerId" />
+                            <input type="hidden" name="LecturerId" value="@lecturer.LecturerId" />
+
+                            <div class="modal-header">
+                                <div class="distribution-modal-header-wrap">
+                                    <div class="distribution-modal-header-left">
+                                        <div class="distribution-modal-title">
+                                            Добавить нагрузку: @lecturer.LecturerDisplayName
+                                        </div>
+                                        <div class="distribution-modal-subtitle">
+                                            @lecturer.LecturerStudyPostTitle
+                                        </div>
+                                    </div>
+
+                                    <div class="distribution-modal-header-stats">
+                                        <div class="distribution-mini-stat">
+                                            <div class="distribution-mini-stat-label">Свободно</div>
+                                            <div class="distribution-mini-stat-value">
+                                                <span class="js-free-hours">@Math.Max(0, lecturer.RemainingHours).ToString("0")</span> ч.
+                                            </div>
+                                        </div>
+
+                                        <div class="distribution-mini-stat">
+                                            <div class="distribution-mini-stat-label">Выбрано</div>
+                                            <div class="distribution-mini-stat-value">
+                                                <span class="js-selected-hours">0</span> ч.
+                                            </div>
+                                        </div>
+
+                                        <div class="distribution-mini-stat">
+                                            <div class="distribution-mini-stat-label">Останется</div>
+                                            <div class="distribution-mini-stat-value">
+                                                <span class="js-after-assign-hours">@Math.Max(0, lecturer.RemainingHours).ToString("0")</span> ч.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+
+                            <div class="modal-body">
+                                @if (!lecturer.SemesterGroups.Any() && !lecturer.GiaItems.Any())
+                                {
+                                    <div class="alert alert-info">
+                                        Нет свободных элементов нагрузки для назначения.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="accordion" id="loadAccordion_@lecturer.LecturerId">
+
+                                        @for (var semesterIndex = 0; semesterIndex < lecturer.SemesterGroups.Count; semesterIndex++)
+                                        {
+                                            var semester = lecturer.SemesterGroups[semesterIndex];
+                                            var semesterId = $"semester_{lecturer.LecturerId}_{semesterIndex}";
+
+                                            <div class="accordion-item mb-2">
+                                                <h2 class="accordion-header">
+                                                    <button class="accordion-button collapsed"
+                                                            type="button"
+                                                            data-bs-toggle="collapse"
+                                                            data-bs-target="#@semesterId">
+                                                        @semester.SemesterName
                                                     </button>
-                                                </div>
-                                            </form>
-                                        }
-                                    </div>
-                                </div>
+                                                </h2>
 
-                                <div class="card">
-                                    <div class="card-header fw-semibold">Назначенная нагрузка</div>
-                                    <div class="card-body">
-                                        @if (!card.Assignments.Any())
-                                        {
-                                            <div class="text-muted">У этого преподавателя пока нет назначенной нагрузки.</div>
-                                        }
-                                        else
-                                        {
-                                            <div class="table-responsive">
-                                                <table class="table table-sm align-middle">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Источник</th>
-                                                            <th>Нагрузка</th>
-                                                            <th>Часы</th>
-                                                            <th style="min-width: 310px;">Изменить</th>
-                                                            <th></th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach (var assignment in card.Assignments)
-                                                        {
-                                                            <tr class="@(card.IsOverloaded ? "table-danger" : "")">
-                                                                <td>
-                                                                    <div class="fw-semibold">@assignment.SourceTypeDisplayName</div>
-                                                                    <div class="small text-muted">@assignment.Subtitle</div>
-                                                                </td>
-                                                                <td>
-                                                                    <div class="fw-semibold">@assignment.Title</div>
-                                                                    <div class="small text-muted">@assignment.ElementDisplayName</div>
-                                                                    <div class="small text-muted">
-                                                                        Всего по элементу: @assignment.TotalItemHours,
-                                                                        осталось нераспределенным: @assignment.RemainingItemHours
-                                                                    </div>
-                                                                </td>
-                                                                <td class="fw-bold">@assignment.AssignedHours</td>
-                                                                <td>
-                                                                    <div class="d-flex flex-wrap gap-1">
-                                                                        <form asp-action="ChangeAssignmentHours" method="post" class="d-inline">
-                                                                            @Html.AntiForgeryToken()
-                                                                            <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
-                                                                            <input type="hidden" name="SelectedLecturerId" value="@card.LecturerId" />
-                                                                            <input type="hidden" name="AssignmentId" value="@assignment.AssignmentId" />
-                                                                            <button type="submit" name="Delta" value="-10" class="btn btn-outline-secondary btn-sm" @(assignment.CanDecrease ? null : "disabled")>-10</button>
-                                                                        </form>
+                                                <div id="@semesterId"
+                                                     class="accordion-collapse collapse">
+                                                    <div class="accordion-body">
 
-                                                                        <form asp-action="ChangeAssignmentHours" method="post" class="d-inline">
-                                                                            @Html.AntiForgeryToken()
-                                                                            <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
-                                                                            <input type="hidden" name="SelectedLecturerId" value="@card.LecturerId" />
-                                                                            <input type="hidden" name="AssignmentId" value="@assignment.AssignmentId" />
-                                                                            <button type="submit" name="Delta" value="-5" class="btn btn-outline-secondary btn-sm" @(assignment.CanDecrease ? null : "disabled")>-5</button>
-                                                                        </form>
+                                                        <div class="accordion" id="disciplineAccordion_@lecturer.LecturerId@semesterIndex">
+                                                            @for (var disciplineIndex = 0; disciplineIndex < semester.Disciplines.Count; disciplineIndex++)
+                                                            {
+                                                                var discipline = semester.Disciplines[disciplineIndex];
+                                                                var disciplineId = $"discipline_{lecturer.LecturerId}_{semesterIndex}_{disciplineIndex}";
 
-                                                                        <form asp-action="ChangeAssignmentHours" method="post" class="d-inline">
-                                                                            @Html.AntiForgeryToken()
-                                                                            <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
-                                                                            <input type="hidden" name="SelectedLecturerId" value="@card.LecturerId" />
-                                                                            <input type="hidden" name="AssignmentId" value="@assignment.AssignmentId" />
-                                                                            <button type="submit" name="Delta" value="-1" class="btn btn-outline-secondary btn-sm" @(assignment.CanDecrease ? null : "disabled")>-1</button>
-                                                                        </form>
-
-                                                                        <form asp-action="ChangeAssignmentHours" method="post" class="d-inline">
-                                                                            @Html.AntiForgeryToken()
-                                                                            <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
-                                                                            <input type="hidden" name="SelectedLecturerId" value="@card.LecturerId" />
-                                                                            <input type="hidden" name="AssignmentId" value="@assignment.AssignmentId" />
-                                                                            <button type="submit" name="Delta" value="1" class="btn btn-outline-primary btn-sm" @(assignment.CanIncrease ? null : "disabled")>+1</button>
-                                                                        </form>
-
-                                                                        <form asp-action="ChangeAssignmentHours" method="post" class="d-inline">
-                                                                            @Html.AntiForgeryToken()
-                                                                            <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
-                                                                            <input type="hidden" name="SelectedLecturerId" value="@card.LecturerId" />
-                                                                            <input type="hidden" name="AssignmentId" value="@assignment.AssignmentId" />
-                                                                            <button type="submit" name="Delta" value="5" class="btn btn-outline-primary btn-sm" @(assignment.CanIncrease ? null : "disabled")>+5</button>
-                                                                        </form>
-
-                                                                        <form asp-action="ChangeAssignmentHours" method="post" class="d-inline">
-                                                                            @Html.AntiForgeryToken()
-                                                                            <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
-                                                                            <input type="hidden" name="SelectedLecturerId" value="@card.LecturerId" />
-                                                                            <input type="hidden" name="AssignmentId" value="@assignment.AssignmentId" />
-                                                                            <button type="submit" name="Delta" value="10" class="btn btn-outline-primary btn-sm" @(assignment.CanIncrease ? null : "disabled")>+10</button>
-                                                                        </form>
-
-                                                                        <form asp-action="FillAssignmentToRemaining" method="post" class="d-inline">
-                                                                            @Html.AntiForgeryToken()
-                                                                            <input type="hidden" name="startYear" value="@Model.SelectedYearStart" />
-                                                                            <input type="hidden" name="assignmentId" value="@assignment.AssignmentId" />
-                                                                            <button type="submit" class="btn btn-outline-success btn-sm">
-                                                                                Остаток
-                                                                            </button>
-                                                                        </form>
-                                                                    </div>
-                                                                </td>
-                                                                <td class="text-end">
-                                                                    <form asp-action="DeleteAssignment" method="post">
-                                                                        @Html.AntiForgeryToken()
-                                                                        <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
-                                                                        <input type="hidden" name="SelectedLecturerId" value="@card.LecturerId" />
-                                                                        <input type="hidden" name="AssignmentId" value="@assignment.AssignmentId" />
-                                                                        <button type="submit" class="btn btn-outline-danger btn-sm">
-                                                                            Удалить
+                                                                <div class="accordion-item mb-2">
+                                                                    <h2 class="accordion-header">
+                                                                        <button class="accordion-button collapsed"
+                                                                                type="button"
+                                                                                data-bs-toggle="collapse"
+                                                                                data-bs-target="#@disciplineId">
+                                                                            <div>
+                                                                                <div>@discipline.Title</div>
+                                                                                <div class="small text-muted">@discipline.Subtitle</div>
+                                                                            </div>
                                                                         </button>
-                                                                    </form>
-                                                                </td>
-                                                            </tr>
+                                                                    </h2>
+
+                                                                    <div id="@disciplineId"
+                                                                         class="accordion-collapse collapse">
+                                                                        <div class="accordion-body">
+                                                                            @foreach (var workType in discipline.WorkTypes)
+                                                                            {
+                                                                                <div class="distribution-worktype-row">
+                                                                                    <div class="distribution-worktype-title">
+                                                                                        @workType.ElementDisplayName:
+                                                                                    </div>
+
+                                                                                    <div class="distribution-chip-list">
+                                                                                        @foreach (var item in workType.Items)
+                                                                                        {
+                                                                                            <label class="distribution-chip js-load-chip">
+                                                                                                <input type="checkbox"
+                                                                                                       name="SelectedItemKeys"
+                                                                                                       value="@item.ItemKey"
+                                                                                                       class="form-check-input js-load-item-checkbox"
+                                                                                                       data-hours="@item.RemainingHours.ToString("0").Replace(",", ".")" />
+
+                                                                                                <span class="distribution-chip-main">
+                                                                                                    <span class="distribution-chip-title">
+                                                                                                        @item.UnitName
+                                                                                                    </span>
+                                                                                                    <span class="distribution-chip-meta">
+                                                                                                        @item.RemainingHours.ToString("0") ч.
+                                                                                                        @if (item.StudentsCount > 0)
+                                                                                                        {
+                                                                                                            <span> · @item.StudentsCount студ.</span>
+                                                                                                        }
+                                                                                                    </span>
+                                                                                                </span>
+                                                                                            </label>
+                                                                                        }
+                                                                                    </div>
+                                                                                </div>
+                                                                            }
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+
+                                        @if (lecturer.GiaItems.Any())
+                                        {
+                                            var giaCollapseId = $"gia_{lecturer.LecturerId}";
+
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header">
+                                                    <button class="accordion-button collapsed"
+                                                            type="button"
+                                                            data-bs-toggle="collapse"
+                                                            data-bs-target="#@giaCollapseId">
+                                                        ГИА
+                                                    </button>
+                                                </h2>
+
+                                                <div id="@giaCollapseId"
+                                                     class="accordion-collapse collapse">
+                                                    <div class="accordion-body">
+                                                        @{
+                                                            var giaIndex = 0;
                                                         }
-                                                    </tbody>
-                                                </table>
+
+                                                        @foreach (var giaItem in lecturer.GiaItems)
+                                                        {
+                                                            <div class="distribution-gia-row row g-3 align-items-center">
+                                                                <div class="col-md-6">
+                                                                    <div class="distribution-gia-title">@giaItem.Title</div>
+                                                                    <div>@giaItem.ElementDisplayName</div>
+                                                                    <div class="distribution-gia-subtitle">@giaItem.Subtitle</div>
+                                                                    <div class="distribution-gia-meta">
+                                                                        Осталось студентов: @giaItem.RemainingStudentsCount,
+                                                                        часов на студента: @giaItem.HoursPerStudent.ToString("0.##")
+                                                                    </div>
+                                                                </div>
+
+                                                                <div class="col-md-3">
+                                                                    <input type="hidden"
+                                                                           name="GiaStudents[@giaIndex].ItemKey"
+                                                                           value="@giaItem.ItemKey" />
+
+                                                                    <label class="form-label small">Назначить студентов</label>
+                                                                    <input type="number"
+                                                                           name="GiaStudents[@giaIndex].StudentsCount"
+                                                                           value="0"
+                                                                           min="0"
+                                                                           max="@giaItem.RemainingStudentsCount"
+                                                                           class="form-control form-control-sm js-gia-students-input"
+                                                                           data-hours-per-student="@giaItem.HoursPerStudent.ToString("0.####").Replace(",", ".")" />
+                                                                </div>
+
+                                                                <div class="col-md-3">
+                                                                    <div class="small text-muted">Часы</div>
+                                                                    <div class="fw-semibold">
+                                                                        <span class="js-gia-row-hours">0</span> ч.
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            giaIndex++;
+                                                        }
+                                                    </div>
+                                                </div>
                                             </div>
                                         }
                                     </div>
-                                </div>
+                                }
                             </div>
-                        </div>
+
+                            <div class="modal-footer">
+                                <div class="distribution-modal-footer-warning d-none js-limit-warning">
+                                    Превышен лимит преподавателя.
+                                </div>
+
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                    Закрыть
+                                </button>
+
+                                <button type="submit" class="btn btn-primary js-assign-selected-button">
+                                    Назначить выбранное
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -368,42 +759,146 @@ else
     </div>
 }
 
-<h2 class="h4 mb-3">Осталось распределить</h2>
+@section Scripts {
+    <script>
+        function parseNumber(value) {
+            if (!value) {
+                return 0;
+            }
 
-@if (!Model.RemainingItems.Any())
-{
-    <div class="alert alert-success">Вся нагрузка распределена.</div>
-}
-else
-{
-    <div class="table-responsive">
-        <table class="table table-bordered table-sm align-middle">
-            <thead>
-                <tr>
-                    <th>Источник</th>
-                    <th>Наименование</th>
-                    <th>Элемент</th>
-                    <th>Всего</th>
-                    <th>Уже распределено</th>
-                    <th>Осталось</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model.RemainingItems)
-                {
-                    <tr>
-                        <td>@item.SourceTypeDisplayName</td>
-                        <td>
-                            <div class="fw-semibold">@item.Title</div>
-                            <div class="small text-muted">@item.Subtitle</div>
-                        </td>
-                        <td>@item.ElementDisplayName</td>
-                        <td>@item.TotalHours</td>
-                        <td>@item.AssignedHours</td>
-                        <td class="fw-bold text-warning">@item.RemainingHours</td>
-                    </tr>
+            return Number(String(value).replace(",", ".")) || 0;
+        }
+
+        function formatNumber(value) {
+            return String(Math.round(value));
+        }
+
+        function updateChipState(modal) {
+            modal.querySelectorAll(".js-load-chip").forEach(function (chip) {
+                const checkbox = chip.querySelector(".js-load-item-checkbox");
+
+                if (!checkbox) {
+                    return;
                 }
-            </tbody>
-        </table>
-    </div>
+
+                if (checkbox.checked) {
+                    chip.classList.add("selected");
+                } else {
+                    chip.classList.remove("selected");
+                }
+            });
+        }
+
+        function updateModalHours(modal) {
+            const remainingLimit = parseNumber(modal.dataset.remainingHours);
+            let selectedHours = 0;
+
+            modal.querySelectorAll(".js-load-item-checkbox:checked").forEach(function (checkbox) {
+                selectedHours += parseNumber(checkbox.dataset.hours);
+            });
+
+            modal.querySelectorAll(".js-gia-students-input").forEach(function (input) {
+                const students = parseNumber(input.value);
+                const hoursPerStudent = parseNumber(input.dataset.hoursPerStudent);
+                const rowHours = Math.round(students * hoursPerStudent);
+
+                const row = input.closest(".distribution-gia-row");
+                const rowHoursElement = row.querySelector(".js-gia-row-hours");
+
+                if (rowHoursElement) {
+                    rowHoursElement.textContent = formatNumber(rowHours);
+                }
+
+                selectedHours += rowHours;
+            });
+
+            const afterAssign = remainingLimit - selectedHours;
+
+            modal.querySelector(".js-selected-hours").textContent = formatNumber(selectedHours);
+            modal.querySelector(".js-after-assign-hours").textContent = formatNumber(afterAssign);
+
+            const submitButton = modal.querySelector(".js-assign-selected-button");
+            const warning = modal.querySelector(".js-limit-warning");
+
+            if (afterAssign < 0) {
+                submitButton.disabled = true;
+                warning.classList.remove("d-none");
+            } else {
+                submitButton.disabled = false;
+                warning.classList.add("d-none");
+            }
+
+            updateChipState(modal);
+        }
+
+        document.addEventListener("change", function (event) {
+            if (!event.target.classList.contains("js-load-item-checkbox")
+                && !event.target.classList.contains("js-gia-students-input")) {
+                return;
+            }
+
+            const modal = event.target.closest(".js-load-modal");
+
+            if (modal) {
+                updateModalHours(modal);
+            }
+        });
+
+        document.addEventListener("input", function (event) {
+            if (!event.target.classList.contains("js-gia-students-input")) {
+                return;
+            }
+
+            const modal = event.target.closest(".js-load-modal");
+
+            if (modal) {
+                updateModalHours(modal);
+            }
+        });
+
+        document.querySelectorAll(".js-load-modal").forEach(function (modal) {
+            modal.addEventListener("shown.bs.modal", function () {
+                updateModalHours(modal);
+            });
+        });
+
+        function updateLecturerRateInfo(select) {
+            const lecturerId = select.dataset.lecturerId;
+            const normHours = parseNumber(select.dataset.normHours);
+            const assignedHours = parseNumber(select.dataset.assignedHours);
+            const rate = parseNumber(select.value);
+
+            const limitHours = Math.round(normHours * rate);
+            const remainingHours = limitHours - assignedHours;
+
+            document.querySelectorAll(`.js-rate-label[data-lecturer-id="${lecturerId}"]`).forEach(function (element) {
+                element.textContent = select.options[select.selectedIndex].text;
+            });
+
+            document.querySelectorAll(`.js-effective-norm[data-lecturer-id="${lecturerId}"]`).forEach(function (element) {
+                element.textContent = formatNumber(limitHours);
+            });
+
+            document.querySelectorAll(`.js-limit-badge[data-lecturer-id="${lecturerId}"]`).forEach(function (element) {
+                element.textContent = formatNumber(limitHours);
+            });
+
+            document.querySelectorAll(`.js-remaining-badge[data-lecturer-id="${lecturerId}"]`).forEach(function (element) {
+                element.textContent = formatNumber(remainingHours);
+            });
+
+            document.querySelectorAll(`.js-remaining-badge-wrapper[data-lecturer-id="${lecturerId}"]`).forEach(function (element) {
+                element.classList.remove("bg-success", "bg-danger");
+                element.classList.add(remainingHours < 0 ? "bg-danger" : "bg-success");
+            });
+        }
+
+        document.addEventListener("change", function (event) {
+            if (!event.target.classList.contains("js-rate-select")) {
+                return;
+            }
+
+            updateLecturerRateInfo(event.target);
+        });
+    </script>
 }

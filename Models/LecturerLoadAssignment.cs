@@ -10,18 +10,26 @@ public class LecturerLoadAssignment
     public string AcademicYear { get; set; } = string.Empty;
 
     public int LecturerAcademicYearPlanId { get; set; }
+
     public LecturerAcademicYearPlan? LecturerAcademicYearPlan { get; set; }
 
     public LoadAssignmentSourceType SourceType { get; set; }
 
-    // Старый временный Id строки расчета.
-    // Оставляем, чтобы не ломать старые данные и миграцию.
     public int SourceRowId { get; set; }
 
-    // Новый стабильный ключ из AcademicPlanRecord
     public int SourceAcademicPlanRecordId { get; set; }
 
     public LoadAssignmentElementType LoadElementType { get; set; }
 
-    public int AssignedHours { get; set; }
+    public DistributionUnitType DistributionUnitType { get; set; }
+
+    public int? StudentGroupId { get; set; }
+
+    public int? ContingentSubgroupId { get; set; }
+
+    public string UnitName { get; set; } = string.Empty;
+
+    public int StudentsCount { get; set; }
+
+    public decimal AssignedHours { get; set; }
 }

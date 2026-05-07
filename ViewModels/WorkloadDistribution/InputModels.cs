@@ -10,10 +10,10 @@ public class UpdateLecturerPlanInputModel
 
     public int? LecturerStudyPostId { get; set; }
 
-    public decimal Rate { get; set; }
+    public string Rate { get; set; } = "1";
 }
 
-public class AddAssignmentInputModel
+public class AddSelectedAssignmentsInputModel
 {
     public int SelectedYearStart { get; set; }
 
@@ -21,18 +21,16 @@ public class AddAssignmentInputModel
 
     public int LecturerId { get; set; }
 
-    public string ItemKey { get; set; } = string.Empty;
+    public List<string> SelectedItemKeys { get; set; } = new();
+
+    public List<GiaStudentsAssignmentInputModel> GiaStudents { get; set; } = new();
 }
 
-public class ChangeAssignmentHoursInputModel
+public class GiaStudentsAssignmentInputModel
 {
-    public int SelectedYearStart { get; set; }
+    public string ItemKey { get; set; } = string.Empty;
 
-    public int? SelectedLecturerId { get; set; }
-
-    public int AssignmentId { get; set; }
-
-    public int Delta { get; set; }
+    public int StudentsCount { get; set; }
 }
 
 public class DeleteAssignmentInputModel

@@ -214,12 +214,20 @@ public class DepartmentLoadDbContext : DbContext
                 .HasMaxLength(9);
 
             entity.Property(x => x.SourceType)
-                .HasConversion<string>();
+                .HasConversion<int>();
 
             entity.Property(x => x.LoadElementType)
-                .HasConversion<string>();
+                .HasConversion<int>();
+
+            entity.Property(x => x.DistributionUnitType)
+                .HasConversion<int>();
+
+            entity.Property(x => x.UnitName)
+                .IsRequired()
+                .HasMaxLength(300);
 
             entity.Property(x => x.AssignedHours)
+                .HasPrecision(10, 2)
                 .IsRequired();
 
             entity.HasIndex(x => new
@@ -227,7 +235,10 @@ public class DepartmentLoadDbContext : DbContext
                 x.LecturerAcademicYearPlanId,
                 x.SourceType,
                 x.SourceRowId,
-                x.LoadElementType
+                x.LoadElementType,
+                x.DistributionUnitType,
+                x.StudentGroupId,
+                x.ContingentSubgroupId
             }).IsUnique();
 
             entity.HasIndex(x => new
@@ -235,7 +246,10 @@ public class DepartmentLoadDbContext : DbContext
                 x.AcademicYear,
                 x.SourceType,
                 x.SourceRowId,
-                x.LoadElementType
+                x.LoadElementType,
+                x.DistributionUnitType,
+                x.StudentGroupId,
+                x.ContingentSubgroupId
             });
 
             entity.HasOne(x => x.LecturerAcademicYearPlan)

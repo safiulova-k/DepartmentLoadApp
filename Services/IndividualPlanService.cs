@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Text.RegularExpressions;
 using ClosedXML.Excel;
 using DepartmentLoadApp.Data;
@@ -7,9 +6,6 @@ using DepartmentLoadApp.Helpers;
 using DepartmentLoadApp.Models;
 using DepartmentLoadApp.Models.Core;
 using DepartmentLoadApp.Models.Enums;
-using DepartmentLoadApp.Models.Gia;
-using DepartmentLoadApp.Models.Practice;
-using DepartmentLoadApp.Models.Workload;
 using DepartmentLoadApp.ViewModels.IndividualPlans;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,8 +18,6 @@ public class IndividualPlanService
 
     private const string TitleSheetName = "Титул";
     private const string SummarySheetName = "Сводная таблица";
-    private const string AutumnSheetName = "Осенний сем.";
-    private const string SpringSheetName = "Весенний сем.";
 
     private const string FirstNameCell = "F17";
     private const string LastNameCell = "F18";
@@ -87,14 +81,18 @@ public class IndividualPlanService
                 FullName = BuildLecturerFullName(plan.Lecturer),
                 StudyPostTitle = plan.LecturerStudyPost?.StudyPostTitle ?? "Не указана",
                 Rate = plan.Rate,
-                AssignedHours = assignedHoursMap.TryGetValue(plan.Id, out var hours) ? hours : 0
+                AssignedHours = assignedHoursMap.TryGetValue(plan.Id, out var hours)
+                    ? RoundHoursToInt(hours)
+                    : 0
             })
             .ToList();
 
         return model;
     }
 
-    public async Task<IndividualPlanExportResult> ExportLecturerPlanAsync(int startYear, int lecturerId)
+    public async Task<IndividualPlanExportResult> ExportLecturerPlanAsync(
+        int startYear,
+        int lecturerId)
     {
         var selectedYearStart = AcademicYearResolver.NormalizeStartYear(startYear);
         var academicYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
@@ -102,6 +100,7 @@ public class IndividualPlanService
         await EnsureAcademicYearPlansAsync(academicYear);
 
         var templatePath = GetTemplatePath();
+
         if (!File.Exists(templatePath))
         {
             return IndividualPlanExportResult.Fail(
@@ -170,7 +169,8 @@ public class IndividualPlanService
 
         if (plans.Count == 0)
         {
-            return IndividualPlanExportResult.Fail("Для выбранного учебного года преподаватели не найдены.");
+            return IndividualPlanExportResult.Fail(
+                "Для выбранного учебного года преподаватели не найдены.");
         }
 
         using var zipStream = new MemoryStream();
@@ -179,17 +179,24 @@ public class IndividualPlanService
         {
             foreach (var plan in plans)
             {
-                var fileResult = await ExportLecturerPlanAsync(selectedYearStart, plan.LecturerId);
+                var fileResult = await ExportLecturerPlanAsync(
+                    selectedYearStart,
+                    plan.LecturerId);
 
                 if (!fileResult.Success || fileResult.Content == null)
                 {
                     continue;
                 }
 
-                var entry = archive.CreateEntry(fileResult.FileName, CompressionLevel.Fastest);
+                var entry = archive.CreateEntry(
+                    fileResult.FileName,
+                    CompressionLevel.Fastest);
 
                 await using var entryStream = entry.Open();
-                await entryStream.WriteAsync(fileResult.Content, 0, fileResult.Content.Length);
+                await entryStream.WriteAsync(
+                    fileResult.Content,
+                    0,
+                    fileResult.Content.Length);
             }
         }
 
@@ -199,7 +206,9 @@ public class IndividualPlanService
             contentType: "application/zip");
     }
 
-    private async Task<List<IndividualPlanRowData>> BuildPlanRowsAsync(string academicYear, int lecturerAcademicYearPlanId)
+    private async Task<List<IndividualPlanRowData>> BuildPlanRowsAsync(
+        string academicYear,
+        int lecturerAcademicYearPlanId)
     {
         var assignments = await _context.LecturerLoadAssignments
             .AsNoTracking()
@@ -207,8 +216,9 @@ public class IndividualPlanService
                 x.AcademicYear == academicYear &&
                 x.LecturerAcademicYearPlanId == lecturerAcademicYearPlanId)
             .OrderBy(x => x.SourceType)
-            .ThenBy(x => x.SourceAcademicPlanRecordId)
+            .ThenBy(x => x.SourceRowId)
             .ThenBy(x => x.LoadElementType)
+            .ThenBy(x => x.UnitName)
             .ToListAsync();
 
         if (assignments.Count == 0)
@@ -216,49 +226,49 @@ public class IndividualPlanService
             return new List<IndividualPlanRowData>();
         }
 
-        var disciplinePlanRecordIds = assignments
+        var disciplineRowIds = assignments
             .Where(x => x.SourceType == LoadAssignmentSourceType.Discipline)
-            .Select(x => x.SourceAcademicPlanRecordId)
+            .Select(x => x.SourceRowId)
             .Distinct()
             .ToList();
 
-        var practicePlanRecordIds = assignments
+        var practiceRowIds = assignments
             .Where(x => x.SourceType == LoadAssignmentSourceType.Practice)
-            .Select(x => x.SourceAcademicPlanRecordId)
+            .Select(x => x.SourceRowId)
             .Distinct()
             .ToList();
 
-        var giaPlanRecordIds = assignments
+        var giaRowIds = assignments
             .Where(x => x.SourceType == LoadAssignmentSourceType.Gia)
-            .Select(x => x.SourceAcademicPlanRecordId)
+            .Select(x => x.SourceRowId)
             .Distinct()
             .ToList();
 
         var disciplineRows = await _context.WorkloadRows
-             .AsNoTracking()
-             .Where(x => x.AcademicYear == academicYear && disciplinePlanRecordIds.Contains(x.AcademicPlanRecordId))
-             .ToListAsync();
+            .AsNoTracking()
+            .Where(x => x.AcademicYear == academicYear && disciplineRowIds.Contains(x.Id))
+            .ToListAsync();
 
         var disciplineMap = disciplineRows
-            .GroupBy(x => x.AcademicPlanRecordId)
+            .GroupBy(x => x.Id)
             .ToDictionary(x => x.Key, x => x.First());
 
         var practiceRows = await _context.PracticeWorkloadRows
             .AsNoTracking()
-            .Where(x => x.PlanYear == academicYear && practicePlanRecordIds.Contains(x.AcademicPlanRecordId))
+            .Where(x => x.PlanYear == academicYear && practiceRowIds.Contains(x.Id))
             .ToListAsync();
 
         var practiceMap = practiceRows
-            .GroupBy(x => x.AcademicPlanRecordId)
+            .GroupBy(x => x.Id)
             .ToDictionary(x => x.Key, x => x.First());
 
         var giaRows = await _context.GiaWorkloadRows
             .AsNoTracking()
-            .Where(x => x.PlanYear == academicYear && giaPlanRecordIds.Contains(x.AcademicPlanRecordId))
+            .Where(x => x.PlanYear == academicYear && giaRowIds.Contains(x.Id))
             .ToListAsync();
 
         var giaMap = giaRows
-            .GroupBy(x => x.AcademicPlanRecordId)
+            .GroupBy(x => x.Id)
             .ToDictionary(x => x.Key, x => x.First());
 
         var result = new Dictionary<string, IndividualPlanRowData>();
@@ -269,13 +279,16 @@ public class IndividualPlanService
             {
                 case LoadAssignmentSourceType.Discipline:
                     {
-                        if (!disciplineMap.TryGetValue(assignment.SourceAcademicPlanRecordId, out var row))
+                        if (!disciplineMap.TryGetValue(assignment.SourceRowId, out var row))
                         {
                             continue;
                         }
 
                         var semester = ResolveSemester(row.SemesterName);
-                        var key = BuildRowKey(assignment.SourceType, assignment.SourceAcademicPlanRecordId, semester);
+                        var key = BuildRowKey(
+                            assignment.SourceType,
+                            assignment.SourceRowId,
+                            semester);
 
                         if (!result.TryGetValue(key, out var item))
                         {
@@ -297,13 +310,16 @@ public class IndividualPlanService
 
                 case LoadAssignmentSourceType.Practice:
                     {
-                        if (!practiceMap.TryGetValue(assignment.SourceAcademicPlanRecordId, out var row))
+                        if (!practiceMap.TryGetValue(assignment.SourceRowId, out var row))
                         {
                             continue;
                         }
 
                         var semester = ResolveSemester(row.SemesterName);
-                        var key = BuildRowKey(assignment.SourceType, assignment.SourceAcademicPlanRecordId, semester);
+                        var key = BuildRowKey(
+                            assignment.SourceType,
+                            assignment.SourceRowId,
+                            semester);
 
                         if (!result.TryGetValue(key, out var item))
                         {
@@ -325,13 +341,16 @@ public class IndividualPlanService
 
                 case LoadAssignmentSourceType.Gia:
                     {
-                        if (!giaMap.TryGetValue(assignment.SourceAcademicPlanRecordId, out var row))
+                        if (!giaMap.TryGetValue(assignment.SourceRowId, out var row))
                         {
                             continue;
                         }
 
                         var semester = ResolveSemester(row.SemesterName);
-                        var key = BuildRowKey(assignment.SourceType, assignment.SourceAcademicPlanRecordId, semester);
+                        var key = BuildRowKey(
+                            assignment.SourceType,
+                            assignment.SourceRowId,
+                            semester);
 
                         if (!result.TryGetValue(key, out var item))
                         {
@@ -341,10 +360,16 @@ public class IndividualPlanService
                                 Semester = semester,
                                 SortOrder = 3,
                                 DisplayText = $"{row.DirectionCode} {row.GiaSection}: {row.WorkName}",
-                                StudentsCount = row.StudentsCount
+                                StudentsCount = assignment.StudentsCount > 0
+                                    ? assignment.StudentsCount
+                                    : row.StudentsCount
                             };
 
                             result[key] = item;
+                        }
+                        else if (assignment.StudentsCount > 0)
+                        {
+                            item.StudentsCount += assignment.StudentsCount;
                         }
 
                         AddHoursToRow(item, assignment.LoadElementType, assignment.AssignedHours);
@@ -361,50 +386,50 @@ public class IndividualPlanService
     }
 
     private static void FillTitleSheet(
-     XLWorkbook workbook,
-     LecturerAcademicYearPlan plan,
-     string academicYear)
+        XLWorkbook workbook,
+        LecturerAcademicYearPlan plan,
+        string academicYear)
     {
         var sheet = workbook.Worksheet(TitleSheetName);
         var lecturer = plan.Lecturer!;
 
-        // Координаты ячеек соответствуют утверждённому шаблону
-        // индивидуального плана преподавателя.
         sheet.Cell(FirstNameCell).Value = lecturer.FirstName;
         sheet.Cell(LastNameCell).Value = lecturer.LastName;
         sheet.Cell(PatronymicCell).Value = lecturer.Patronymic;
-        sheet.Cell(StudyPostCell).Value = plan.LecturerStudyPost?.StudyPostTitle ?? string.Empty;
+        sheet.Cell(StudyPostCell).Value =
+            plan.LecturerStudyPost?.StudyPostTitle ?? string.Empty;
         sheet.Cell(BirthYearCell).Value = lecturer.DateBirth.Year;
 
         sheet.Cell("F22").Value = string.Empty;
         sheet.Cell("F23").Value = string.Empty;
     }
+
     private static void FillSummarySheet(
-     XLWorkbook workbook,
-     LecturerAcademicYearPlan plan,
-     string academicYear)
+        XLWorkbook workbook,
+        LecturerAcademicYearPlan plan,
+        string academicYear)
     {
         var sheet = workbook.Worksheet(SummarySheetName);
         var academicYearForTemplate = academicYear.Replace("-", "/");
 
-        // Координаты ячеек соответствуют утверждённому шаблону Excel.
         sheet.Cell(AcademicYearTitleCell).Value =
             $"на {academicYearForTemplate} учебный год";
 
         sheet.Cell(RateCell).Value = plan.Rate;
         sheet.Cell(RateCell).Style.NumberFormat.Format = "0.##";
     }
+
     private static void FillAutumnSheet(
-     XLWorkbook workbook,
-     string academicYear,
-     List<IndividualPlanRowData> rows)
+        XLWorkbook workbook,
+        string academicYear,
+        List<IndividualPlanRowData> rows)
     {
         var sheet = workbook.Worksheet("Осенний сем.");
         var startYear = academicYear.Split('-')[0];
         var academicYearForTemplate = academicYear.Replace("-", "/");
 
         sheet.Cell("D2").Value =
-            $"1.1 Нагрузка преподавателя по программам высшего образования (ВО)     {academicYearForTemplate}уч. год ";
+            $"1.1 Нагрузка преподавателя по программам высшего образования (ВО)     {academicYearForTemplate} уч. год ";
 
         sheet.Cell("I3").Value = "a) Осенний семестр";
         sheet.Cell("A4").Value = $"\"____\"______________________{startYear}г";
@@ -441,14 +466,14 @@ public class IndividualPlanService
     }
 
     private static void FillSemesterSheet(
-     IXLWorksheet sheet,
-     List<IndividualPlanRowData> rows,
-     int dataStartRow,
-     int dataEndRow,
-     int totalRow,
-     int actualRow,
-     int? yearTotalRow,
-     int? yearActualRow)
+        IXLWorksheet sheet,
+        List<IndividualPlanRowData> rows,
+        int dataStartRow,
+        int dataEndRow,
+        int totalRow,
+        int actualRow,
+        int? yearTotalRow,
+        int? yearActualRow)
     {
         const int lastColumn = 22;
         var templateCapacity = dataEndRow - dataStartRow + 1;
@@ -505,18 +530,19 @@ public class IndividualPlanService
             var item = rows[i];
 
             sheet.Cell(targetRow, 1).Value = item.DisplayText;
-            sheet.Cell(targetRow, 4).Value = item.StudentsCount == 0 ? string.Empty : item.StudentsCount;
+            sheet.Cell(targetRow, 4).Value =
+                item.StudentsCount == 0 ? string.Empty : item.StudentsCount;
 
-            SetHourValue(sheet, targetRow, 5, item.LectureHours);              // E Лекции
-            SetHourValue(sheet, targetRow, 6, item.PracticeHours);             // F Практ.
-            SetHourValue(sheet, targetRow, 7, item.LaboratoryHours);           // G Лаб.
-            SetHourValue(sheet, targetRow, 8, item.CourseProjectHours);        // H Курсовое проектирование
-            SetHourValue(sheet, targetRow, 9, item.ConsultationHours);         // I Консультации
-            SetHourValue(sheet, targetRow, 10, item.CreditHours);              // J Зачеты
-            SetHourValue(sheet, targetRow, 11, item.ExamHours);                // K Экзамены
-            SetHourValue(sheet, targetRow, 13, item.PracticeHoursGuidance);    // M Руководство практиками
-            SetHourValue(sheet, targetRow, 17, item.GiaHours);                 // Q Работа в ГИА
-            SetHourValue(sheet, targetRow, 20, item.OtherHours);               // T Другие виды работ
+            SetHourValue(sheet, targetRow, 5, item.LectureHours);
+            SetHourValue(sheet, targetRow, 6, item.PracticeHours);
+            SetHourValue(sheet, targetRow, 7, item.LaboratoryHours);
+            SetHourValue(sheet, targetRow, 8, item.CourseWorkHours + item.CourseProjectHours);
+            SetHourValue(sheet, targetRow, 9, item.ConsultationHours);
+            SetHourValue(sheet, targetRow, 10, item.CreditHours);
+            SetHourValue(sheet, targetRow, 11, item.ExamHours);
+            SetHourValue(sheet, targetRow, 13, item.PracticeHoursGuidance);
+            SetHourValue(sheet, targetRow, 17, item.GiaHours);
+            SetHourValue(sheet, targetRow, 20, item.OtherHours);
 
             sheet.Cell(targetRow, 21).FormulaA1 = $"SUM(E{targetRow}:T{targetRow})";
             sheet.Cell(targetRow, 22).FormulaA1 = $"U{targetRow}";
@@ -527,7 +553,8 @@ public class IndividualPlanService
         for (var col = 5; col <= 21; col++)
         {
             var letter = XLHelper.GetColumnLetterFromNumber(col);
-            sheet.Cell(totalRow, col).FormulaA1 = $"SUM({letter}{dataStartRow}:{letter}{dataEndRow})";
+            sheet.Cell(totalRow, col).FormulaA1 =
+                $"SUM({letter}{dataStartRow}:{letter}{dataEndRow})";
         }
 
         sheet.Cell(totalRow, 22).FormulaA1 = $"U{totalRow}";
@@ -548,13 +575,14 @@ public class IndividualPlanService
             {
                 var letter = XLHelper.GetColumnLetterFromNumber(col);
                 sheet.Cell(yearTotalRow.Value, col).FormulaA1 =
-                    $"SUM({letter}{totalRow},'Осенний сем.'!{letter}{(totalRow == 18 ? 20 : 20)})";
+                    $"SUM({letter}{totalRow},'Осенний сем.'!{letter}20)";
             }
         }
 
         if (yearActualRow.HasValue)
         {
-            sheet.Cell(yearActualRow.Value, 1).Value = "Фактически  выполнено за учебный год по ВО";
+            sheet.Cell(yearActualRow.Value, 1).Value =
+                "Фактически  выполнено за учебный год по ВО";
 
             for (var col = 5; col <= 22; col++)
             {
@@ -565,7 +593,11 @@ public class IndividualPlanService
         }
     }
 
-    private static void SetHourValue(IXLWorksheet sheet, int row, int column, int value)
+    private static void SetHourValue(
+        IXLWorksheet sheet,
+        int row,
+        int column,
+        int value)
     {
         sheet.Cell(row, column).Value = value <= 0 ? string.Empty : value;
     }
@@ -573,48 +605,50 @@ public class IndividualPlanService
     private static void AddHoursToRow(
         IndividualPlanRowData row,
         LoadAssignmentElementType elementType,
-        int hours)
+        decimal hours)
     {
+        var roundedHours = RoundHoursToInt(hours);
+
         switch (elementType)
         {
             case LoadAssignmentElementType.Lecture:
-                row.LectureHours += hours;
+                row.LectureHours += roundedHours;
                 break;
 
             case LoadAssignmentElementType.Practice:
-                row.PracticeHours += hours;
+                row.PracticeHours += roundedHours;
                 break;
 
             case LoadAssignmentElementType.Laboratory:
-                row.LaboratoryHours += hours;
-                break;
-
-            case LoadAssignmentElementType.CourseProject:
-                row.CourseProjectHours += hours;
+                row.LaboratoryHours += roundedHours;
                 break;
 
             case LoadAssignmentElementType.Consultation:
-                row.ConsultationHours += hours;
-                break;
-
-            case LoadAssignmentElementType.Credit:
-                row.CreditHours += hours;
+                row.ConsultationHours += roundedHours;
                 break;
 
             case LoadAssignmentElementType.Exam:
-                row.ExamHours += hours;
+                row.ExamHours += roundedHours;
                 break;
 
-            case LoadAssignmentElementType.PracticeWork:
-                row.PracticeHoursGuidance += hours;
-                break;
-
-            case LoadAssignmentElementType.GiaWork:
-                row.GiaHours += hours;
+            case LoadAssignmentElementType.Credit:
+                row.CreditHours += roundedHours;
                 break;
 
             case LoadAssignmentElementType.CourseWork:
-                row.OtherHours += hours;
+                row.CourseWorkHours += roundedHours;
+                break;
+
+            case LoadAssignmentElementType.CourseProject:
+                row.CourseProjectHours += roundedHours;
+                break;
+
+            case LoadAssignmentElementType.PracticeWork:
+                row.PracticeHoursGuidance += roundedHours;
+                break;
+
+            case LoadAssignmentElementType.GiaWork:
+                row.GiaHours += roundedHours;
                 break;
         }
     }
@@ -678,6 +712,7 @@ public class IndividualPlanService
         }
 
         var match = Regex.Match(value, @"\d+");
+
         if (match.Success && int.TryParse(match.Value, out var semesterNumber))
         {
             return semesterNumber % 2 == 1
@@ -690,10 +725,10 @@ public class IndividualPlanService
 
     private static string BuildRowKey(
         LoadAssignmentSourceType sourceType,
-        int sourceAcademicPlanRecordId,
+        int sourceRowId,
         SemesterKind semester)
     {
-        return $"{sourceType}_{sourceAcademicPlanRecordId}_{semester}";
+        return $"{sourceType}_{sourceRowId}_{semester}";
     }
 
     private static string BuildLecturerFullName(Lecturer? lecturer)
@@ -703,12 +738,18 @@ public class IndividualPlanService
             return string.Empty;
         }
 
-        return $"{lecturer.LastName} {lecturer.FirstName} {lecturer.Patronymic}".Trim();
+        return string.Join(" ", new[]
+        {
+            lecturer.LastName,
+            lecturer.FirstName,
+            lecturer.Patronymic
+        }.Where(x => !string.IsNullOrWhiteSpace(x)));
     }
 
     private static string BuildSafeFileNamePart(string value)
     {
         var invalidChars = Path.GetInvalidFileNameChars();
+
         var sanitized = new string(value
             .Select(ch => invalidChars.Contains(ch) ? '_' : ch)
             .ToArray());
@@ -721,23 +762,43 @@ public class IndividualPlanService
         return sanitized.Trim('_');
     }
 
+    private static int RoundHoursToInt(decimal hours)
+    {
+        return (int)Math.Round(hours, MidpointRounding.AwayFromZero);
+    }
+
     private sealed class IndividualPlanRowData
     {
         public string Key { get; set; } = string.Empty;
+
         public SemesterKind Semester { get; set; }
+
         public int SortOrder { get; set; }
+
         public string DisplayText { get; set; } = string.Empty;
+
         public int StudentsCount { get; set; }
 
         public int LectureHours { get; set; }
+
         public int PracticeHours { get; set; }
+
         public int LaboratoryHours { get; set; }
+
+        public int CourseWorkHours { get; set; }
+
         public int CourseProjectHours { get; set; }
+
         public int ConsultationHours { get; set; }
+
         public int CreditHours { get; set; }
+
         public int ExamHours { get; set; }
+
         public int PracticeHoursGuidance { get; set; }
+
         public int GiaHours { get; set; }
+
         public int OtherHours { get; set; }
     }
 
@@ -751,9 +812,13 @@ public class IndividualPlanService
 public sealed class IndividualPlanExportResult
 {
     public bool Success { get; private set; }
+
     public string Message { get; private set; } = string.Empty;
+
     public byte[]? Content { get; private set; }
+
     public string FileName { get; private set; } = string.Empty;
+
     public string ContentType { get; private set; } = string.Empty;
 
     public static IndividualPlanExportResult Ok(
