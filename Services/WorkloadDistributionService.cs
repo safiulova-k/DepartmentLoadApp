@@ -311,6 +311,7 @@ namespace DepartmentLoadApp.Services
                     lecturerId);
             }
 
+
             selectedItemKeys ??= new List<string>();
             giaStudents ??= new List<GiaStudentsAssignmentInputModel>();
 
