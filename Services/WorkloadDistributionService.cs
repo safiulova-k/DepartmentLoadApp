@@ -76,11 +76,11 @@ namespace DepartmentLoadApp.Services
             var items = await BuildDistributableItemsAsync(academicYear, assignments);
 
             var itemMap = items
-                .GroupBy(BuildItemKey)
-                .ToDictionary(x => x.Key, x => x.First());
+              .GroupBy(BuildItemKey)
+              .ToDictionary(x => x.Key, x => x.First());
 
             var validAssignments = assignments
-                .Where(x => itemMap.ContainsKey(BuildAssignmentKey(x)))
+                .Where(x => FindItemForAssignment(items, x) != null)
                 .ToList();
 
             var selectedId = selectedLecturerId;
@@ -111,7 +111,8 @@ namespace DepartmentLoadApp.Services
                     .ToList(),
                 RemainingItems = items
                     .Where(x => x.RemainingHours > 0)
-                    .OrderBy(x => x.SemesterName)
+                    .OrderBy(x => GetSemesterSortOrder(x.SemesterName))
+                    .ThenBy(x => x.SemesterName)
                     .ThenBy(x => x.Title)
                     .ThenBy(x => x.ElementDisplayName)
                     .ThenBy(x => x.UnitName)
@@ -147,7 +148,8 @@ namespace DepartmentLoadApp.Services
                 var availableForLecturer = items
                     .Where(x => x.RemainingHours > 0)
                     .Where(x => !(isAssistant && x.LoadElementType == LoadAssignmentElementType.Lecture))
-                    .OrderBy(x => x.SemesterName)
+                    .OrderBy(x => GetSemesterSortOrder(x.SemesterName))
+                    .ThenBy(x => x.SemesterName)
                     .ThenBy(x => x.Title)
                     .ThenBy(x => x.ElementDisplayName)
                     .ThenBy(x => x.UnitName)
@@ -162,7 +164,9 @@ namespace DepartmentLoadApp.Services
 
                 foreach (var assignment in lecturerAssignments)
                 {
-                    if (!itemMap.TryGetValue(BuildAssignmentKey(assignment), out var item))
+                    var item = FindItemForAssignment(items, assignment);
+
+                    if (item == null)
                     {
                         continue;
                     }
@@ -175,8 +179,12 @@ namespace DepartmentLoadApp.Services
                         Title = item.Title,
                         Subtitle = item.Subtitle,
                         ElementDisplayName = item.ElementDisplayName,
-                        UnitName = assignment.UnitName,
-                        StudentsCount = assignment.StudentsCount,
+                        UnitName = string.IsNullOrWhiteSpace(assignment.UnitName)
+                            ? item.UnitName
+                            : assignment.UnitName,
+                        StudentsCount = assignment.StudentsCount > 0
+                            ? assignment.StudentsCount
+                            : item.StudentsCount,
                         AssignedHours = assignment.AssignedHours,
                         TotalItemHours = item.TotalHours,
                         RemainingItemHours = item.RemainingHours
@@ -505,25 +513,23 @@ namespace DepartmentLoadApp.Services
                 .ToDictionary(x => x.Key, x => x.ToList());
 
             var disciplineRows = await _context.WorkloadRows
-                .AsNoTracking()
-                .Where(x => x.AcademicYear == academicYear)
-                .OrderBy(x => x.Course)
-                .ThenBy(x => x.SemesterName)
-                .ThenBy(x => x.DisciplineName)
-                .ThenBy(x => x.DirectionCode)
-                .ToListAsync();
+     .AsNoTracking()
+     .Where(x => x.AcademicYear == academicYear)
+     .OrderBy(x => x.Course)
+     .ThenBy(x => x.SemesterName)
+     .ThenBy(x => x.DisciplineName)
+     .ThenBy(x => x.DirectionCode)
+     .ToListAsync();
 
-            var calculatedDisciplineRows = await _workloadCalculationService
+            var lectureRows = await _workloadCalculationService
                 .BuildRowsForTableAsync(disciplineRows);
 
-            foreach (var row in calculatedDisciplineRows)
+            foreach (var row in lectureRows)
             {
-                var rowGroups = GetGroupsForRow(row, groupItems);
-
                 AddDisciplineItems(
                     result,
                     row,
-                    rowGroups,
+                    GetGroupsForRow(row, groupItems),
                     subgroupsByGroupId,
                     LoadAssignmentElementType.Lecture,
                     "Лекции",
@@ -531,6 +537,11 @@ namespace DepartmentLoadApp.Services
                     row.LectureTotalHours,
                     norms.GetValueOrDefault(LectureNormName),
                     forceGroupDistribution: false);
+            }
+
+            foreach (var row in disciplineRows)
+            {
+                var rowGroups = GetGroupsForRow(row, groupItems);
 
                 AddDisciplineItems(
                     result,
@@ -637,6 +648,7 @@ namespace DepartmentLoadApp.Services
 
             return result
                 .OrderBy(x => x.SourceType)
+                .ThenBy(x => GetSemesterSortOrder(x.SemesterName))
                 .ThenBy(x => x.SemesterName)
                 .ThenBy(x => x.Title)
                 .ThenBy(x => x.ElementDisplayName)
@@ -867,27 +879,37 @@ namespace DepartmentLoadApp.Services
             };
         }
 
-        private void ApplyAssignedInfo(
-            List<DistributableLoadItem> items,
-            List<LecturerLoadAssignment> assignments)
+        private static void ApplyAssignedInfo(
+       List<DistributableLoadItem> items,
+       List<LecturerLoadAssignment> assignments)
         {
             foreach (var item in items)
             {
-                var assignedForItem = assignments
-                    .Where(x => x.SourceType == item.SourceType)
-                    .Where(x => x.SourceRowId == item.SourceRowId)
-                    .Where(x => x.LoadElementType == item.LoadElementType)
-                    .Where(x => x.DistributionUnitType == item.DistributionUnitType)
-                    .Where(x => x.StudentGroupId == item.StudentGroupId)
-                    .Where(x => x.ContingentSubgroupId == item.ContingentSubgroupId)
-                    .ToList();
+                item.AssignedHours = 0;
+                item.RemainingHours = item.TotalHours;
 
-                item.AssignedHours = assignedForItem.Sum(x => x.AssignedHours);
+                if (item.SourceType == LoadAssignmentSourceType.Gia)
+                {
+                    item.AssignedStudentsCount = 0;
+                    item.RemainingStudentsCount = item.TotalStudentsCount;
+                }
+            }
+
+            foreach (var assignment in assignments)
+            {
+                var item = FindItemForAssignment(items, assignment);
+
+                if (item == null)
+                {
+                    continue;
+                }
+
+                item.AssignedHours += assignment.AssignedHours;
                 item.RemainingHours = Math.Max(0, item.TotalHours - item.AssignedHours);
 
                 if (item.SourceType == LoadAssignmentSourceType.Gia)
                 {
-                    item.AssignedStudentsCount = assignedForItem.Sum(x => x.StudentsCount);
+                    item.AssignedStudentsCount += assignment.StudentsCount;
                     item.RemainingStudentsCount = Math.Max(
                         0,
                         item.TotalStudentsCount - item.AssignedStudentsCount);
@@ -1009,22 +1031,23 @@ namespace DepartmentLoadApp.Services
         }
 
         private static List<WorkloadDistributionSemesterGroupViewModel> BuildSemesterGroups(
-            List<DistributableLoadItem> items)
+       List<DistributableLoadItem> items)
         {
             return items
                 .Where(x => x.SourceType != LoadAssignmentSourceType.Gia)
                 .GroupBy(x => x.SemesterName)
-                .OrderBy(x => x.Key)
+                .OrderBy(x => GetSemesterSortOrder(x.Key))
+                .ThenBy(x => x.Key)
                 .Select(semesterGroup => new WorkloadDistributionSemesterGroupViewModel
                 {
                     SemesterName = semesterGroup.Key,
                     Disciplines = semesterGroup
-                        .GroupBy(x => new { x.Title, x.Subtitle })
-                        .OrderBy(x => x.Key.Title)
+                        .GroupBy(BuildDisciplineAccordionKey)
+                        .OrderBy(x => x.First().Title)
                         .Select(disciplineGroup => new WorkloadDistributionDisciplineGroupViewModel
                         {
-                            Title = disciplineGroup.Key.Title,
-                            Subtitle = disciplineGroup.Key.Subtitle,
+                            Title = disciplineGroup.First().Title,
+                            Subtitle = BuildDisciplineAccordionSubtitle(disciplineGroup),
                             WorkTypes = disciplineGroup
                                 .GroupBy(x => x.ElementDisplayName)
                                 .OrderBy(x => x.Key)
@@ -1135,6 +1158,78 @@ namespace DepartmentLoadApp.Services
                 assignment.ContingentSubgroupId);
         }
 
+        private static DistributableLoadItem? FindItemForAssignment(
+    List<DistributableLoadItem> items,
+    LecturerLoadAssignment assignment)
+        {
+            var exactKey = BuildAssignmentKey(assignment);
+
+            var exactItem = items.FirstOrDefault(x => BuildItemKey(x) == exactKey);
+
+            if (exactItem != null)
+            {
+                return exactItem;
+            }
+
+            return items.FirstOrDefault(x => IsBroadAssignmentMatch(x, assignment));
+        }
+
+        private static bool IsBroadAssignmentMatch(
+            DistributableLoadItem item,
+            LecturerLoadAssignment assignment)
+        {
+            if (item.SourceType != assignment.SourceType)
+            {
+                return false;
+            }
+
+            if (item.LoadElementType != assignment.LoadElementType)
+            {
+                return false;
+            }
+
+            if (assignment.SourceRowId > 0 && item.SourceRowId == assignment.SourceRowId)
+            {
+                return true;
+            }
+
+            if (assignment.SourceAcademicPlanRecordId > 0 &&
+                item.SourceAcademicPlanRecordId == assignment.SourceAcademicPlanRecordId)
+            {
+                return true;
+            }
+
+            return false;
+        }
+        private static int GetSemesterSortOrder(string? semesterName)
+        {
+            if (string.IsNullOrWhiteSpace(semesterName))
+            {
+                return 99;
+            }
+
+            var value = semesterName.Trim().ToLowerInvariant();
+
+            if (value.Contains("осень") ||
+                value.Contains("осен") ||
+                value.Contains("1 сем") ||
+                value.Contains("1-й сем") ||
+                value.Contains("семестр 1"))
+            {
+                return 1;
+            }
+
+            if (value.Contains("весна") ||
+                value.Contains("весен") ||
+                value.Contains("2 сем") ||
+                value.Contains("2-й сем") ||
+                value.Contains("семестр 2"))
+            {
+                return 2;
+            }
+
+            return 50;
+        }
         private static string BuildKey(
             LoadAssignmentSourceType sourceType,
             int sourceRowId,
@@ -1277,7 +1372,89 @@ namespace DepartmentLoadApp.Services
                 _ => "Неизвестно"
             };
         }
+        private static string BuildDisciplineAccordionKey(DistributableLoadItem item)
+        {
+            return string.Join("|", new[]
+            {
+        NormalizeAccordionKey(item.Title),
+        NormalizeAccordionKey(ExtractCoursePart(item.Subtitle)),
+        NormalizeAccordionKey(item.SemesterName)
+    });
+        }
 
+        private static string BuildDisciplineAccordionSubtitle(
+            IEnumerable<DistributableLoadItem> items)
+        {
+            var itemList = items.ToList();
+
+            if (itemList.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            var first = itemList[0];
+
+            var directions = itemList
+                .SelectMany(x => ExtractDirectionParts(x.Subtitle))
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x)
+                .ToList();
+
+            var coursePart = ExtractCoursePart(first.Subtitle);
+            var semesterPart = first.SemesterName;
+
+            return string.Join(" · ", new[]
+            {
+        directions.Count > 0 ? string.Join(", ", directions) : null,
+        coursePart,
+        semesterPart
+    }.Where(x => !string.IsNullOrWhiteSpace(x)));
+        }
+
+        private static List<string> ExtractDirectionParts(string? subtitle)
+        {
+            if (string.IsNullOrWhiteSpace(subtitle))
+            {
+                return new List<string>();
+            }
+
+            var firstPart = subtitle
+                .Split('·', StringSplitOptions.RemoveEmptyEntries)
+                .FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(firstPart))
+            {
+                return new List<string>();
+            }
+
+            return firstPart
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
+        }
+
+        private static string ExtractCoursePart(string? subtitle)
+        {
+            if (string.IsNullOrWhiteSpace(subtitle))
+            {
+                return string.Empty;
+            }
+
+            return subtitle
+                .Split('·', StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .FirstOrDefault(x => x.Contains("курс", StringComparison.OrdinalIgnoreCase))
+                ?? string.Empty;
+        }
+
+        private static string NormalizeAccordionKey(string? value)
+        {
+            return string.IsNullOrWhiteSpace(value)
+                ? string.Empty
+                : value.Trim().ToLowerInvariant();
+        }
         private sealed class DistributableLoadItem
         {
             public LoadAssignmentSourceType SourceType { get; set; }
@@ -1382,4 +1559,5 @@ namespace DepartmentLoadApp.Services
             };
         }
     }
+
 }

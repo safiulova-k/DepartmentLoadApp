@@ -436,40 +436,12 @@ else
             .ThenBy(x => x.ElementDisplayName)
             .ThenBy(x => x.UnitName)
             .ToList();
+            var autumnSubjectGroups = BuildAssignedSubjectGroups(autumnAssignments);
 
-            var autumnSubjectGroups = autumnAssignments
-            .GroupBy(x => new { x.Title, x.Subtitle })
-            .Select(x => new
-            {
-                x.Key.Title,
-                x.Key.Subtitle,
-                Items = x.ToList()
-            })
-            .OrderBy(x => x.Title)
-            .ToList();
+            var springSubjectGroups = BuildAssignedSubjectGroups(
+            springAssignments.Concat(otherAssignments));
 
-            var springSubjectGroups = springAssignments
-            .Concat(otherAssignments)
-            .GroupBy(x => new { x.Title, x.Subtitle })
-            .Select(x => new
-            {
-                x.Key.Title,
-                x.Key.Subtitle,
-                Items = x.ToList()
-            })
-            .OrderBy(x => x.Title)
-            .ToList();
-
-            var giaSubjectGroups = giaAssignments
-            .GroupBy(x => new { x.Title, x.Subtitle })
-            .Select(x => new
-            {
-                x.Key.Title,
-                x.Key.Subtitle,
-                Items = x.ToList()
-            })
-            .OrderBy(x => x.Title)
-            .ToList();
+            var giaSubjectGroups = BuildAssignedSubjectGroups(giaAssignments);
 
             var autumnSectionId = $"viewAutumn_{lecturer.LecturerId}";
             var springSectionId = $"viewSpring_{lecturer.LecturerId}";
@@ -1510,11 +1482,17 @@ else
 
             event.preventDefault();
 
+            if (form.dataset.deleting === "true") {
+                return;
+            }
+
             const chip = form.closest(".js-assigned-chip");
             const modal = form.closest(".js-view-load-modal");
             const lecturerId = form.dataset.lecturerId;
             const hours = parseNumber(form.dataset.hours);
             const submitButton = form.querySelector("button[type='submit']");
+
+            form.dataset.deleting = "true";
 
             if (submitButton) {
                 submitButton.disabled = true;
@@ -1532,6 +1510,13 @@ else
                         throw new Error("Ошибка удаления нагрузки.");
                     }
 
+                    return response.json();
+                })
+                .then(function (data) {
+                    if (!data || data.success !== true) {
+                        throw new Error(data && data.message ? data.message : "Ошибка удаления нагрузки.");
+                    }
+
                     updatePageHoursAfterDelete(hours);
                     updateLecturerHoursAfterDelete(lecturerId, hours);
                     updateAddModalAfterDelete(lecturerId, hours);
@@ -1544,14 +1529,27 @@ else
                         cleanupAfterChipDelete(chip);
                     }
 
+                    if (modal) {
+                        modal.querySelectorAll(".js-delete-assignment-form").forEach(function (deleteForm) {
+                            deleteForm.dataset.deleting = "false";
+
+                            const button = deleteForm.querySelector("button[type='submit']");
+                            if (button) {
+                                button.disabled = false;
+                            }
+                        });
+                    }
+
                     applyLecturerFiltersAndSort();
                 })
-                .catch(function () {
+                .catch(function (error) {
+                    form.dataset.deleting = "false";
+
                     if (submitButton) {
                         submitButton.disabled = false;
                     }
 
-                    alert("Не удалось удалить нагрузку. Обновите страницу и попробуйте ещё раз.");
+                    alert(error.message || "Не удалось удалить нагрузку. Обновите страницу и попробуйте ещё раз.");
                 });
         });
 
@@ -1679,5 +1677,139 @@ else
                || subtitle.Contains("2-й сем", StringComparison.OrdinalIgnoreCase)
                || subtitle.Contains("2 семестр", StringComparison.OrdinalIgnoreCase)
                || subtitle.Contains("семестр 2", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed class AssignedSubjectGroup
+    {
+        public string Title { get; set; } = string.Empty;
+
+        public string Subtitle { get; set; } = string.Empty;
+
+        public List<DepartmentLoadApp.ViewModels.WorkloadDistribution.WorkloadDistributionAssignmentViewModel> Items { get; set; } = new();
+    }
+
+    private static List<AssignedSubjectGroup> BuildAssignedSubjectGroups(
+        IEnumerable<DepartmentLoadApp.ViewModels.WorkloadDistribution.WorkloadDistributionAssignmentViewModel> assignments)
+    {
+        return assignments
+            .GroupBy(BuildAssignedSubjectKey)
+            .Select(group =>
+            {
+                var items = group
+                    .OrderBy(x => x.ElementDisplayName)
+                    .ThenBy(x => x.UnitName)
+                    .ToList();
+
+                return new AssignedSubjectGroup
+                    {
+                        Title = items.First().Title,
+                        Subtitle = BuildAssignedSubjectSubtitle(items),
+                        Items = items
+                    };
+            })
+            .OrderBy(x => x.Title)
+            .ThenBy(x => x.Subtitle)
+            .ToList();
+    }
+
+    private static string BuildAssignedSubjectKey(
+        DepartmentLoadApp.ViewModels.WorkloadDistribution.WorkloadDistributionAssignmentViewModel item)
+    {
+        return string.Join("|", new[]
+        {
+        NormalizeAssignedSubjectKey(item.Title),
+        NormalizeAssignedSubjectKey(ExtractAssignedCoursePart(item.Subtitle)),
+        NormalizeAssignedSubjectKey(item.SemesterName)
+    });
+    }
+
+    private static string BuildAssignedSubjectSubtitle(
+        IEnumerable<DepartmentLoadApp.ViewModels.WorkloadDistribution.WorkloadDistributionAssignmentViewModel> items)
+    {
+        var itemList = items.ToList();
+
+        if (itemList.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var first = itemList[0];
+
+        var directions = itemList
+            .SelectMany(x => ExtractAssignedDirectionParts(x.Subtitle))
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x)
+            .ToList();
+
+        var coursePart = ExtractAssignedCoursePart(first.Subtitle);
+        var semesterPart = !string.IsNullOrWhiteSpace(first.SemesterName)
+            ? first.SemesterName
+            : ExtractAssignedSemesterPart(first.Subtitle);
+
+        return string.Join(" · ", new[]
+        {
+        directions.Count > 0 ? string.Join(", ", directions) : null,
+        coursePart,
+        semesterPart
+    }.Where(x => !string.IsNullOrWhiteSpace(x)));
+    }
+
+    private static List<string> ExtractAssignedDirectionParts(string? subtitle)
+    {
+        if (string.IsNullOrWhiteSpace(subtitle))
+        {
+            return new List<string>();
+        }
+
+        var firstPart = subtitle
+            .Split('·', StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault();
+
+        if (string.IsNullOrWhiteSpace(firstPart))
+        {
+            return new List<string>();
+        }
+
+        return firstPart
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(x => x.Trim())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToList();
+    }
+
+    private static string ExtractAssignedCoursePart(string? subtitle)
+    {
+        if (string.IsNullOrWhiteSpace(subtitle))
+        {
+            return string.Empty;
+        }
+
+        return subtitle
+            .Split('·', StringSplitOptions.RemoveEmptyEntries)
+            .Select(x => x.Trim())
+            .FirstOrDefault(x => x.Contains("курс", StringComparison.OrdinalIgnoreCase))
+            ?? string.Empty;
+    }
+
+    private static string ExtractAssignedSemesterPart(string? subtitle)
+    {
+        if (string.IsNullOrWhiteSpace(subtitle))
+        {
+            return string.Empty;
+        }
+
+        return subtitle
+            .Split('·', StringSplitOptions.RemoveEmptyEntries)
+            .Select(x => x.Trim())
+            .LastOrDefault()
+            ?? string.Empty;
+    }
+
+    private static string NormalizeAssignedSubjectKey(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : value.Trim().ToLowerInvariant();
     }
 }

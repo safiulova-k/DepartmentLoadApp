@@ -6,6 +6,8 @@ using DepartmentLoadApp.Helpers;
 using DepartmentLoadApp.Models;
 using DepartmentLoadApp.Models.Core;
 using DepartmentLoadApp.Models.Enums;
+using DepartmentLoadApp.Models.Practice;
+using DepartmentLoadApp.Models.Workload;
 using DepartmentLoadApp.ViewModels.IndividualPlans;
 using Microsoft.EntityFrameworkCore;
 
@@ -193,6 +195,7 @@ public class IndividualPlanService
                     CompressionLevel.Fastest);
 
                 await using var entryStream = entry.Open();
+
                 await entryStream.WriteAsync(
                     fileResult.Content,
                     0,
@@ -226,12 +229,6 @@ public class IndividualPlanService
             return new List<IndividualPlanRowData>();
         }
 
-        var disciplineRowIds = assignments
-            .Where(x => x.SourceType == LoadAssignmentSourceType.Discipline)
-            .Select(x => x.SourceRowId)
-            .Distinct()
-            .ToList();
-
         var practiceRowIds = assignments
             .Where(x => x.SourceType == LoadAssignmentSourceType.Practice)
             .Select(x => x.SourceRowId)
@@ -244,14 +241,23 @@ public class IndividualPlanService
             .Distinct()
             .ToList();
 
-        var disciplineRows = await _context.WorkloadRows
+        var allDisciplineRows = await _context.WorkloadRows
             .AsNoTracking()
-            .Where(x => x.AcademicYear == academicYear && disciplineRowIds.Contains(x.Id))
+            .Where(x => x.AcademicYear == academicYear)
             .ToListAsync();
 
-        var disciplineMap = disciplineRows
+        var disciplineMap = allDisciplineRows
             .GroupBy(x => x.Id)
             .ToDictionary(x => x.Key, x => x.First());
+
+        var disciplineMergeGroups = allDisciplineRows
+            .GroupBy(BuildDisciplineMergeKey)
+            .ToDictionary(
+                x => x.Key,
+                x => x
+                    .OrderBy(row => row.DirectionCode)
+                    .ThenBy(row => row.Id)
+                    .ToList());
 
         var practiceRows = await _context.PracticeWorkloadRows
             .AsNoTracking()
@@ -271,6 +277,38 @@ public class IndividualPlanService
             .GroupBy(x => x.Id)
             .ToDictionary(x => x.Key, x => x.First());
 
+        var studentsCountByDirectionAndCourse =
+            await LoadStudentsCountByDirectionAndCourseAsync();
+
+        var directions = await _context.EducationDirections
+            .AsNoTracking()
+            .ToListAsync();
+
+        var directionMap = directions
+            .Where(x => !string.IsNullOrWhiteSpace(x.Cipher))
+            .GroupBy(x => NormalizeKey(x.Cipher))
+            .ToDictionary(
+                x => x.Key,
+                x => x.First(),
+                StringComparer.OrdinalIgnoreCase);
+
+        var studentGroups = await (
+                from groupItem in _context.StudentGroupsCore.AsNoTracking()
+                join direction in _context.EducationDirections.AsNoTracking()
+                    on groupItem.EducationDirectionId equals direction.Id
+                select new StudentGroupPlanInfo
+                {
+                    Id = groupItem.Id,
+                    DirectionCode = direction.Cipher,
+                    Course = (int)groupItem.Course,
+                    StudentsCount = groupItem.StudentCount
+                })
+            .ToListAsync();
+
+        var studentGroupMap = studentGroups
+            .GroupBy(x => x.Id)
+            .ToDictionary(x => x.Key, x => x.First());
+
         var result = new Dictionary<string, IndividualPlanRowData>();
 
         foreach (var assignment in assignments)
@@ -279,32 +317,84 @@ public class IndividualPlanService
             {
                 case LoadAssignmentSourceType.Discipline:
                     {
-                        if (!disciplineMap.TryGetValue(assignment.SourceRowId, out var row))
+                        if (!disciplineMap.TryGetValue(assignment.SourceRowId, out var sourceRow))
                         {
                             continue;
                         }
 
-                        var semester = ResolveSemester(row.SemesterName);
-                        var key = BuildRowKey(
-                            assignment.SourceType,
-                            assignment.SourceRowId,
-                            semester);
+                        var semester = ResolveSemester(sourceRow.SemesterName);
+                        var mergeKey = BuildDisciplineMergeKey(sourceRow);
 
-                        if (!result.TryGetValue(key, out var item))
+                        var mergedDirectionRows = disciplineMergeGroups.TryGetValue(mergeKey, out var rowsInMergedFlow)
+                            ? rowsInMergedFlow
+                            : new List<WorkloadRow> { sourceRow };
+
+                        if (assignment.LoadElementType == LoadAssignmentElementType.Lecture &&
+                            mergedDirectionRows.Count > 1)
                         {
-                            item = new IndividualPlanRowData
+                            for (var i = 0; i < mergedDirectionRows.Count; i++)
                             {
-                                Key = key,
-                                Semester = semester,
-                                SortOrder = 1,
-                                DisplayText = $"{row.DirectionCode} {row.DisciplineName}",
-                                StudentsCount = row.StudentsCount
-                            };
+                                var directionRow = mergedDirectionRows[i];
 
-                            result[key] = item;
+                                var item = GetOrCreatePlanRow(
+                                    result,
+                                    LoadAssignmentSourceType.Discipline,
+                                    directionRow.Id,
+                                    semester,
+                                    directionRow.DirectionCode,
+                                    sortOrder: 1,
+                                    displayText: BuildDisplayText(
+                                        directionRow.DirectionCode,
+                                        directionRow.Course,
+                                        directionRow.DisciplineName,
+                                        directionMap),
+                                    studentsCount: GetStudentsCountForDirectionAndCourse(
+                                        directionRow.DirectionCode,
+                                        directionRow.Course,
+                                        directionRow.StudentsCount,
+                                        studentsCountByDirectionAndCourse));
+
+                                if (i == 0)
+                                {
+                                    AddHoursToRow(
+                                        item,
+                                        assignment.LoadElementType,
+                                        assignment.AssignedHours);
+                                }
+                            }
+
+                            break;
                         }
 
-                        AddHoursToRow(item, assignment.LoadElementType, assignment.AssignedHours);
+                        var targetRow = ResolveDisciplineTargetRow(
+                            assignment,
+                            sourceRow,
+                            mergedDirectionRows,
+                            studentGroupMap);
+
+                        var disciplineItem = GetOrCreatePlanRow(
+                            result,
+                            LoadAssignmentSourceType.Discipline,
+                            targetRow.Id,
+                            semester,
+                            targetRow.DirectionCode,
+                            sortOrder: 1,
+                            displayText: BuildDisplayText(
+                                targetRow.DirectionCode,
+                                targetRow.Course,
+                                targetRow.DisciplineName,
+                                directionMap),
+                            studentsCount: GetStudentsCountForDirectionAndCourse(
+                                targetRow.DirectionCode,
+                                targetRow.Course,
+                                targetRow.StudentsCount,
+                                studentsCountByDirectionAndCourse));
+
+                        AddHoursToRow(
+                            disciplineItem,
+                            assignment.LoadElementType,
+                            assignment.AssignedHours);
+
                         break;
                     }
 
@@ -316,26 +406,30 @@ public class IndividualPlanService
                         }
 
                         var semester = ResolveSemester(row.SemesterName);
-                        var key = BuildRowKey(
-                            assignment.SourceType,
-                            assignment.SourceRowId,
-                            semester);
 
-                        if (!result.TryGetValue(key, out var item))
-                        {
-                            item = new IndividualPlanRowData
-                            {
-                                Key = key,
-                                Semester = semester,
-                                SortOrder = 2,
-                                DisplayText = $"{row.DirectionCode} {row.PracticeName}",
-                                StudentsCount = row.StudentsCount
-                            };
+                        var item = GetOrCreatePlanRow(
+                            result,
+                            LoadAssignmentSourceType.Practice,
+                            row.Id,
+                            semester,
+                            row.DirectionCode,
+                            sortOrder: 2,
+                            displayText: BuildDisplayText(
+                                row.DirectionCode,
+                                row.Course,
+                                row.PracticeName,
+                                directionMap),
+                            studentsCount: GetStudentsCountForDirectionAndCourse(
+                                row.DirectionCode,
+                                row.Course,
+                                row.StudentsCount,
+                                studentsCountByDirectionAndCourse));
 
-                            result[key] = item;
-                        }
+                        AddHoursToRow(
+                            item,
+                            assignment.LoadElementType,
+                            assignment.AssignedHours);
 
-                        AddHoursToRow(item, assignment.LoadElementType, assignment.AssignedHours);
                         break;
                     }
 
@@ -347,32 +441,32 @@ public class IndividualPlanService
                         }
 
                         var semester = ResolveSemester(row.SemesterName);
-                        var key = BuildRowKey(
-                            assignment.SourceType,
-                            assignment.SourceRowId,
-                            semester);
 
-                        if (!result.TryGetValue(key, out var item))
-                        {
-                            item = new IndividualPlanRowData
-                            {
-                                Key = key,
-                                Semester = semester,
-                                SortOrder = 3,
-                                DisplayText = $"{row.DirectionCode} {row.GiaSection}: {row.WorkName}",
-                                StudentsCount = assignment.StudentsCount > 0
-                                    ? assignment.StudentsCount
-                                    : row.StudentsCount
-                            };
+                        var item = GetOrCreatePlanRow(
+                            result,
+                            LoadAssignmentSourceType.Gia,
+                            row.Id,
+                            semester,
+                            row.DirectionCode,
+                            sortOrder: 3,
+                            displayText: BuildDisplayText(
+                                row.DirectionCode,
+                                row.Course,
+                                $"{row.GiaSection}: {row.WorkName}",
+                                directionMap),
+                            studentsCount: assignment.StudentsCount > 0
+                                ? assignment.StudentsCount
+                                : GetStudentsCountForDirectionAndCourse(
+                                    row.DirectionCode,
+                                    row.Course,
+                                    row.StudentsCount,
+                                    studentsCountByDirectionAndCourse));
 
-                            result[key] = item;
-                        }
-                        else if (assignment.StudentsCount > 0)
-                        {
-                            item.StudentsCount += assignment.StudentsCount;
-                        }
+                        AddHoursToRow(
+                            item,
+                            assignment.LoadElementType,
+                            assignment.AssignedHours);
 
-                        AddHoursToRow(item, assignment.LoadElementType, assignment.AssignedHours);
                         break;
                     }
             }
@@ -726,9 +820,167 @@ public class IndividualPlanService
     private static string BuildRowKey(
         LoadAssignmentSourceType sourceType,
         int sourceRowId,
-        SemesterKind semester)
+        SemesterKind semester,
+        string directionCode)
     {
-        return $"{sourceType}_{sourceRowId}_{semester}";
+        return $"{sourceType}_{sourceRowId}_{semester}_{NormalizeKey(directionCode)}";
+    }
+
+    private static IndividualPlanRowData GetOrCreatePlanRow(
+        Dictionary<string, IndividualPlanRowData> result,
+        LoadAssignmentSourceType sourceType,
+        int sourceRowId,
+        SemesterKind semester,
+        string directionCode,
+        int sortOrder,
+        string displayText,
+        int studentsCount)
+    {
+        var key = BuildRowKey(
+            sourceType,
+            sourceRowId,
+            semester,
+            directionCode);
+
+        if (!result.TryGetValue(key, out var item))
+        {
+            item = new IndividualPlanRowData
+            {
+                Key = key,
+                Semester = semester,
+                SortOrder = sortOrder,
+                DisplayText = displayText,
+                StudentsCount = studentsCount
+            };
+
+            result[key] = item;
+        }
+        else if (studentsCount > item.StudentsCount)
+        {
+            item.StudentsCount = studentsCount;
+        }
+
+        return item;
+    }
+
+    private static WorkloadRow ResolveDisciplineTargetRow(
+        LecturerLoadAssignment assignment,
+        WorkloadRow sourceRow,
+        List<WorkloadRow> mergedDirectionRows,
+        Dictionary<int, StudentGroupPlanInfo> studentGroupMap)
+    {
+        if (assignment.StudentGroupId.HasValue &&
+            studentGroupMap.TryGetValue(assignment.StudentGroupId.Value, out var groupInfo))
+        {
+            var rowByGroupDirection = mergedDirectionRows
+                .FirstOrDefault(x =>
+                    string.Equals(
+                        NormalizeKey(x.DirectionCode),
+                        NormalizeKey(groupInfo.DirectionCode),
+                        StringComparison.OrdinalIgnoreCase) &&
+                    x.Course == groupInfo.Course);
+
+            if (rowByGroupDirection != null)
+            {
+                return rowByGroupDirection;
+            }
+        }
+
+        return sourceRow;
+    }
+
+    private static string BuildDisplayText(
+        string directionCode,
+        int course,
+        string workName,
+        Dictionary<string, EducationDirection> directionMap)
+    {
+        var flowName = BuildFlowName(
+            directionCode,
+            course,
+            directionMap);
+
+        return $"{directionCode} {flowName} {workName}".Trim();
+    }
+
+    private static string BuildFlowName(
+        string directionCode,
+        int course,
+        Dictionary<string, EducationDirection> directionMap)
+    {
+        if (directionMap.TryGetValue(NormalizeKey(directionCode), out var direction) &&
+            !string.IsNullOrWhiteSpace(direction.ShortName))
+        {
+            return $"{direction.ShortName}-{course}";
+        }
+
+        return $"{course} курс";
+    }
+
+    private static string BuildDisciplineMergeKey(WorkloadRow row)
+    {
+        return string.Join("|", new[]
+        {
+            NormalizeKey(row.AcademicYear),
+            NormalizeKey(row.EducationLevel),
+            NormalizeKey(row.EducationForm),
+            NormalizeKey(row.SemesterName),
+            NormalizeKey(row.DisciplineName),
+            row.Course.ToString()
+        });
+    }
+
+    private async Task<Dictionary<string, int>> LoadStudentsCountByDirectionAndCourseAsync()
+    {
+        var groups = await (
+                from groupItem in _context.StudentGroupsCore.AsNoTracking()
+                join direction in _context.EducationDirections.AsNoTracking()
+                    on groupItem.EducationDirectionId equals direction.Id
+                select new
+                {
+                    DirectionCode = direction.Cipher,
+                    Course = (int)groupItem.Course,
+                    StudentsCount = groupItem.StudentCount
+                })
+            .ToListAsync();
+
+        return groups
+            .Where(x => !string.IsNullOrWhiteSpace(x.DirectionCode))
+            .GroupBy(x => BuildDirectionCourseKey(x.DirectionCode, x.Course))
+            .ToDictionary(
+                x => x.Key,
+                x => x.Sum(item => item.StudentsCount));
+    }
+
+    private static int GetStudentsCountForDirectionAndCourse(
+        string directionCode,
+        int course,
+        int fallbackStudentsCount,
+        Dictionary<string, int> studentsCountByDirectionAndCourse)
+    {
+        var key = BuildDirectionCourseKey(directionCode, course);
+
+        if (studentsCountByDirectionAndCourse.TryGetValue(key, out var studentsCount) &&
+            studentsCount > 0)
+        {
+            return studentsCount;
+        }
+
+        return fallbackStudentsCount;
+    }
+
+    private static string BuildDirectionCourseKey(
+        string directionCode,
+        int course)
+    {
+        return $"{NormalizeKey(directionCode)}|{course}";
+    }
+
+    private static string NormalizeKey(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? string.Empty
+            : value.Trim().ToLowerInvariant();
     }
 
     private static string BuildLecturerFullName(Lecturer? lecturer)
@@ -765,6 +1017,17 @@ public class IndividualPlanService
     private static int RoundHoursToInt(decimal hours)
     {
         return (int)Math.Round(hours, MidpointRounding.AwayFromZero);
+    }
+
+    private sealed class StudentGroupPlanInfo
+    {
+        public int Id { get; set; }
+
+        public string DirectionCode { get; set; } = string.Empty;
+
+        public int Course { get; set; }
+
+        public int StudentsCount { get; set; }
     }
 
     private sealed class IndividualPlanRowData

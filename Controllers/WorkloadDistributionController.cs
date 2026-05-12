@@ -65,6 +65,16 @@ public class WorkloadDistributionController : Controller
             model.SelectedYearStart,
             model.AssignmentId);
 
+        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        {
+            return Json(new
+            {
+                success = result.Success,
+                message = result.Message,
+                lecturerId = result.LecturerId ?? model.SelectedLecturerId
+            });
+        }
+
         PutMessage(result);
 
         return RedirectToIndex(
