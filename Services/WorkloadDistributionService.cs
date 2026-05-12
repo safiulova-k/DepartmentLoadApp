@@ -16,6 +16,7 @@ namespace DepartmentLoadApp.Services
     {
         private const decimal MinLecturerRate = 0m;
         private const decimal MaxLecturerRate = 2.00m;
+
         private const string AssistantPostKeyword = "ассистент";
 
         private const string LectureNormName = "Лекции";
@@ -26,7 +27,6 @@ namespace DepartmentLoadApp.Services
         private const string CreditNormName = "Зачет";
         private const string CourseWorkNormName = "Курсовая работа";
         private const string CourseProjectNormName = "Курсовой проект";
-        private const string RgrNormName = "РГР";
 
         private readonly DepartmentLoadDbContext _context;
         private readonly WorkloadCalculationService _workloadCalculationService;
@@ -98,7 +98,9 @@ namespace DepartmentLoadApp.Services
                 SelectedLecturerId = selectedId,
                 TotalHours = items.Sum(x => x.TotalHours),
                 AssignedHours = validAssignments.Sum(x => x.AssignedHours),
-                RemainingHours = Math.Max(0, items.Sum(x => x.TotalHours) - validAssignments.Sum(x => x.AssignedHours)),
+                RemainingHours = Math.Max(
+                    0,
+                    items.Sum(x => x.TotalHours) - validAssignments.Sum(x => x.AssignedHours)),
                 StudyPosts = studyPosts
                     .Select(x => new WorkloadDistributionStudyPostOptionViewModel
                     {
@@ -169,6 +171,7 @@ namespace DepartmentLoadApp.Services
                     {
                         AssignmentId = assignment.Id,
                         SourceTypeDisplayName = GetSourceDisplayName(assignment.SourceType),
+                        SemesterName = item.SemesterName,
                         Title = item.Title,
                         Subtitle = item.Subtitle,
                         ElementDisplayName = item.ElementDisplayName,
@@ -182,6 +185,7 @@ namespace DepartmentLoadApp.Services
 
                 card.Assignments = card.Assignments
                     .OrderBy(x => x.SourceTypeDisplayName)
+                    .ThenBy(x => x.SemesterName)
                     .ThenBy(x => x.Title)
                     .ThenBy(x => x.ElementDisplayName)
                     .ThenBy(x => x.UnitName)
@@ -227,33 +231,30 @@ namespace DepartmentLoadApp.Services
                     "План преподавателя не найден.",
                     lecturerId);
             }
+
             if (!lecturerStudyPostId.HasValue)
             {
                 return WorkloadDistributionOperationResult.Fail(
                     "Выберите должность преподавателя.",
                     lecturerId);
             }
-            LecturerStudyPost? newStudyPost = null;
 
-            if (lecturerStudyPostId.HasValue)
+            var newStudyPost = await _context.LecturerStudyPosts
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == lecturerStudyPostId.Value);
+
+            if (newStudyPost == null)
             {
-                newStudyPost = await _context.LecturerStudyPosts
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.Id == lecturerStudyPostId.Value);
-
-                if (newStudyPost == null)
-                {
-                    return WorkloadDistributionOperationResult.Fail(
-                        "Учебная должность не найдена.",
-                        lecturerId);
-                }
+                return WorkloadDistributionOperationResult.Fail(
+                    "Учебная должность не найдена.",
+                    lecturerId);
             }
 
             var currentAssignedHours = await _context.LecturerLoadAssignments
                 .Where(x => x.LecturerAcademicYearPlanId == plan.Id)
                 .SumAsync(x => (decimal?)x.AssignedHours) ?? 0m;
 
-            var newLimitHours = CalculateLimitHours(newStudyPost?.Hours ?? 0, normalizedRate);
+            var newLimitHours = CalculateLimitHours(newStudyPost.Hours, normalizedRate);
 
             if (currentAssignedHours > newLimitHours)
             {
@@ -262,7 +263,7 @@ namespace DepartmentLoadApp.Services
                     lecturerId);
             }
 
-            if (IsAssistant(newStudyPost?.StudyPostTitle))
+            if (IsAssistant(newStudyPost.StudyPostTitle))
             {
                 var hasLectureAssignments = await _context.LecturerLoadAssignments
                     .AnyAsync(x =>
@@ -311,7 +312,6 @@ namespace DepartmentLoadApp.Services
                     lecturerId);
             }
 
-
             selectedItemKeys ??= new List<string>();
             giaStudents ??= new List<GiaStudentsAssignmentInputModel>();
 
@@ -326,7 +326,7 @@ namespace DepartmentLoadApp.Services
 
             foreach (var itemKey in selectedItemKeys.Distinct())
             {
-                if (!TryParseKey(itemKey, out var parsed))
+                if (!TryParseKey(itemKey, out _))
                 {
                     return WorkloadDistributionOperationResult.Fail(
                         "Некорректный элемент нагрузки.",
@@ -400,7 +400,9 @@ namespace DepartmentLoadApp.Services
                 .Sum(x => x.AssignedHours);
 
             var limitHours = CalculateLimitHours(plan.LecturerStudyPost?.Hours ?? 0, plan.Rate);
-            var selectedHours = selectedItems.Sum(x => x.RemainingHours) + giaSelectedItems.Sum(x => x.Hours);
+
+            var selectedHours = selectedItems.Sum(x => x.RemainingHours)
+                                + giaSelectedItems.Sum(x => x.Hours);
 
             if (lecturerAssignedHours + selectedHours > limitHours)
             {
@@ -488,8 +490,8 @@ namespace DepartmentLoadApp.Services
             List<LecturerLoadAssignment> assignments)
         {
             var result = new List<DistributableLoadItem>();
-            var norms = await LoadNormsAsync();
 
+            var norms = await LoadNormsAsync();
             var groupItems = await LoadStudentGroupsAsync();
 
             var subgroups = await _context.ContingentSubgroups
@@ -645,7 +647,7 @@ namespace DepartmentLoadApp.Services
         private void AddDisciplineItems(
             List<DistributableLoadItem> result,
             WorkloadRow row,
-            List<StudentGroupItem> rowGroups,
+            List<StudentGroupDistributionItem> rowGroups,
             Dictionary<int, List<ContingentSubgroup>> subgroupsByGroupId,
             LoadAssignmentElementType elementType,
             string elementDisplayName,
@@ -675,6 +677,7 @@ namespace DepartmentLoadApp.Services
                     null,
                     row.StudentsCount,
                     totalHours));
+
                 return;
             }
 
@@ -682,7 +685,8 @@ namespace DepartmentLoadApp.Services
             {
                 foreach (var group in rowGroups)
                 {
-                    if (!subgroupsByGroupId.TryGetValue(group.Id, out var groupSubgroups) || !groupSubgroups.Any())
+                    if (!subgroupsByGroupId.TryGetValue(group.Id, out var groupSubgroups) ||
+                        !groupSubgroups.Any())
                     {
                         result.Add(CreateItem(
                             row,
@@ -694,6 +698,7 @@ namespace DepartmentLoadApp.Services
                             null,
                             group.StudentCount,
                             CalculateSingleUnitHours(planHours, totalHours, Math.Max(1, row.SubgroupCount))));
+
                         continue;
                     }
 
@@ -731,12 +736,12 @@ namespace DepartmentLoadApp.Services
         }
 
         private void AddControlGroupItems(
-        List<DistributableLoadItem> result,
-        WorkloadRow row,
-        List<StudentGroupItem> rowGroups,
-        LoadAssignmentElementType elementType,
-        string elementDisplayName,
-        decimal totalHours)
+            List<DistributableLoadItem> result,
+            WorkloadRow row,
+            List<StudentGroupDistributionItem> rowGroups,
+            LoadAssignmentElementType elementType,
+            string elementDisplayName,
+            decimal totalHours)
         {
             if (totalHours <= 0 || rowGroups.Count == 0)
             {
@@ -761,9 +766,9 @@ namespace DepartmentLoadApp.Services
         }
 
         private void AddPracticeGroupItems(
-     List<DistributableLoadItem> result,
-     PracticeWorkloadRow row,
-     List<StudentGroupItem> rowGroups)
+            List<DistributableLoadItem> result,
+            PracticeWorkloadRow row,
+            List<StudentGroupDistributionItem> rowGroups)
         {
             if (row.TotalHours <= 0 || rowGroups.Count == 0)
             {
@@ -796,15 +801,14 @@ namespace DepartmentLoadApp.Services
         }
 
         private void AddGiaStudentItem(
-       List<DistributableLoadItem> result,
-       GiaWorkloadRow row)
+            List<DistributableLoadItem> result,
+            GiaWorkloadRow row)
         {
             if (row.TotalHours <= 0 || row.StudentsCount <= 0)
             {
                 return;
             }
 
-            var roundedTotalHours = RoundHours(row.TotalHours);
             var hoursPerStudent = row.TotalHours / row.StudentsCount;
 
             result.Add(new DistributableLoadItem
@@ -822,25 +826,26 @@ namespace DepartmentLoadApp.Services
                 ElementDisplayName = row.WorkName,
                 UnitName = "студенты",
                 StudentsCount = row.StudentsCount,
-                TotalHours = roundedTotalHours,
-                RemainingHours = roundedTotalHours,
+                TotalHours = row.TotalHours,
+                RemainingHours = row.TotalHours,
+                TotalStudentsCount = row.StudentsCount,
                 RemainingStudentsCount = row.StudentsCount,
-                HoursPerStudent = hoursPerStudent,
-                IsGiaStudentsInput = true
+                HoursPerStudent = hoursPerStudent
             });
         }
-        private static DistributableLoadItem CreateItem(
-       WorkloadRow row,
-       LoadAssignmentElementType elementType,
-       DistributionUnitType unitType,
-       string elementDisplayName,
-       string unitName,
-       int? studentGroupId,
-       int? subgroupId,
-       int studentsCount,
-       decimal hours)
+
+        private DistributableLoadItem CreateItem(
+            WorkloadRow row,
+            LoadAssignmentElementType elementType,
+            DistributionUnitType distributionUnitType,
+            string elementDisplayName,
+            string unitName,
+            int? studentGroupId,
+            int? contingentSubgroupId,
+            int studentsCount,
+            decimal totalHours)
         {
-            var roundedHours = RoundHours(hours);
+            totalHours = RoundHours(totalHours);
 
             return new DistributableLoadItem
             {
@@ -848,51 +853,44 @@ namespace DepartmentLoadApp.Services
                 SourceRowId = row.Id,
                 SourceAcademicPlanRecordId = row.AcademicPlanRecordId,
                 LoadElementType = elementType,
-                DistributionUnitType = unitType,
+                DistributionUnitType = distributionUnitType,
                 StudentGroupId = studentGroupId,
-                ContingentSubgroupId = subgroupId,
+                ContingentSubgroupId = contingentSubgroupId,
                 SemesterName = row.SemesterName,
                 Title = row.DisciplineName,
                 Subtitle = $"{row.DirectionCode} · курс {row.Course} · {row.SemesterName}",
                 ElementDisplayName = elementDisplayName,
                 UnitName = unitName,
                 StudentsCount = studentsCount,
-                TotalHours = roundedHours,
-                RemainingHours = roundedHours
+                TotalHours = totalHours,
+                RemainingHours = totalHours
             };
         }
-        private static decimal CalculateSingleUnitHours(
-       decimal planHours,
-       decimal totalHours,
-       int unitCount)
-        {
-            if (planHours > 0)
-            {
-                return RoundHours(planHours);
-            }
 
-            return unitCount > 0
-                ? RoundHours(totalHours / unitCount)
-                : RoundHours(totalHours);
-        }
-        private static void ApplyAssignedInfo(
+        private void ApplyAssignedInfo(
             List<DistributableLoadItem> items,
             List<LecturerLoadAssignment> assignments)
         {
             foreach (var item in items)
             {
-                var itemAssignments = assignments
-                    .Where(x => BuildAssignmentKey(x) == BuildItemKey(item))
+                var assignedForItem = assignments
+                    .Where(x => x.SourceType == item.SourceType)
+                    .Where(x => x.SourceRowId == item.SourceRowId)
+                    .Where(x => x.LoadElementType == item.LoadElementType)
+                    .Where(x => x.DistributionUnitType == item.DistributionUnitType)
+                    .Where(x => x.StudentGroupId == item.StudentGroupId)
+                    .Where(x => x.ContingentSubgroupId == item.ContingentSubgroupId)
                     .ToList();
 
-                item.AssignedHours = itemAssignments.Sum(x => x.AssignedHours);
+                item.AssignedHours = assignedForItem.Sum(x => x.AssignedHours);
                 item.RemainingHours = Math.Max(0, item.TotalHours - item.AssignedHours);
 
                 if (item.SourceType == LoadAssignmentSourceType.Gia)
                 {
-                    var assignedStudents = itemAssignments.Sum(x => x.StudentsCount);
-                    item.RemainingStudentsCount = Math.Max(0, item.StudentsCount - assignedStudents);
-                    item.RemainingHours = Math.Round(item.RemainingStudentsCount * item.HoursPerStudent, 2, MidpointRounding.AwayFromZero);
+                    item.AssignedStudentsCount = assignedForItem.Sum(x => x.StudentsCount);
+                    item.RemainingStudentsCount = Math.Max(
+                        0,
+                        item.TotalStudentsCount - item.AssignedStudentsCount);
                 }
             }
         }
@@ -905,62 +903,109 @@ namespace DepartmentLoadApp.Services
 
             return norms
                 .Where(x => !string.IsNullOrWhiteSpace(x.WorkName))
-                .GroupBy(x => x.WorkName)
-                .ToDictionary(x => x.Key, x => x.First());
+                .GroupBy(
+                    x => x.WorkName.Trim(),
+                    StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    x => x.Key,
+                    x => x.First(),
+                    StringComparer.OrdinalIgnoreCase);
         }
 
-        private async Task<List<StudentGroupItem>> LoadStudentGroupsAsync()
+        private async Task<List<StudentGroupDistributionItem>> LoadStudentGroupsAsync()
         {
-            return await (
-                from studentGroup in _context.StudentGroupsCore.AsNoTracking()
-                join direction in _context.EducationDirections.AsNoTracking()
-                    on studentGroup.EducationDirectionId equals direction.Id
-                select new StudentGroupItem
-                {
-                    Id = studentGroup.Id,
-                    GroupName = studentGroup.GroupName,
-                    StudentCount = studentGroup.StudentCount,
-                    Course = (int)studentGroup.Course,
-                    DirectionCode = direction.Cipher
-                })
+            var groups = await (
+                    from groupItem in _context.StudentGroupsCore.AsNoTracking()
+                    join direction in _context.EducationDirections.AsNoTracking()
+                        on groupItem.EducationDirectionId equals direction.Id
+                    select new StudentGroupDistributionItem
+                    {
+                        Id = groupItem.Id,
+                        DirectionCode = direction.Cipher,
+                        Course = (int)groupItem.Course,
+                        GroupName = groupItem.GroupName,
+                        StudentCount = groupItem.StudentCount
+                    })
+                .OrderBy(x => x.DirectionCode)
+                .ThenBy(x => x.Course)
+                .ThenBy(x => x.GroupName)
                 .ToListAsync();
+
+            return groups;
         }
 
-        private static List<StudentGroupItem> GetGroupsForRow(
+        private static List<StudentGroupDistributionItem> GetGroupsForRow(
             WorkloadRow row,
-            List<StudentGroupItem> groups)
+            List<StudentGroupDistributionItem> groups)
         {
-            var directionCodes = SplitDirectionCodes(row.DirectionCode);
-
-            return groups
-                .Where(x => directionCodes.Contains(TextNormalizeHelper.Normalize(x.DirectionCode)))
-                .Where(x => x.Course == row.Course)
-                .OrderBy(x => x.GroupName)
-                .ToList();
+            return GetGroupsForDirectionAndCourse(row.DirectionCode, row.Course, groups);
         }
 
-        private static List<StudentGroupItem> GetGroupsForDirectionAndCourse(
+        private static List<StudentGroupDistributionItem> GetGroupsForDirectionAndCourse(
             string directionCode,
             int course,
-            List<StudentGroupItem> groups)
+            List<StudentGroupDistributionItem> groups)
         {
-            var normalizedDirectionCode = TextNormalizeHelper.Normalize(directionCode);
-
             return groups
-                .Where(x => TextNormalizeHelper.Normalize(x.DirectionCode) == normalizedDirectionCode)
+                .Where(x => string.Equals(
+                    x.DirectionCode,
+                    directionCode,
+                    StringComparison.OrdinalIgnoreCase))
                 .Where(x => x.Course == course)
                 .OrderBy(x => x.GroupName)
                 .ToList();
         }
 
-        private static List<string> SplitDirectionCodes(string directionCode)
+        private static List<(StudentGroupDistributionItem Group, decimal Hours)> SplitHoursByGroups(
+            decimal totalHours,
+            List<StudentGroupDistributionItem> groups)
         {
-            return directionCode
-                .Split(new[] { ',', '/', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(TextNormalizeHelper.Normalize)
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct()
-                .ToList();
+            var result = new List<(StudentGroupDistributionItem Group, decimal Hours)>();
+
+            if (totalHours <= 0 || groups.Count == 0)
+            {
+                return result;
+            }
+
+            var baseHours = Math.Floor((totalHours / groups.Count) * 100m) / 100m;
+            var usedHours = 0m;
+
+            for (var i = 0; i < groups.Count; i++)
+            {
+                var hours = i == groups.Count - 1
+                    ? totalHours - usedHours
+                    : baseHours;
+
+                hours = RoundHours(hours);
+                usedHours += hours;
+
+                if (hours <= 0)
+                {
+                    continue;
+                }
+
+                result.Add((groups[i], hours));
+            }
+
+            return result;
+        }
+
+        private static decimal CalculateSingleUnitHours(
+            decimal planHours,
+            decimal totalHours,
+            int unitsCount)
+        {
+            if (unitsCount <= 0)
+            {
+                return RoundHours(totalHours);
+            }
+
+            if (planHours > 0)
+            {
+                return RoundHours(planHours);
+            }
+
+            return RoundHours(totalHours / unitsCount);
         }
 
         private static List<WorkloadDistributionSemesterGroupViewModel> BuildSemesterGroups(
@@ -968,9 +1013,8 @@ namespace DepartmentLoadApp.Services
         {
             return items
                 .Where(x => x.SourceType != LoadAssignmentSourceType.Gia)
-                .Where(x => x.RemainingHours > 0)
                 .GroupBy(x => x.SemesterName)
-                .OrderBy(x => GetSemesterOrder(x.Key))
+                .OrderBy(x => x.Key)
                 .Select(semesterGroup => new WorkloadDistributionSemesterGroupViewModel
                 {
                     SemesterName = semesterGroup.Key,
@@ -1005,8 +1049,7 @@ namespace DepartmentLoadApp.Services
             return items
                 .Where(x => x.SourceType == LoadAssignmentSourceType.Gia)
                 .Where(x => x.RemainingStudentsCount > 0)
-                .OrderBy(x => x.SemesterName)
-                .ThenBy(x => x.Title)
+                .OrderBy(x => x.Title)
                 .ThenBy(x => x.ElementDisplayName)
                 .Select(x => new WorkloadDistributionGiaItemViewModel
                 {
@@ -1051,6 +1094,142 @@ namespace DepartmentLoadApp.Services
             await _context.SaveChangesAsync();
         }
 
+        private static decimal CalculateLimitHours(int normHours, decimal rate)
+        {
+            return Math.Round(normHours * rate, 2, MidpointRounding.AwayFromZero);
+        }
+
+        private static decimal RoundHours(decimal value)
+        {
+            return Math.Round(value, 2, MidpointRounding.AwayFromZero);
+        }
+
+        private static bool IsAssistant(string? studyPostTitle)
+        {
+            return !string.IsNullOrWhiteSpace(studyPostTitle)
+                   && studyPostTitle
+                       .Trim()
+                       .ToLowerInvariant()
+                       .Contains(AssistantPostKeyword);
+        }
+
+        private static string BuildItemKey(DistributableLoadItem item)
+        {
+            return BuildKey(
+                item.SourceType,
+                item.SourceRowId,
+                item.LoadElementType,
+                item.DistributionUnitType,
+                item.StudentGroupId,
+                item.ContingentSubgroupId);
+        }
+
+        private static string BuildAssignmentKey(LecturerLoadAssignment assignment)
+        {
+            return BuildKey(
+                assignment.SourceType,
+                assignment.SourceRowId,
+                assignment.LoadElementType,
+                assignment.DistributionUnitType,
+                assignment.StudentGroupId,
+                assignment.ContingentSubgroupId);
+        }
+
+        private static string BuildKey(
+            LoadAssignmentSourceType sourceType,
+            int sourceRowId,
+            LoadAssignmentElementType elementType,
+            DistributionUnitType distributionUnitType,
+            int? studentGroupId,
+            int? contingentSubgroupId)
+        {
+            return string.Join("_", new[]
+            {
+                ((int)sourceType).ToString(),
+                sourceRowId.ToString(),
+                ((int)elementType).ToString(),
+                ((int)distributionUnitType).ToString(),
+                studentGroupId?.ToString() ?? "0",
+                contingentSubgroupId?.ToString() ?? "0"
+            });
+        }
+
+        private static bool TryParseKey(
+            string key,
+            out ParsedLoadItemKey parsed)
+        {
+            parsed = new ParsedLoadItemKey();
+
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return false;
+            }
+
+            var parts = key.Split('_');
+
+            if (parts.Length != 6)
+            {
+                return false;
+            }
+
+            if (!int.TryParse(parts[0], out var sourceTypeValue))
+            {
+                return false;
+            }
+
+            if (!int.TryParse(parts[1], out var sourceRowId))
+            {
+                return false;
+            }
+
+            if (!int.TryParse(parts[2], out var elementTypeValue))
+            {
+                return false;
+            }
+
+            if (!int.TryParse(parts[3], out var distributionUnitTypeValue))
+            {
+                return false;
+            }
+
+            if (!int.TryParse(parts[4], out var studentGroupIdValue))
+            {
+                return false;
+            }
+
+            if (!int.TryParse(parts[5], out var contingentSubgroupIdValue))
+            {
+                return false;
+            }
+
+            if (!Enum.IsDefined(typeof(LoadAssignmentSourceType), sourceTypeValue))
+            {
+                return false;
+            }
+
+            if (!Enum.IsDefined(typeof(LoadAssignmentElementType), elementTypeValue))
+            {
+                return false;
+            }
+
+            if (!Enum.IsDefined(typeof(DistributionUnitType), distributionUnitTypeValue))
+            {
+                return false;
+            }
+
+            parsed = new ParsedLoadItemKey
+            {
+                SourceType = (LoadAssignmentSourceType)sourceTypeValue,
+                SourceRowId = sourceRowId,
+                LoadElementType = (LoadAssignmentElementType)elementTypeValue,
+                DistributionUnitType = (DistributionUnitType)distributionUnitTypeValue,
+                StudentGroupId = studentGroupIdValue == 0 ? null : studentGroupIdValue,
+                ContingentSubgroupId = contingentSubgroupIdValue == 0 ? null : contingentSubgroupIdValue
+            };
+
+            return true;
+        }
+
         private static WorkloadDistributionAvailableItemViewModel MapAvailableItem(
             DistributableLoadItem item)
         {
@@ -1067,202 +1246,10 @@ namespace DepartmentLoadApp.Services
                 AssignedHours = item.AssignedHours,
                 RemainingHours = item.RemainingHours,
                 StudentsCount = item.StudentsCount,
-                IsGiaStudentsInput = item.IsGiaStudentsInput,
+                IsGiaStudentsInput = item.SourceType == LoadAssignmentSourceType.Gia,
                 RemainingStudentsCount = item.RemainingStudentsCount,
                 HoursPerStudent = item.HoursPerStudent
             };
-        }
-
-        private static decimal CalculateLimitHours(int normHours, decimal rate)
-        {
-            return Math.Round(normHours * rate, 0, MidpointRounding.AwayFromZero);
-        }
-
-        private static bool IsAssistant(string? studyPostTitle)
-        {
-            return !string.IsNullOrWhiteSpace(studyPostTitle)
-                   && studyPostTitle
-                       .Trim()
-                       .ToLowerInvariant()
-                       .Contains(AssistantPostKeyword);
-        }
-
-        private static decimal RoundHours(decimal value)
-        {
-            return Math.Round(value, 0, MidpointRounding.AwayFromZero);
-        }
-
-        private static int RoundHoursToInt(decimal value)
-        {
-            return (int)Math.Round(value, 0, MidpointRounding.AwayFromZero);
-        }
-
-        private static List<GroupHoursItem> SplitHoursByGroups(
-            decimal totalHours,
-            List<StudentGroupItem> groups)
-        {
-            var result = new List<GroupHoursItem>();
-
-            if (groups.Count == 0)
-            {
-                return result;
-            }
-
-            var totalHoursInt = RoundHoursToInt(totalHours);
-
-            if (totalHoursInt <= 0)
-            {
-                return result;
-            }
-
-            var totalStudents = groups.Sum(x => x.StudentCount);
-
-            if (totalStudents <= 0)
-            {
-                var baseHours = totalHoursInt / groups.Count;
-                var remainder = totalHoursInt % groups.Count;
-
-                for (var i = 0; i < groups.Count; i++)
-                {
-                    result.Add(new GroupHoursItem
-                    {
-                        Group = groups[i],
-                        Hours = baseHours + (i < remainder ? 1 : 0)
-                    });
-                }
-
-                return result;
-            }
-
-            var calculated = groups
-                .Select(group =>
-                {
-                    var exactHours = (decimal)totalHoursInt * group.StudentCount / totalStudents;
-                    var floorHours = (int)Math.Floor(exactHours);
-
-                    return new
-                    {
-                        Group = group,
-                        FloorHours = floorHours,
-                        Fraction = exactHours - floorHours
-                    };
-                })
-                .ToList();
-
-            var distributedHours = calculated.Sum(x => x.FloorHours);
-            var remainderHours = totalHoursInt - distributedHours;
-
-            var groupsWithRemainder = calculated
-                .OrderByDescending(x => x.Fraction)
-                .ThenBy(x => x.Group.GroupName)
-                .ToList();
-
-            var extraByGroupId = new Dictionary<int, int>();
-
-            for (var i = 0; i < remainderHours; i++)
-            {
-                var group = groupsWithRemainder[i % groupsWithRemainder.Count].Group;
-
-                if (!extraByGroupId.ContainsKey(group.Id))
-                {
-                    extraByGroupId[group.Id] = 0;
-                }
-
-                extraByGroupId[group.Id]++;
-            }
-
-            foreach (var item in calculated)
-            {
-                result.Add(new GroupHoursItem
-                {
-                    Group = item.Group,
-                    Hours = item.FloorHours + extraByGroupId.GetValueOrDefault(item.Group.Id)
-                });
-            }
-
-            return result;
-        }
-        private static int GetSemesterOrder(string semesterName)
-        {
-            return semesterName.Equals("Осень", StringComparison.OrdinalIgnoreCase) ? 1 : 2;
-        }
-
-        private static string BuildItemKey(DistributableLoadItem item)
-        {
-            return string.Join("_", new[]
-            {
-                ((int)item.SourceType).ToString(),
-                item.SourceRowId.ToString(),
-                item.SourceAcademicPlanRecordId.ToString(),
-                ((int)item.LoadElementType).ToString(),
-                ((int)item.DistributionUnitType).ToString(),
-                (item.StudentGroupId ?? 0).ToString(),
-                (item.ContingentSubgroupId ?? 0).ToString()
-            });
-        }
-
-        private static string BuildAssignmentKey(LecturerLoadAssignment assignment)
-        {
-            return string.Join("_", new[]
-            {
-                ((int)assignment.SourceType).ToString(),
-                assignment.SourceRowId.ToString(),
-                assignment.SourceAcademicPlanRecordId.ToString(),
-                ((int)assignment.LoadElementType).ToString(),
-                ((int)assignment.DistributionUnitType).ToString(),
-                (assignment.StudentGroupId ?? 0).ToString(),
-                (assignment.ContingentSubgroupId ?? 0).ToString()
-            });
-        }
-
-        private static bool TryParseKey(
-            string key,
-            out ParsedAssignmentKey parsed)
-        {
-            parsed = new ParsedAssignmentKey();
-
-            if (string.IsNullOrWhiteSpace(key))
-            {
-                return false;
-            }
-
-            var parts = key.Split('_');
-
-            if (parts.Length != 7)
-            {
-                return false;
-            }
-
-            if (!int.TryParse(parts[0], out var sourceTypeValue)
-                || !int.TryParse(parts[1], out var sourceRowId)
-                || !int.TryParse(parts[2], out var recordId)
-                || !int.TryParse(parts[3], out var elementTypeValue)
-                || !int.TryParse(parts[4], out var unitTypeValue)
-                || !int.TryParse(parts[5], out var groupId)
-                || !int.TryParse(parts[6], out var subgroupId))
-            {
-                return false;
-            }
-
-            if (!Enum.IsDefined(typeof(LoadAssignmentSourceType), sourceTypeValue)
-                || !Enum.IsDefined(typeof(LoadAssignmentElementType), elementTypeValue)
-                || !Enum.IsDefined(typeof(DistributionUnitType), unitTypeValue))
-            {
-                return false;
-            }
-
-            parsed = new ParsedAssignmentKey
-            {
-                SourceType = (LoadAssignmentSourceType)sourceTypeValue,
-                SourceRowId = sourceRowId,
-                SourceAcademicPlanRecordId = recordId,
-                LoadElementType = (LoadAssignmentElementType)elementTypeValue,
-                DistributionUnitType = (DistributionUnitType)unitTypeValue,
-                StudentGroupId = groupId > 0 ? groupId : null,
-                ContingentSubgroupId = subgroupId > 0 ? subgroupId : null
-            };
-
-            return true;
         }
 
         private static string GetLecturerDisplayName(Lecturer? lecturer)
@@ -1289,41 +1276,6 @@ namespace DepartmentLoadApp.Services
                 LoadAssignmentSourceType.Gia => "ГИА",
                 _ => "Неизвестно"
             };
-        }
-
-        private sealed class StudentGroupItem
-        {
-            public int Id { get; set; }
-
-            public string GroupName { get; set; } = string.Empty;
-
-            public int StudentCount { get; set; }
-
-            public int Course { get; set; }
-
-            public string DirectionCode { get; set; } = string.Empty;
-        }
-        private sealed class GroupHoursItem
-        {
-            public StudentGroupItem Group { get; set; } = new();
-
-            public decimal Hours { get; set; }
-        }
-        private sealed class ParsedAssignmentKey
-        {
-            public LoadAssignmentSourceType SourceType { get; set; }
-
-            public int SourceRowId { get; set; }
-
-            public int SourceAcademicPlanRecordId { get; set; }
-
-            public LoadAssignmentElementType LoadElementType { get; set; }
-
-            public DistributionUnitType DistributionUnitType { get; set; }
-
-            public int? StudentGroupId { get; set; }
-
-            public int? ContingentSubgroupId { get; set; }
         }
 
         private sealed class DistributableLoadItem
@@ -1360,11 +1312,41 @@ namespace DepartmentLoadApp.Services
 
             public decimal RemainingHours { get; set; }
 
-            public bool IsGiaStudentsInput { get; set; }
+            public int TotalStudentsCount { get; set; }
+
+            public int AssignedStudentsCount { get; set; }
 
             public int RemainingStudentsCount { get; set; }
 
             public decimal HoursPerStudent { get; set; }
+        }
+
+        private sealed class StudentGroupDistributionItem
+        {
+            public int Id { get; set; }
+
+            public string DirectionCode { get; set; } = string.Empty;
+
+            public int Course { get; set; }
+
+            public string GroupName { get; set; } = string.Empty;
+
+            public int StudentCount { get; set; }
+        }
+
+        private sealed class ParsedLoadItemKey
+        {
+            public LoadAssignmentSourceType SourceType { get; set; }
+
+            public int SourceRowId { get; set; }
+
+            public LoadAssignmentElementType LoadElementType { get; set; }
+
+            public DistributionUnitType DistributionUnitType { get; set; }
+
+            public int? StudentGroupId { get; set; }
+
+            public int? ContingentSubgroupId { get; set; }
         }
     }
 

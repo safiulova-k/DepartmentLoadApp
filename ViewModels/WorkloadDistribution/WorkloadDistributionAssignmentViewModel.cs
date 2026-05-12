@@ -6,6 +6,8 @@ public class WorkloadDistributionAssignmentViewModel
 
     public string SourceTypeDisplayName { get; set; } = string.Empty;
 
+    public string SemesterName { get; set; } = string.Empty;
+
     public string Title { get; set; } = string.Empty;
 
     public string Subtitle { get; set; } = string.Empty;
