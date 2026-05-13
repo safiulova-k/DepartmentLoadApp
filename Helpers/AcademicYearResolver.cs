@@ -10,20 +10,20 @@ namespace DepartmentLoadApp.Helpers
         public static int GetCurrentAcademicYearStart()
         {
             var now = DateTime.Now;
-            return now.Month >= 9 ? now.Year : now.Year - 1;
+
+            return now.Month >= 9
+                ? now.Year
+                : now.Year - 1;
         }
 
         public static int NormalizeStartYear(int? startYear)
         {
-            var current = GetCurrentAcademicYearStart();
+            return GetCurrentAcademicYearStart();
+        }
 
-            if (!startYear.HasValue)
-                return current;
-
-            if (startYear.Value < 2000 || startYear.Value > current + 10)
-                return current;
-
-            return startYear.Value;
+        public static string BuildCurrentAcademicYear()
+        {
+            return BuildAcademicYear(GetCurrentAcademicYearStart());
         }
 
         public static string BuildAcademicYear(int startYear)
@@ -31,29 +31,36 @@ namespace DepartmentLoadApp.Helpers
             return $"{startYear}-{startYear + 1}";
         }
 
-        public static IReadOnlyList<int> BuildAvailableStartYears(int selectedStartYear, int before = 6, int after = 3)
+        public static IReadOnlyList<int> BuildAvailableStartYears(
+            int selectedStartYear,
+            int before = 6,
+            int after = 3)
         {
-            var result = new List<int>();
-
-            for (int year = selectedStartYear - before; year <= selectedStartYear + after; year++)
+            return new List<int>
             {
-                result.Add(year);
-            }
-
-            return result;
+                GetCurrentAcademicYearStart()
+            };
         }
 
-        public static bool TryParsePlanPeriod(string? value, out int startYear, out int endYear)
+        public static bool TryParsePlanPeriod(
+            string? value,
+            out int startYear,
+            out int endYear)
         {
             startYear = 0;
             endYear = 0;
 
             if (string.IsNullOrWhiteSpace(value))
+            {
                 return false;
+            }
 
             var match = YearRangeRegex.Match(value.Trim());
+
             if (!match.Success)
+            {
                 return false;
+            }
 
             startYear = int.Parse(match.Groups["start"].Value);
             endYear = int.Parse(match.Groups["end"].Value);
@@ -71,16 +78,23 @@ namespace DepartmentLoadApp.Helpers
             semesters = Array.Empty<int>();
 
             if (!TryParsePlanPeriod(planPeriod, out var planStartYear, out var planEndYear))
+            {
                 return false;
+            }
 
             var totalCourses = planEndYear - planStartYear;
+
             if (totalCourses <= 0)
+            {
                 return false;
+            }
 
             course = calculationYearStart - planStartYear + 1;
 
             if (course < 1 || course > totalCourses)
+            {
                 return false;
+            }
 
             semesters = new[]
             {
@@ -93,7 +107,9 @@ namespace DepartmentLoadApp.Helpers
 
         public static string GetSemesterName(int semester)
         {
-            return semester % 2 == 0 ? "Весна" : "Осень";
+            return semester % 2 == 0
+                ? "Весна"
+                : "Осень";
         }
     }
 }

@@ -2,18 +2,6 @@
 
 @{
     ViewData["Title"] = "Распределение нагрузки";
-
-    const int minAvailableStartYear = 2018;
-
-    var currentAcademicStartYear = DateTime.Now.Month >= 9
-        ? DateTime.Now.Year
-        : DateTime.Now.Year - 1;
-
-    var maxAvailableStartYear = currentAcademicStartYear + 1;
-
-    var availableYearStarts = Enumerable
-        .Range(minAvailableStartYear, maxAvailableStartYear - minAvailableStartYear + 1)
-        .ToList();
 }
 
 <style>
@@ -29,9 +17,20 @@
             font-size: 1.45rem !important;
         }
 
+    .distribution-current-year-line {
+        width: 100%;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        background: #f8f9fa;
+        padding: 10px 14px;
+        margin-bottom: 14px;
+        font-size: 1.08rem;
+        font-weight: 600;
+    }
+
     .distribution-toolbar {
         display: grid;
-        grid-template-columns: 170px minmax(240px, 1fr) 210px 210px;
+        grid-template-columns: minmax(320px, 1fr) 230px 230px;
         gap: 12px;
         align-items: end;
         margin-bottom: 18px;
@@ -288,26 +287,11 @@
 </style>
 
 <h1>Распределение нагрузки</h1>
+<div class="distribution-current-year-line">
+    Текущий учебный год: @Model.SelectedYear
+</div>
 
-<form asp-action="Index" method="get" class="distribution-toolbar">
-    <div>
-        <label class="form-label">Учебный год</label>
-        <select name="startYear" class="form-select form-select-sm" onchange="this.form.submit()">
-            @foreach (var year in availableYearStarts)
-            {
-                var text = $"{year}-{year + 1}";
-                if (year == Model.SelectedYearStart)
-                {
-                    <option value="@year" selected>@text</option>
-                }
-                else
-                {
-                    <option value="@year">@text</option>
-                }
-            }
-        </select>
-    </div>
-
+<div class="distribution-toolbar">
     <div>
         <label class="form-label">Поиск преподавателя</label>
         <input type="text"
@@ -335,7 +319,7 @@
             <option value="remaining-asc">Меньше остаток</option>
         </select>
     </div>
-</form>
+</div>
 
 @if (TempData["SuccessMessage"] != null)
 {

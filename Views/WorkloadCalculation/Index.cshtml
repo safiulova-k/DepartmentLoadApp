@@ -33,56 +33,80 @@
 }
 
 <style>
+    .workload-table-wrapper {
+        max-width: 100%;
+        height: calc(100vh - 75px);
+        min-height: 560px;
+        overflow: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        background: #fff;
+    }
     .workload-calculation-table {
         width: 100%;
+        min-width: 1280px;
         table-layout: fixed;
-        font-size: 0.84rem;
+        font-size: 0.86rem;
+        margin-bottom: 0;
     }
+
+        .workload-calculation-table col.semester-column {
+            width: 92px;
+        }
+
+        .workload-calculation-table col.direction-column {
+            width: 64px;
+        }
+
+        .workload-calculation-table col.discipline-column {
+            width: 290px;
+        }
+
+        .workload-calculation-table col.equal-column {
+            width: 52px;
+        }
 
         .workload-calculation-table th,
         .workload-calculation-table td {
             vertical-align: middle;
             text-align: center;
             padding: 0.22rem;
+            border-color: #dee2e6;
         }
 
         .workload-calculation-table thead th {
             position: sticky;
-            top: 0;
-            z-index: 5;
             background: #f8f9fa !important;
             color: #212529 !important;
             border-color: #dee2e6 !important;
+            vertical-align: middle;
+            font-weight: 700;
+            z-index: 5;
+        }
+
+        .workload-calculation-table thead tr:first-child th {
+            top: 0;
+            height: 34px;
+            z-index: 7;
         }
 
         .workload-calculation-table thead tr:nth-child(2) th {
-            top: 35px;
-            z-index: 4;
+            top: 34px;
+            height: 150px;
+            z-index: 6;
+        }
+
+        .workload-calculation-table thead th[rowspan="2"] {
+            top: 0;
+            z-index: 8;
         }
 
         .workload-calculation-table .text-cell {
             text-align: left;
         }
 
-        .workload-calculation-table .direction-column {
-            width: 82px;
-        }
-
-        .workload-calculation-table .discipline-column {
-            width: 250px;
-        }
-
-        .workload-calculation-table .small-column {
-            width: 38px;
-        }
-
-        .workload-calculation-table .medium-column {
-            width: 48px;
-        }
-
         .workload-calculation-table .vertical-header {
             height: 150px;
-            width: 34px;
             padding: 4px 2px;
         }
 
@@ -94,46 +118,27 @@
                 white-space: nowrap;
             }
 
-        .workload-calculation-table .control-column {
-            width: 34px;
-        }
-
         .workload-calculation-table .control-cell {
-            font-size: 0.76rem;
-            line-height: 1.05;
-        }
-
-        .workload-calculation-table .control-check {
-            font-weight: 700;
-            display: block;
-        }
-
-        .workload-calculation-table .control-hours {
-            display: block;
-            font-size: 0.74rem;
+            font-size: 0.82rem;
+            line-height: 1.1;
         }
 
         .workload-calculation-table .total-column,
         .workload-calculation-table .total-cell {
-            width: 54px;
             font-weight: 700;
         }
 
     @@media (max-width: 1199.98px) {
         .workload-calculation-table {
-            font-size: 0.78rem;
+            font-size: 0.8rem;
         }
 
-            .workload-calculation-table .discipline-column {
-                width: 220px;
+            .workload-calculation-table col.discipline-column {
+                width: 250px;
             }
 
-            .workload-calculation-table .direction-column {
-                width: 76px;
-            }
-
-            .workload-calculation-table .vertical-header {
-                width: 32px;
+            .workload-calculation-table col.equal-column {
+                width: 48px;
             }
     }
 </style>
@@ -183,35 +188,61 @@ else
         }
     </div>
 
-    <div class="table-responsive">
+    <div class="workload-table-wrapper">
         <table class="table table-bordered table-sm workload-calculation-table">
+            <colgroup>
+                <col class="semester-column" />
+                <col class="direction-column" />
+                <col class="discipline-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+                <col class="equal-column" />
+            </colgroup>
+
             <thead>
                 <tr>
-                    <th class="vertical-header small-column" rowspan="2">
+                    <th class="vertical-header" rowspan="2">
                         <span>Семестр</span>
                     </th>
-                    <th class="direction-column" rowspan="2">Направление</th>
-                    <th class="discipline-column" rowspan="2">Дисциплина</th>
-                    <th class="vertical-header small-column" rowspan="2">
+                    <th class="vertical-header" rowspan="2">
+                        <span>Направление</span>
+                    </th>
+                    <th rowspan="2">Дисциплина</th>
+                    <th class="vertical-header" rowspan="2">
                         <span>Курс</span>
                     </th>
-                    <th class="vertical-header medium-column" rowspan="2">
+                    <th class="vertical-header" rowspan="2">
                         <span>Студентов</span>
                     </th>
-                    <th class="vertical-header small-column" rowspan="2">
+                    <th class="vertical-header" rowspan="2">
                         <span>Потоков</span>
                     </th>
-                    <th class="vertical-header small-column" rowspan="2">
+                    <th class="vertical-header" rowspan="2">
                         <span>Групп</span>
                     </th>
-                    <th class="vertical-header small-column" rowspan="2">
+                    <th class="vertical-header" rowspan="2">
                         <span>Подгрупп</span>
                     </th>
                     <th colspan="2">Лекции</th>
                     <th colspan="2">Практика</th>
                     <th colspan="2">Лабораторные</th>
                     <th colspan="5">Контроль</th>
-                    <th class="vertical-header medium-column" rowspan="2">
+                    <th class="vertical-header" rowspan="2">
                         <span>Консультации</span>
                     </th>
                     <th class="vertical-header total-column" rowspan="2">
@@ -226,11 +257,11 @@ else
                     <th class="vertical-header"><span>Всего</span></th>
                     <th class="vertical-header"><span>План</span></th>
                     <th class="vertical-header"><span>Всего</span></th>
-                    <th class="vertical-header control-column"><span>Экзамен</span></th>
-                    <th class="vertical-header control-column"><span>Зачет</span></th>
-                    <th class="vertical-header control-column"><span>Курсовая работа</span></th>
-                    <th class="vertical-header control-column"><span>Курсовой проект</span></th>
-                    <th class="vertical-header control-column"><span>РГР</span></th>
+                    <th class="vertical-header"><span>Экзамен</span></th>
+                    <th class="vertical-header"><span>Зачет</span></th>
+                    <th class="vertical-header"><span>Курсовая работа</span></th>
+                    <th class="vertical-header"><span>Курсовой проект</span></th>
+                    <th class="vertical-header"><span>РГР</span></th>
                 </tr>
             </thead>
 
@@ -260,57 +291,23 @@ else
                         <td>@row.GroupCount</td>
                         <td>@row.SubgroupCount</td>
 
-                        <td>@row.LecturePlanHours.ToString("0.##")</td>
-                        <td>@row.LectureTotalHours.ToString("0.##")</td>
+                        <td>@FormatHours(row.LecturePlanHours)</td>
+                        <td>@FormatHours(row.LectureTotalHours)</td>
 
-                        <td>@row.PracticePlanHours.ToString("0.##")</td>
-                        <td>@row.PracticeTotalHours.ToString("0.##")</td>
+                        <td>@FormatHours(row.PracticePlanHours)</td>
+                        <td>@FormatHours(row.PracticeTotalHours)</td>
 
-                        <td>@row.LabPlanHours.ToString("0.##")</td>
-                        <td>@row.LabTotalHours.ToString("0.##")</td>
+                        <td>@FormatHours(row.LabPlanHours)</td>
+                        <td>@FormatHours(row.LabTotalHours)</td>
 
-                        <td class="control-cell">
-                            @if (row.HasExam || row.ExamHours > 0)
-                            {
-                                <span class="control-check">✓</span>
-                                <span class="control-hours">@row.ExamHours.ToString("0.##")</span>
-                            }
-                        </td>
+                        <td class="control-cell">@FormatHours(row.ExamHours)</td>
+                        <td class="control-cell">@FormatHours(row.CreditHours)</td>
+                        <td class="control-cell">@FormatHours(row.CourseWorkHours)</td>
+                        <td class="control-cell">@FormatHours(row.CourseProjectHours)</td>
+                        <td class="control-cell">@FormatHours(row.RgrHours)</td>
 
-                        <td class="control-cell">
-                            @if (row.HasCredit || row.CreditHours > 0)
-                            {
-                                <span class="control-check">✓</span>
-                                <span class="control-hours">@row.CreditHours.ToString("0.##")</span>
-                            }
-                        </td>
-
-                        <td class="control-cell">
-                            @if (row.HasCourseWork || row.CourseWorkHours > 0)
-                            {
-                                <span class="control-check">✓</span>
-                                <span class="control-hours">@row.CourseWorkHours.ToString("0.##")</span>
-                            }
-                        </td>
-
-                        <td class="control-cell">
-                            @if (row.HasCourseProject || row.CourseProjectHours > 0)
-                            {
-                                <span class="control-check">✓</span>
-                                <span class="control-hours">@row.CourseProjectHours.ToString("0.##")</span>
-                            }
-                        </td>
-
-                        <td class="control-cell">
-                            @if (row.HasRgr || row.RgrHours > 0)
-                            {
-                                <span class="control-check">✓</span>
-                                <span class="control-hours">@row.RgrHours.ToString("0.##")</span>
-                            }
-                        </td>
-
-                        <td>@row.ConsultationHours.ToString("0.##")</td>
-                        <td class="total-cell">@row.TotalHours.ToString("0.##")</td>
+                        <td>@FormatHours(row.ConsultationHours)</td>
+                        <td class="total-cell">@FormatHours(row.TotalHours)</td>
                     </tr>
                 }
             </tbody>
@@ -516,4 +513,13 @@ else
         buildDirectionFilter();
         applyCalculationFiltersAndSort();
     </script>
+}
+
+@functions {
+    private static string FormatHours(decimal value)
+    {
+        return value <= 0
+            ? string.Empty
+            : value.ToString("0.##");
+    }
 }

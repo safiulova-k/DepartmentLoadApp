@@ -2,24 +2,23 @@
 
 @{
     ViewData["Title"] = "Индивидуальные планы";
-
-    const int minAvailableStartYear = 2018;
-
-    var currentAcademicStartYear = DateTime.Now.Month >= 9
-        ? DateTime.Now.Year
-        : DateTime.Now.Year - 1;
-
-    var maxAvailableStartYear = currentAcademicStartYear + 1;
-
-    var availableYearStarts = Enumerable
-        .Range(minAvailableStartYear, maxAvailableStartYear - minAvailableStartYear + 1)
-        .ToList();
 }
 
 <style>
+    .individual-current-year-line {
+        width: 100%;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        background: #f8f9fa;
+        padding: 10px 14px;
+        margin-bottom: 14px;
+        font-size: 1.08rem;
+        font-weight: 600;
+    }
+
     .individual-plans-toolbar {
         display: grid;
-        grid-template-columns: 170px minmax(240px, 1fr) 210px 210px;
+        grid-template-columns: minmax(320px, 1fr) 230px 230px;
         gap: 12px;
         align-items: end;
         margin-bottom: 18px;
@@ -55,26 +54,11 @@
 
 <h1>Индивидуальные планы преподавателей</h1>
 
-<form asp-action="Index" method="get" class="individual-plans-toolbar">
-    <div>
-        <label class="form-label">Учебный год</label>
-        <select name="startYear" class="form-select form-select-sm" onchange="this.form.submit()">
-            @foreach (var year in availableYearStarts)
-            {
-                var text = $"{year}-{year + 1}";
+<div class="individual-current-year-line">
+    Текущий учебный год: @Model.SelectedAcademicYear
+</div>
 
-                if (year == Model.SelectedYearStart)
-                {
-                    <option value="@year" selected>@text</option>
-                }
-                else
-                {
-                    <option value="@year">@text</option>
-                }
-            }
-        </select>
-    </div>
-
+<div class="individual-plans-toolbar">
     <div>
         <label class="form-label">Поиск преподавателя</label>
         <input type="text"
@@ -102,7 +86,7 @@
             <option value="rate-asc">Меньше ставка</option>
         </select>
     </div>
-</form>
+</div>
 
 @if (TempData["SuccessMessage"] != null)
 {
@@ -128,9 +112,12 @@
 <div class="individual-plans-actions">
     <form asp-action="ExportAll" method="post">
         @Html.AntiForgeryToken()
+
         <input type="hidden" name="startYear" value="@Model.SelectedYearStart" />
 
-        <button type="submit" class="btn btn-success" @(Model.TemplateExists ? "" : "disabled")>
+        <button type="submit"
+                class="btn btn-success"
+        @(Model.TemplateExists ? "" : "disabled")>
             Выгрузить все планы
         </button>
     </form>
@@ -139,7 +126,7 @@
 @if (Model.Lecturers.Count == 0)
 {
     <div class="alert alert-info">
-        Для выбранного учебного года преподаватели не найдены.
+        Для текущего учебного года преподаватели не найдены.
     </div>
 }
 else
