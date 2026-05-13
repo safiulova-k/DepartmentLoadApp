@@ -1,0 +1,85 @@
+﻿@model DepartmentLoadApp.ViewModels.AdditionalWorkCalculation.AdditionalWorkCalculationPageViewModel
+
+@{
+    ViewData["Title"] = "Доп. работа";
+}
+
+<h1 class="h3 mb-3">Расчет дополнительной работы</h1>
+
+@await Html.PartialAsync(
+        "_CalculationTopPanel",
+        new DepartmentLoadApp.ViewModels.Shared.CalculationTopPanelViewModel
+    {
+        SelectedYear = Model.SelectedYear,
+        SelectedYearStart = Model.SelectedYearStart,
+        AvailableYearStarts = Model.AvailableYearStarts,
+        ActiveTab = "additional"
+    })
+
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success">
+        @successMessage
+    </div>
+}
+
+<form asp-action="SavePostgraduateCount" method="post">
+    @Html.AntiForgeryToken()
+
+    <input type="hidden" name="selectedYearStart" value="@Model.SelectedYearStart" />
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-sm align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Вид работы</th>
+                    <th style="width: 180px;">Количество</th>
+                    <th style="width: 180px;">Норма часов</th>
+                    <th style="width: 180px;">Итого</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    <tr>
+                        <td>@row.WorkName</td>
+
+                        <td>
+                            @if (row.IsPostgraduate)
+                            {
+                                <input type="number"
+                                       min="0"
+                                       step="1"
+                                       name="count"
+                                       value="@row.Count"
+                                       class="form-control form-control-sm" />
+                            }
+                            else
+                            {
+                                <span>1</span>
+                            }
+                        </td>
+
+                        <td>@row.HoursPerUnit.ToString("0.##")</td>
+
+                        <td>@row.TotalHours ч.</td>
+                    </tr>
+                }
+            </tbody>
+
+            <tfoot class="table-light">
+                <tr>
+                    <th colspan="3">Итого</th>
+                    <th>@Model.TotalHours ч.</th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-primary px-4">
+            Сохранить
+        </button>
+    </div>
+</form>

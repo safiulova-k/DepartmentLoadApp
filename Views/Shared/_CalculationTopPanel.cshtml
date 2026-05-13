@@ -6,6 +6,7 @@
         "workload" => "WorkloadCalculation",
         "practice" => "PracticeCalculation",
         "gia" => "GiaCalculation",
+        "additional" => "AdditionalWorkCalculation",
         _ => "WorkloadCalculation"
     };
 
@@ -20,7 +21,11 @@
     var giaTabClass = Model.ActiveTab == "gia"
         ? "btn-primary"
         : "btn-outline-primary";
-}
+
+    var additionalTabClass = Model.ActiveTab == "additional" 
+        ? "btn-primary" 
+        : "btn-outline-primary";
+   }
 
 <style>
     .calculation-top-panel {
@@ -237,6 +242,13 @@
            asp-action="Index"
            class="btn btn-sm @giaTabClass">
             ГИА
+        </a>
+
+        <a asp-controller="AdditionalWorkCalculation"
+           asp-action="Index"
+           asp-route-startYear="@Model.SelectedYearStart"
+           class="btn @additionalTabClass">
+            Доп. работа
         </a>
     </div>
 </div>

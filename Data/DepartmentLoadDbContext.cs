@@ -4,6 +4,7 @@ using DepartmentLoadApp.Models.Core;
 using DepartmentLoadApp.Models.Gia;
 using DepartmentLoadApp.Models.Practice;
 using DepartmentLoadApp.Models.Workload;
+using DepartmentLoadApp.Models.AdditionalWork;
 using Microsoft.EntityFrameworkCore;
 
 namespace DepartmentLoadApp.Data;
@@ -35,6 +36,8 @@ public class DepartmentLoadDbContext : DbContext
     public DbSet<GiaWorkloadRow> GiaWorkloadRows { get; set; } = null!;
     public DbSet<SemesterPeriod> SemesterPeriods { get; set; } = null!;
     public DbSet<StudentFlow> StudentFlows { get; set; } = null!;
+    public DbSet<AdditionalWorkNorm> AdditionalWorkNorms => Set<AdditionalWorkNorm>();
+    public DbSet<AdditionalWorkloadRow> AdditionalWorkloadRows => Set<AdditionalWorkloadRow>();
 
     // Распределение нагрузки
     public DbSet<LecturerAcademicYearPlan> LecturerAcademicYearPlans { get; set; } = null!;
@@ -256,6 +259,51 @@ public class DepartmentLoadDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.LecturerAcademicYearPlanId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AdditionalWorkNorm>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Code)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(x => x.Name)
+                .IsRequired()
+                .HasMaxLength(300);
+
+            entity.Property(x => x.Hours)
+                .HasColumnType("decimal(10,2)");
+
+            entity.HasIndex(x => x.Code)
+                .IsUnique();
+        });
+
+        modelBuilder.Entity<AdditionalWorkloadRow>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.AcademicYear)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            entity.Property(x => x.WorkName)
+                .IsRequired()
+                .HasMaxLength(500);
+
+            entity.Property(x => x.HoursPerUnit)
+                .HasColumnType("decimal(10,2)");
+
+            entity.Property(x => x.Comment)
+                .HasMaxLength(1000);
+
+            entity.HasOne(x => x.AdditionalWorkNorm)
+                .WithMany()
+                .HasForeignKey(x => x.AdditionalWorkNormId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(x => x.AcademicYear);
         });
     }
 }

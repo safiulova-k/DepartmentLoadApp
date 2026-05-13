@@ -7,6 +7,10 @@ namespace DepartmentLoadApp.ViewModels.NormTime
     {
         public List<NormTimeRowViewModel> Items { get; set; } = new();
 
+        public List<AdditionalWorkNormRowViewModel> AdditionalWorkNorms { get; set; } = new();
+
+        public string ActiveTab { get; set; } = string.Empty;
+
         public List<SelectListItem> CalculationBaseItems { get; set; } = new()
         {
             new SelectListItem("На поток", ((int)WorkCalculationBase.PerStream).ToString()),

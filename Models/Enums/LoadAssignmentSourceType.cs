@@ -4,6 +4,7 @@
     {
         Discipline = 1,
         Practice = 2,
-        Gia = 3
+        Gia = 3,
+        AdditionalWork = 4
     }
 }

@@ -3,6 +3,7 @@ using System;
 using DepartmentLoadApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DepartmentLoadApp.Migrations
 {
     [DbContext(typeof(DepartmentLoadDbContext))]
-    partial class DepartmentLoadDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260513154752_AddAdditionalWork")]
+    partial class AddAdditionalWork
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,87 +23,6 @@ namespace DepartmentLoadApp.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("DepartmentLoadApp.Models.AdditionalWork.AdditionalWorkloadRow", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AcademicYear")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<int?>("AdditionalWorkNormId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Comment")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<int>("Count")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("HoursPerUnit")
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<int>("TotalHours")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("WorkName")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int>("WorkType")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AcademicYear");
-
-                    b.HasIndex("AdditionalWorkNormId");
-
-                    b.ToTable("AdditionalWorkloadRows");
-                });
-
-            modelBuilder.Entity("DepartmentLoadApp.Models.AdditionalWork.AdditionalWorkNorm", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<decimal>("Hours")
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<int>("WorkType")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.ToTable("AdditionalWorkNorms");
-                });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.Contingent.ContingentRow", b =>
                 {
@@ -1005,16 +926,6 @@ namespace DepartmentLoadApp.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("WorkloadRows");
-                });
-
-            modelBuilder.Entity("DepartmentLoadApp.Models.AdditionalWork.AdditionalWorkloadRow", b =>
-                {
-                    b.HasOne("DepartmentLoadApp.Models.AdditionalWork.AdditionalWorkNorm", "AdditionalWorkNorm")
-                        .WithMany()
-                        .HasForeignKey("AdditionalWorkNormId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("AdditionalWorkNorm");
                 });
 
             modelBuilder.Entity("DepartmentLoadApp.Models.Contingent.ContingentSubgroup", b =>

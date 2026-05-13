@@ -14,6 +14,9 @@
         CourseProject = 8,
 
         PracticeWork = 20,
-        GiaWork = 30
+        GiaWork = 30,
+
+        PostgraduateSupervision = 100,
+        OrganizationalWork = 101
     }
 }

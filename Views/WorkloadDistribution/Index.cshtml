@@ -392,6 +392,7 @@ else
 
             var autumnAssignments = lecturer.Assignments
             .Where(x => !IsGiaAssignment(x.SourceTypeDisplayName))
+            .Where(x => !IsAdditionalWorkAssignment(x.SourceTypeDisplayName))
             .Where(x => IsAutumnAssignment(x.Subtitle))
             .OrderBy(x => x.Title)
             .ThenBy(x => x.ElementDisplayName)
@@ -400,6 +401,7 @@ else
 
             var springAssignments = lecturer.Assignments
             .Where(x => !IsGiaAssignment(x.SourceTypeDisplayName))
+            .Where(x => !IsAdditionalWorkAssignment(x.SourceTypeDisplayName))
             .Where(x => IsSpringAssignment(x.Subtitle))
             .OrderBy(x => x.Title)
             .ThenBy(x => x.ElementDisplayName)
@@ -408,6 +410,7 @@ else
 
             var otherAssignments = lecturer.Assignments
             .Where(x => !IsGiaAssignment(x.SourceTypeDisplayName))
+            .Where(x => !IsAdditionalWorkAssignment(x.SourceTypeDisplayName))
             .Where(x => !autumnAssignments.Any(a => a.AssignmentId == x.AssignmentId))
             .Where(x => !springAssignments.Any(a => a.AssignmentId == x.AssignmentId))
             .OrderBy(x => x.Title)
@@ -421,6 +424,14 @@ else
             .ThenBy(x => x.ElementDisplayName)
             .ThenBy(x => x.UnitName)
             .ToList();
+
+            var additionalAssignments = lecturer.Assignments
+            .Where(x => IsAdditionalWorkAssignment(x.SourceTypeDisplayName))
+            .OrderBy(x => x.Title)
+            .ThenBy(x => x.ElementDisplayName)
+            .ThenBy(x => x.UnitName)
+            .ToList();
+
             var autumnSubjectGroups = BuildAssignedSubjectGroups(autumnAssignments);
 
             var springSubjectGroups = BuildAssignedSubjectGroups(
@@ -428,9 +439,12 @@ else
 
             var giaSubjectGroups = BuildAssignedSubjectGroups(giaAssignments);
 
+            var additionalSubjectGroups = BuildAssignedSubjectGroups(additionalAssignments);
+
             var autumnSectionId = $"viewAutumn_{lecturer.LecturerId}";
             var springSectionId = $"viewSpring_{lecturer.LecturerId}";
             var giaSectionId = $"viewGia_{lecturer.LecturerId}";
+            var additionalSectionId = $"viewAdditional_{lecturer.LecturerId}";
 
             <div class="accordion-item mb-2 border rounded js-lecturer-card"
                  data-lecturer-id="@lecturer.LecturerId"
@@ -642,7 +656,7 @@ else
                             </div>
 
                             <div class="modal-body">
-                                @if (!lecturer.SemesterGroups.Any() && !lecturer.GiaItems.Any())
+                                @if (!lecturer.SemesterGroups.Any() && !lecturer.GiaItems.Any() && !lecturer.AdditionalWorkItems.Any())
                                 {
                                     <div class="alert alert-info">
                                         Нет свободных элементов нагрузки для назначения.
@@ -796,6 +810,59 @@ else
 
                                                             giaIndex++;
                                                         }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                        @if (lecturer.AdditionalWorkItems.Any())
+                                        {
+                                            var additionalCollapseId = $"additional_{lecturer.LecturerId}";
+
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header">
+                                                    <button class="accordion-button collapsed"
+                                                            type="button"
+                                                            data-bs-toggle="collapse"
+                                                            data-bs-target="#@additionalCollapseId">
+                                                        Доп. работа
+                                                    </button>
+                                                </h2>
+
+                                                <div id="@additionalCollapseId"
+                                                     class="accordion-collapse collapse">
+                                                    <div class="accordion-body">
+                                                        <div class="distribution-worktype-row">
+                                                            <div class="distribution-worktype-title">
+                                                                Доп. работа:
+                                                            </div>
+
+                                                            <div class="distribution-chip-list">
+                                                                @foreach (var item in lecturer.AdditionalWorkItems)
+                                                                {
+                                                                    <label class="distribution-chip js-load-chip">
+                                                                        <input type="checkbox"
+                                                                               name="SelectedItemKeys"
+                                                                               value="@item.ItemKey"
+                                                                               class="form-check-input js-load-item-checkbox"
+                                                                               data-hours="@item.RemainingHours.ToString("0").Replace(",", ".")" />
+
+                                                                        <span class="distribution-chip-main">
+                                                                            <span class="distribution-chip-title">
+                                                                                @item.ElementDisplayName
+                                                                            </span>
+
+                                                                            <span class="distribution-chip-meta">
+                                                                                @item.RemainingHours.ToString("0") ч.
+                                                                                @if (!string.IsNullOrWhiteSpace(item.Subtitle))
+                                                                                {
+                                                                                    <span> · @item.Subtitle</span>
+                                                                                }
+                                                                            </span>
+                                                                        </span>
+                                                                    </label>
+                                                                }
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1164,7 +1231,101 @@ else
                                         </div>
                                     </div>
                                 </div>
+                                <div class="accordion-item js-view-section">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed"
+                                                type="button"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#@additionalSectionId">
+                                            Доп. работа
+                                            <span class="badge bg-secondary ms-2">
+                                                <span class="js-view-section-hours">
+                                                    @additionalAssignments.Sum(x => x.AssignedHours).ToString("0")
+                                                </span> ч.
+                                            </span>
+                                        </button>
+                                    </h2>
 
+                                    <div id="@additionalSectionId" class="accordion-collapse collapse">
+                                        <div class="accordion-body">
+                                            <div class="alert alert-light border distribution-empty-section @(additionalSubjectGroups.Any() ? "d-none" : "")">
+                                                Назначенной дополнительной работы нет.
+                                            </div>
+
+                                            <div class="accordion js-view-subjects">
+                                                @for (var subjectIndex = 0; subjectIndex < additionalSubjectGroups.Count; subjectIndex++)
+                                                {
+                                                    var subject = additionalSubjectGroups[subjectIndex];
+                                                    var subjectId = $"viewAdditionalSubject_{lecturer.LecturerId}_{subjectIndex}";
+
+                                                    <div class="accordion-item mb-2 js-view-subject-item">
+                                                        <h2 class="accordion-header">
+                                                            <button class="accordion-button collapsed"
+                                                                    type="button"
+                                                                    data-bs-toggle="collapse"
+                                                                    data-bs-target="#@subjectId">
+                                                                <div>
+                                                                    <div>@subject.Title</div>
+                                                                    <div class="small text-muted">@subject.Subtitle</div>
+                                                                </div>
+                                                            </button>
+                                                        </h2>
+
+                                                        <div id="@subjectId" class="accordion-collapse collapse">
+                                                            <div class="accordion-body">
+                                                                @foreach (var workType in subject.Items.GroupBy(x => x.ElementDisplayName).OrderBy(x => x.Key))
+                                                                {
+                                                                    <div class="distribution-worktype-row js-view-worktype-row">
+                                                                        <div class="distribution-worktype-title">
+                                                                            @workType.Key:
+                                                                        </div>
+
+                                                                        <div class="distribution-chip-list">
+                                                                            @foreach (var assignment in workType.OrderBy(x => x.UnitName))
+                                                                            {
+                                                                                <div class="distribution-chip distribution-assigned-chip js-assigned-chip"
+                                                                                     data-hours="@assignment.AssignedHours.ToString("0.####").Replace(",", ".")">
+                                                                                    <span class="distribution-chip-main">
+                                                                                        <span class="distribution-chip-title">
+                                                                                            @(string.IsNullOrWhiteSpace(assignment.UnitName) ? assignment.ElementDisplayName : assignment.UnitName)
+                                                                                        </span>
+                                                                                        <span class="distribution-chip-meta">
+                                                                                            @assignment.AssignedHours.ToString("0") ч.
+                                                                                            @if (assignment.StudentsCount > 0)
+                                                                                            {
+                                                                                                <span> · @assignment.StudentsCount студ.</span>
+                                                                                            }
+                                                                                        </span>
+                                                                                    </span>
+
+                                                                                    <form asp-action="DeleteAssignment"
+                                                                                          method="post"
+                                                                                          class="m-0 js-delete-assignment-form"
+                                                                                          data-lecturer-id="@lecturer.LecturerId"
+                                                                                          data-hours="@assignment.AssignedHours.ToString("0.####").Replace(",", ".")">
+                                                                                        @Html.AntiForgeryToken()
+
+                                                                                        <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
+                                                                                        <input type="hidden" name="SelectedLecturerId" value="@lecturer.LecturerId" />
+                                                                                        <input type="hidden" name="AssignmentId" value="@assignment.AssignmentId" />
+
+                                                                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                                                            ×
+                                                                                        </button>
+                                                                                    </form>
+                                                                                </div>
+                                                                            }
+                                                                        </div>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -1633,7 +1794,11 @@ else
         return !string.IsNullOrWhiteSpace(sourceTypeDisplayName)
                && sourceTypeDisplayName.Contains("ГИА", StringComparison.OrdinalIgnoreCase);
     }
-
+    private static bool IsAdditionalWorkAssignment(string? sourceTypeDisplayName)
+    {
+        return !string.IsNullOrWhiteSpace(sourceTypeDisplayName)
+               && sourceTypeDisplayName.Contains("Доп. работа", StringComparison.OrdinalIgnoreCase);
+    }
     private static bool IsAutumnAssignment(string? subtitle)
     {
         if (string.IsNullOrWhiteSpace(subtitle))

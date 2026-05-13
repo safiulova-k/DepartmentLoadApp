@@ -32,17 +32,20 @@ namespace DepartmentLoadApp.Services
         private readonly WorkloadCalculationService _workloadCalculationService;
         private readonly PracticeCalculationService _practiceCalculationService;
         private readonly GiaCalculationService _giaCalculationService;
+        private readonly AdditionalWorkCalculationService _additionalWorkCalculationService;
 
         public WorkloadDistributionService(
-            DepartmentLoadDbContext context,
-            WorkloadCalculationService workloadCalculationService,
-            PracticeCalculationService practiceCalculationService,
-            GiaCalculationService giaCalculationService)
+             DepartmentLoadDbContext context,
+             WorkloadCalculationService workloadCalculationService,
+             PracticeCalculationService practiceCalculationService,
+             GiaCalculationService giaCalculationService,
+             AdditionalWorkCalculationService additionalWorkCalculationService)
         {
             _context = context;
             _workloadCalculationService = workloadCalculationService;
             _practiceCalculationService = practiceCalculationService;
             _giaCalculationService = giaCalculationService;
+            _additionalWorkCalculationService = additionalWorkCalculationService;
         }
 
         public async Task<WorkloadDistributionPageViewModel> BuildPageAsync(
@@ -69,15 +72,11 @@ namespace DepartmentLoadApp.Services
                 .ToListAsync();
 
             var assignments = await _context.LecturerLoadAssignments
+                .AsNoTracking()
                 .Where(x => x.AcademicYear == academicYear)
-                .OrderBy(x => x.Id)
                 .ToListAsync();
 
             var items = await BuildDistributableItemsAsync(academicYear, assignments);
-
-            var itemMap = items
-              .GroupBy(BuildItemKey)
-              .ToDictionary(x => x.Key, x => x.First());
 
             var validAssignments = assignments
                 .Where(x => FindItemForAssignment(items, x) != null)
@@ -161,6 +160,7 @@ namespace DepartmentLoadApp.Services
 
                 card.SemesterGroups = BuildSemesterGroups(availableForLecturer);
                 card.GiaItems = BuildGiaItems(availableForLecturer);
+                card.AdditionalWorkItems = BuildAdditionalWorkItems(availableForLecturer);
 
                 foreach (var assignment in lecturerAssignments)
                 {
@@ -513,13 +513,13 @@ namespace DepartmentLoadApp.Services
                 .ToDictionary(x => x.Key, x => x.ToList());
 
             var disciplineRows = await _context.WorkloadRows
-     .AsNoTracking()
-     .Where(x => x.AcademicYear == academicYear)
-     .OrderBy(x => x.Course)
-     .ThenBy(x => x.SemesterName)
-     .ThenBy(x => x.DisciplineName)
-     .ThenBy(x => x.DirectionCode)
-     .ToListAsync();
+             .AsNoTracking()
+             .Where(x => x.AcademicYear == academicYear)
+             .OrderBy(x => x.Course)
+             .ThenBy(x => x.SemesterName)
+             .ThenBy(x => x.DisciplineName)
+             .ThenBy(x => x.DirectionCode)
+             .ToListAsync();
 
             var lectureRows = await _workloadCalculationService
                 .BuildRowsForTableAsync(disciplineRows);
@@ -642,6 +642,31 @@ namespace DepartmentLoadApp.Services
             foreach (var row in giaRows)
             {
                 AddGiaStudentItem(result, row);
+            }
+
+            var additionalWorkItems = await _additionalWorkCalculationService
+     .BuildDistributionItemsAsync(academicYear);
+
+            foreach (var row in additionalWorkItems)
+            {
+                result.Add(new DistributableLoadItem
+                {
+                    SourceType = LoadAssignmentSourceType.AdditionalWork,
+                    SourceRowId = row.SourceRowId,
+                    SourceAcademicPlanRecordId = row.SourceAcademicPlanRecordId,
+                    LoadElementType = row.LoadElementType,
+                    DistributionUnitType = DistributionUnitType.Flow,
+                    StudentGroupId = null,
+                    ContingentSubgroupId = null,
+                    SemesterName = "Доп. работа",
+                    Title = row.Title,
+                    Subtitle = row.Subtitle,
+                    ElementDisplayName = row.ElementDisplayName,
+                    UnitName = "без группы",
+                    StudentsCount = 0,
+                    TotalHours = row.TotalHours,
+                    RemainingHours = row.TotalHours
+                });
             }
 
             ApplyAssignedInfo(result, assignments);
@@ -1031,10 +1056,11 @@ namespace DepartmentLoadApp.Services
         }
 
         private static List<WorkloadDistributionSemesterGroupViewModel> BuildSemesterGroups(
-       List<DistributableLoadItem> items)
+      List<DistributableLoadItem> items)
         {
             return items
                 .Where(x => x.SourceType != LoadAssignmentSourceType.Gia)
+                .Where(x => x.SourceType != LoadAssignmentSourceType.AdditionalWork)
                 .GroupBy(x => x.SemesterName)
                 .OrderBy(x => GetSemesterSortOrder(x.Key))
                 .ThenBy(x => x.Key)
@@ -1065,7 +1091,6 @@ namespace DepartmentLoadApp.Services
                 })
                 .ToList();
         }
-
         private static List<WorkloadDistributionGiaItemViewModel> BuildGiaItems(
             List<DistributableLoadItem> items)
         {
@@ -1369,6 +1394,7 @@ namespace DepartmentLoadApp.Services
                 LoadAssignmentSourceType.Discipline => "Дисциплина",
                 LoadAssignmentSourceType.Practice => "Практика",
                 LoadAssignmentSourceType.Gia => "ГИА",
+                LoadAssignmentSourceType.AdditionalWork => "Доп. работа",
                 _ => "Неизвестно"
             };
         }
@@ -1454,6 +1480,17 @@ namespace DepartmentLoadApp.Services
             return string.IsNullOrWhiteSpace(value)
                 ? string.Empty
                 : value.Trim().ToLowerInvariant();
+        }
+
+        private static List<WorkloadDistributionAvailableItemViewModel> BuildAdditionalWorkItems(List<DistributableLoadItem> items)
+        {
+            return items
+                .Where(x => x.SourceType == LoadAssignmentSourceType.AdditionalWork)
+                .Where(x => x.RemainingHours > 0)
+                .OrderBy(x => x.Title)
+                .ThenBy(x => x.ElementDisplayName)
+                .Select(MapAvailableItem)
+                .ToList();
         }
         private sealed class DistributableLoadItem
         {

@@ -39,6 +39,7 @@ builder.Services.AddScoped<ILecturerSyncService, LecturerSyncService>();
 builder.Services.AddScoped<IStudentGroupSyncService, StudentGroupSyncService>();
 builder.Services.AddScoped<IAcademicPlanSyncService, AcademicPlanSyncService>();
 builder.Services.AddScoped<IAcademicPlanRecordSyncService, AcademicPlanRecordSyncService>();
+builder.Services.AddScoped<AdditionalWorkCalculationService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

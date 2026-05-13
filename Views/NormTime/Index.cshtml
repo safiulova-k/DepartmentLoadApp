@@ -1,139 +1,246 @@
 ﻿@model DepartmentLoadApp.ViewModels.NormTime.NormTimePageViewModel
 
+@using System.Globalization
+
 @{
     ViewData["Title"] = "Нормы времени";
+
     var groupedItems = Model.Items
         .GroupBy(x => x.CategoryName)
         .OrderBy(x => x.Key)
         .ToList();
+
+    var activeTab = Model.ActiveTab;
+    var hasActiveTab = !string.IsNullOrWhiteSpace(activeTab);
 }
 
-<div class="container-fluid py-4 norm-time-page">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-        <div>
-            <h2 class="mb-1">Нормы времени</h2>
-            <div class="text-muted">
-                Для каждого вида работы задается основа расчета и значение нормы.
+<h1>Нормы времени</h1>
+
+<p class="text-muted">
+    Для каждого вида работы задается основа расчета и значение нормы.
+</p>
+
+<p class="text-muted">
+    Для строк Лекции, Практические занятия и Лабораторные работы в поле Часы пока указывается 1,
+    так как итоговая нагрузка для них считается по формуле: часы по плану × потоки / группы / подгруппы.
+</p>
+
+<p class="text-muted">
+    Для строк категории Практики в поле Часы указывается коэффициент.
+    Итог по практикам считается по формуле: количество недель × основа расчета × коэффициент.
+</p>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">
+        @TempData["SuccessMessage"]
+    </div>
+}
+
+<form asp-action="Save" method="post" id="normTimeForm">
+    @Html.AntiForgeryToken()
+
+    <input type="hidden"
+           name="activeTab"
+           id="activeTabInput"
+           value="@activeTab" />
+
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        @for (var g = 0; g < groupedItems.Count; g++)
+        {
+            var categoryName = groupedItems[g].Key;
+            var tabId = $"tab-{g}";
+            var paneId = $"pane-{g}";
+
+            var isActive = hasActiveTab
+            ? activeTab == paneId
+            : g == 0;
+
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(isActive ? "active" : "")"
+                        id="@tabId"
+                        data-bs-toggle="tab"
+                        data-bs-target="#@paneId"
+                        type="button"
+                        role="tab">
+                    @categoryName
+                </button>
+            </li>
+        }
+
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(activeTab == "pane-additional-work" ? "active" : "")"
+                    id="tab-additional-work"
+                    data-bs-toggle="tab"
+                    data-bs-target="#pane-additional-work"
+                    type="button"
+                    role="tab">
+                Доп. работа
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        @for (var g = 0; g < groupedItems.Count; g++)
+        {
+            var group = groupedItems[g].ToList();
+            var categoryName = groupedItems[g].Key;
+            var paneId = $"pane-{g}";
+
+            var isActive = hasActiveTab
+            ? activeTab == paneId
+            : g == 0;
+
+            <div class="tab-pane fade @(isActive ? "show active" : "")"
+                 id="@paneId"
+                 role="tabpanel">
+
+                <h4 class="mb-3">@categoryName</h4>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Вид работы</th>
+                                <th style="width: 280px;">Основа расчета</th>
+                                <th style="width: 180px;">Часы</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach (var row in group)
+                            {
+                                var index = Model.Items.IndexOf(row);
+
+                                <tr>
+                                    <td>
+                                        @row.WorkName
+
+                                        <input type="hidden"
+                                               name="Items[@index].Id"
+                                               value="@row.Id" />
+
+                                        <input type="hidden"
+                                               name="Items[@index].WorkName"
+                                               value="@row.WorkName" />
+
+                                        <input type="hidden"
+                                               name="Items[@index].CategoryName"
+                                               value="@row.CategoryName" />
+                                    </td>
+
+                                    <td>
+                                        <select name="Items[@index].CalculationBase"
+                                                class="form-select form-select-sm">
+                                            @foreach (var item in Model.CalculationBaseItems)
+                                            {
+                                                var isSelected = item.Value == ((int)row.CalculationBase).ToString();
+
+                                                <option value="@item.Value" selected="@isSelected">
+                                                    @item.Text
+                                                </option>
+                                            }
+                                        </select>
+                                    </td>
+
+                                    <td>
+                                        <input name="Items[@index].Hours"
+                                               value="@row.Hours.ToString("0.##", CultureInfo.InvariantCulture)"
+                                               class="form-control form-control-sm"
+                                               type="number"
+                                               min="0"
+                                               step="0.01" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        <div class="tab-pane fade @(activeTab == "pane-additional-work" ? "show active" : "")"
+             id="pane-additional-work"
+             role="tabpanel">
+
+            <h4 class="mb-3">Доп. работа</h4>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Вид работы</th>
+                            <th style="width: 180px;">Часы</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @for (var i = 0; i < Model.AdditionalWorkNorms.Count; i++)
+                        {
+                            var row = Model.AdditionalWorkNorms[i];
+
+                            <tr>
+                                <td>
+                                    @row.Name
+
+                                    <input type="hidden"
+                                           name="AdditionalWorkNorms[@i].Id"
+                                           value="@row.Id" />
+
+                                    <input type="hidden"
+                                           name="AdditionalWorkNorms[@i].WorkType"
+                                           value="@((int)row.WorkType)" />
+
+                                    <input type="hidden"
+                                           name="AdditionalWorkNorms[@i].Code"
+                                           value="@row.Code" />
+
+                                    <input type="hidden"
+                                           name="AdditionalWorkNorms[@i].Name"
+                                           value="@row.Name" />
+                                </td>
+
+                                <td>
+                                    <input name="AdditionalWorkNorms[@i].Hours"
+                                           value="@row.Hours.ToString("0.##", CultureInfo.InvariantCulture)"
+                                           class="form-control form-control-sm"
+                                           type="number"
+                                           min="0"
+                                           step="0.01" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <div class="alert alert-info rounded-3 mb-3">
-        Для строк <strong>Лекции</strong>, <strong>Практические занятия</strong> и <strong>Лабораторные работы</strong>
-        в поле <strong>Часы</strong> пока указывается <strong>1</strong>, так как итоговая нагрузка для них считается
-        по формуле: <strong>часы по плану × потоки / группы / подгруппы</strong>.
+    <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-primary px-4">
+            Сохранить
+        </button>
     </div>
-
-    <div class="alert alert-warning rounded-3 mb-4">
-        Для строк категории <strong>Практики</strong> в поле <strong>Часы</strong> указывается
-        <strong>коэффициент</strong>. Итог по практикам считается по формуле:
-        <strong>количество недель × основа расчета × коэффициент</strong>.
-    </div>
-
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="alert alert-success rounded-3 mb-4">
-            @TempData["SuccessMessage"]
-        </div>
-    }
-
-    <form asp-controller="NormTime" asp-action="Save" method="post">
-        <ul class="nav nav-tabs mb-3" id="normTimeTabs" role="tablist">
-            @for (int g = 0; g < groupedItems.Count; g++)
-            {
-                var categoryName = groupedItems[g].Key;
-                var tabId = $"tab-{g}";
-                var paneId = $"pane-{g}";
-
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link @(g == 0 ? "active" : "")"
-                            id="@tabId"
-                            data-bs-toggle="tab"
-                            data-bs-target="#@paneId"
-                            type="button"
-                            role="tab"
-                            aria-controls="@paneId"
-                            aria-selected="@(g == 0 ? "true" : "false")">
-                        @categoryName
-                    </button>
-                </li>
-            }
-        </ul>
-
-        <div class="tab-content" id="normTimeTabsContent">
-            @for (int g = 0; g < groupedItems.Count; g++)
-            {
-                var group = groupedItems[g].ToList();
-                var categoryName = groupedItems[g].Key;
-                var paneId = $"pane-{g}";
-                var tabId = $"tab-{g}";
-
-                <div class="tab-pane fade @(g == 0 ? "show active" : "")"
-                     id="@paneId"
-                     role="tabpanel"
-                     aria-labelledby="@tabId">
-
-                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-3">
-                        <div class="card-header bg-white border-bottom py-3">
-                            <div class="fw-semibold">@categoryName</div>
-                        </div>
-
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0 norm-time-table">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th style="width: 45%;">Вид работы</th>
-                                            <th style="width: 30%;">Основа расчета</th>
-                                            <th style="width: 25%;">Часы</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @for (int i = 0; i < group.Count; i++)
-                                        {
-                                            var row = group[i];
-                                            var index = Model.Items.IndexOf(row);
-
-                                            <tr>
-                                                <td>
-                                                    <input type="hidden" asp-for="Items[index].Id" />
-                                                    <input type="hidden" asp-for="Items[index].WorkName" />
-                                                    <input type="hidden" asp-for="Items[index].CategoryName" />
-
-                                                    <div class="fw-semibold">@row.WorkName</div>
-                                                </td>
-
-                                                <td>
-                                                    <select asp-for="Items[index].CalculationBase"
-                                                            asp-items="Model.CalculationBaseItems"
-                                                            class="form-select form-select-sm">
-                                                    </select>
-                                                </td>
-
-                                                <td>
-                                                    <input asp-for="Items[index].Hours"
-                                                           class="form-control form-control-sm text-center"
-                                                           type="text"
-                                                           inputmode="decimal" />
-                                                    <span asp-validation-for="Items[index].Hours" class="text-danger small"></span>
-                                                </td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            }
-        </div>
-
-        <div class="d-flex justify-content-end mt-4">
-            <button type="submit" class="btn btn-primary px-4">Сохранить</button>
-        </div>
-    </form>
-</div>
+</form>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("shown.bs.tab", function (event) {
+            const target = event.target.getAttribute("data-bs-target");
+            const input = document.getElementById("activeTabInput");
+
+            if (target && input) {
+                input.value = target.replace("#", "");
+            }
+        });
+
+        document.getElementById("normTimeForm")?.addEventListener("submit", function () {
+            const activeButton = document.querySelector(".nav-link.active[data-bs-target]");
+            const input = document.getElementById("activeTabInput");
+
+            if (activeButton && input) {
+                input.value = activeButton.getAttribute("data-bs-target").replace("#", "");
+            }
+        });
+    </script>
 }
