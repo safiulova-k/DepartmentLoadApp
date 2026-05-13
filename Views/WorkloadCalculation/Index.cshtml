@@ -2,7 +2,114 @@
 
 @{
     ViewData["Title"] = "Расчет нагрузки по дисциплинам";
+
+    var pastelColors = new[]
+    {
+        "#fff4d6",
+        "#e3f2fd",
+        "#e8f5e9",
+        "#fce4ec",
+        "#ede7f6",
+        "#e0f7fa",
+        "#f3e5f5",
+        "#fffde7",
+        "#f1f8e9",
+        "#e8eaf6"
+    };
+
+    var directions = (Model.Rows ?? new())
+        .Select(x => x.DirectionCode)
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(x => x)
+        .ToList();
+
+    var directionColorMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    for (var i = 0; i < directions.Count; i++)
+    {
+        directionColorMap[directions[i]] = pastelColors[i % pastelColors.Length];
+    }
 }
+
+<style>
+    .workload-calculation-table {
+        width: 100%;
+        table-layout: fixed;
+        font-size: 0.76rem;
+    }
+
+        .workload-calculation-table th,
+        .workload-calculation-table td {
+            vertical-align: middle;
+            text-align: center;
+            padding: 0.25rem;
+        }
+
+        .workload-calculation-table .text-cell {
+            text-align: left;
+        }
+
+        .workload-calculation-table .direction-column {
+            width: 96px;
+        }
+
+        .workload-calculation-table .discipline-column {
+            width: 260px;
+        }
+
+        .workload-calculation-table .small-column {
+            width: 42px;
+        }
+
+        .workload-calculation-table .medium-column {
+            width: 54px;
+        }
+
+        .workload-calculation-table .vertical-header {
+            height: 150px;
+            width: 38px;
+            padding: 4px 2px;
+        }
+
+            .workload-calculation-table .vertical-header > span {
+                writing-mode: vertical-rl;
+                transform: rotate(180deg);
+                display: inline-block;
+                line-height: 1.1;
+                white-space: nowrap;
+            }
+
+        .workload-calculation-table .total-column {
+            width: 56px;
+            font-weight: 700;
+        }
+
+    .workload-merged-badge {
+        display: block;
+        margin-top: 4px;
+        font-size: 0.68rem;
+        white-space: normal;
+    }
+
+    @@media (max-width: 1199.98px) {
+        .workload-calculation-table {
+            font-size: 0.68rem;
+        }
+
+            .workload-calculation-table .discipline-column {
+                width: 220px;
+            }
+
+            .workload-calculation-table .direction-column {
+                width: 82px;
+            }
+
+            .workload-calculation-table .vertical-header {
+                width: 32px;
+            }
+    }
+</style>
 
 <h1>Расчет нагрузки по дисциплинам</h1>
 
@@ -33,146 +140,262 @@
 @if (Model.Rows == null || !Model.Rows.Any())
 {
     <div class="alert alert-info">
-        По выбранному учебному году данных пока нет
+        По выбранному учебному году данных пока нет.
     </div>
 }
 else
 {
+    <div class="direction-legend">
+        @foreach (var direction in directions)
+        {
+            <div class="direction-legend-item">
+                <span class="direction-legend-color"
+                      style="background-color:@directionColorMap[direction]"></span>
+                <span>@direction</span>
+            </div>
+        }
+    </div>
+
     <div class="table-responsive">
-        <table class="table table-bordered table-sm align-middle workload-table">
-            <thead class="table-light text-center">
+        <table class="table table-bordered table-sm workload-calculation-table">
+            <thead class="table-dark">
                 <tr>
-                    <th rowspan="2">Семестр</th>
-                    <th rowspan="2">Код направления</th>
-                    <th rowspan="2">Форма обучения</th>
-                    <th rowspan="2">Наименование дисциплины</th>
-                    <th rowspan="2">Курс</th>
-                    <th rowspan="2">Студентов</th>
-                    <th rowspan="2">Потоков</th>
-                    <th rowspan="2">Групп</th>
-                    <th rowspan="2">Подгрупп</th>
-
+                    <th class="vertical-header small-column" rowspan="2">
+                        <span>Семестр</span>
+                    </th>
+                    <th class="direction-column" rowspan="2">Направление</th>
+                    <th class="discipline-column" rowspan="2">Дисциплина</th>
+                    <th class="vertical-header small-column" rowspan="2">
+                        <span>Курс</span>
+                    </th>
+                    <th class="vertical-header medium-column" rowspan="2">
+                        <span>Студентов</span>
+                    </th>
+                    <th class="vertical-header small-column" rowspan="2">
+                        <span>Потоков</span>
+                    </th>
+                    <th class="vertical-header small-column" rowspan="2">
+                        <span>Групп</span>
+                    </th>
+                    <th class="vertical-header small-column" rowspan="2">
+                        <span>Подгрупп</span>
+                    </th>
                     <th colspan="2">Лекции</th>
-                    <th colspan="2">Практические занятия</th>
-                    <th colspan="2">Лабораторные занятия</th>
-
-                    <th colspan="5">Формы контроля</th>
-                    <th colspan="5">Часы по формам контроля</th>
-
-                    <th rowspan="2">Консультации</th>
-                    <th rowspan="2">Итого</th>
+                    <th colspan="2">Практика</th>
+                    <th colspan="2">Лабораторные</th>
+                    <th colspan="5">Контроль</th>
+                    <th colspan="5">Часы контроля</th>
+                    <th class="vertical-header medium-column" rowspan="2">
+                        <span>Консультации</span>
+                    </th>
+                    <th class="vertical-header total-column" rowspan="2">
+                        <span>Итого</span>
+                    </th>
                 </tr>
+
                 <tr>
-                    <th>По плану</th>
-                    <th>Всего</th>
-
-                    <th>По плану</th>
-                    <th>Всего</th>
-
-                    <th>По плану</th>
-                    <th>Всего</th>
-
-                    <th>Экзамен</th>
-                    <th>Зачет</th>
-                    <th>Курсовая работа</th>
-                    <th>Курсовой проект</th>
-                    <th>РГР</th>
-
-                    <th>Экзамен</th>
-                    <th>Зачет</th>
-                    <th>Курсовая работа</th>
-                    <th>Курсовой проект</th>
-                    <th>РГР</th>
+                    <th class="vertical-header"><span>План</span></th>
+                    <th class="vertical-header"><span>Всего</span></th>
+                    <th class="vertical-header"><span>План</span></th>
+                    <th class="vertical-header"><span>Всего</span></th>
+                    <th class="vertical-header"><span>План</span></th>
+                    <th class="vertical-header"><span>Всего</span></th>
+                    <th class="vertical-header"><span>Экзамен</span></th>
+                    <th class="vertical-header"><span>Зачет</span></th>
+                    <th class="vertical-header"><span>КР</span></th>
+                    <th class="vertical-header"><span>КП</span></th>
+                    <th class="vertical-header"><span>РГР</span></th>
+                    <th class="vertical-header"><span>Экзамен</span></th>
+                    <th class="vertical-header"><span>Зачет</span></th>
+                    <th class="vertical-header"><span>КР</span></th>
+                    <th class="vertical-header"><span>КП</span></th>
+                    <th class="vertical-header"><span>РГР</span></th>
                 </tr>
             </thead>
 
-            <tbody>
-                @for (int i = 0; i < Model.Rows.Count; i++)
+            <tbody class="js-calculation-table-body">
+                @foreach (var row in Model.Rows)
                 {
-                    <tr class="@(Model.Rows[i].IsMergedStream ? "table-warning" : "")">
-                        <td>@Model.Rows[i].SemesterName</td>
+                    var directionColor = directionColorMap.TryGetValue(row.DirectionCode, out var color)
+                    ? color
+                    : "#ffffff";
+
+                    <tr class="js-calculation-row calculation-row-colored"
+                        style="--direction-color:@directionColor"
+                        data-semester="@((row.SemesterName ?? string.Empty).ToLower())"
+                        data-direction="@((row.DirectionCode ?? string.Empty).ToLower())"
+                        data-name="@((row.DisciplineName ?? string.Empty).ToLower())"
+                        data-course="@row.Course"
+                        data-merged="@(row.IsMergedStream ? "true" : "false")"
+                        data-exam="@(row.HasExam ? "true" : "false")"
+                        data-credit="@(row.HasCredit ? "true" : "false")">
+
+                        <td>@row.SemesterName</td>
 
                         <td>
-                            @Model.Rows[i].DirectionCode
+                            @row.DirectionCode
 
-                            @if (Model.Rows[i].IsMergedStream)
+                            @if (row.IsMergedStream)
                             {
-                                <div class="small text-muted">
-                                    объединённый поток
-                                </div>
+                                <span class="badge bg-info text-dark workload-merged-badge">
+                                    объединенный
+                                </span>
                             }
                         </td>
 
-                        <td>@Model.Rows[i].EducationForm</td>
-                        <td>@Model.Rows[i].DisciplineName</td>
-                        <td class="text-center">@Model.Rows[i].Course</td>
-                        <td class="text-center">@Model.Rows[i].StudentsCount</td>
-                        <td class="text-center">@Model.Rows[i].FlowCount</td>
-                        <td class="text-center">@Model.Rows[i].GroupCount</td>
-                        <td class="text-center">@Model.Rows[i].SubgroupCount</td>
+                        <td class="text-cell">@row.DisciplineName</td>
+                        <td>@row.Course</td>
+                        <td>@row.StudentsCount</td>
+                        <td>@row.FlowCount</td>
+                        <td>@row.GroupCount</td>
+                        <td>@row.SubgroupCount</td>
 
-                        <td class="text-end">
-                            @Model.Rows[i].LecturePlanHours.ToString("0.##")
-                        </td>
-                        <td class="text-end">
-                            @Model.Rows[i].LectureTotalHours.ToString("0.##")
-                        </td>
+                        <td>@row.LecturePlanHours.ToString("0.##")</td>
+                        <td>@row.LectureTotalHours.ToString("0.##")</td>
 
-                        <td class="text-end">
-                            @Model.Rows[i].PracticePlanHours.ToString("0.##")
-                        </td>
-                        <td class="text-end">
-                            @Model.Rows[i].PracticeTotalHours.ToString("0.##")
-                        </td>
+                        <td>@row.PracticePlanHours.ToString("0.##")</td>
+                        <td>@row.PracticeTotalHours.ToString("0.##")</td>
 
-                        <td class="text-end">
-                            @Model.Rows[i].LabPlanHours.ToString("0.##")
-                        </td>
-                        <td class="text-end">
-                            @Model.Rows[i].LabTotalHours.ToString("0.##")
-                        </td>
+                        <td>@row.LabPlanHours.ToString("0.##")</td>
+                        <td>@row.LabTotalHours.ToString("0.##")</td>
 
-                        <td class="text-center">
-                            @(Model.Rows[i].HasExam ? "✓" : "")
-                        </td>
-                        <td class="text-center">
-                            @(Model.Rows[i].HasCredit ? "✓" : "")
-                        </td>
-                        <td class="text-center">
-                            @(Model.Rows[i].HasCourseWork ? "✓" : "")
-                        </td>
-                        <td class="text-center">
-                            @(Model.Rows[i].HasCourseProject ? "✓" : "")
-                        </td>
-                        <td class="text-center">
-                            @(Model.Rows[i].HasRgr ? "✓" : "")
-                        </td>
+                        <td>@(row.HasExam ? "✓" : "")</td>
+                        <td>@(row.HasCredit ? "✓" : "")</td>
+                        <td>@(row.HasCourseWork ? "✓" : "")</td>
+                        <td>@(row.HasCourseProject ? "✓" : "")</td>
+                        <td>@(row.HasRgr ? "✓" : "")</td>
 
-                        <td class="text-end">
-                            @Model.Rows[i].ExamHours.ToString("0.##")
-                        </td>
-                        <td class="text-end">
-                            @Model.Rows[i].CreditHours.ToString("0.##")
-                        </td>
-                        <td class="text-end">
-                            @Model.Rows[i].CourseWorkHours.ToString("0.##")
-                        </td>
-                        <td class="text-end">
-                            @Model.Rows[i].CourseProjectHours.ToString("0.##")
-                        </td>
-                        <td class="text-end">
-                            @Model.Rows[i].RgrHours.ToString("0.##")
-                        </td>
+                        <td>@row.ExamHours.ToString("0.##")</td>
+                        <td>@row.CreditHours.ToString("0.##")</td>
+                        <td>@row.CourseWorkHours.ToString("0.##")</td>
+                        <td>@row.CourseProjectHours.ToString("0.##")</td>
+                        <td>@row.RgrHours.ToString("0.##")</td>
 
-                        <td class="text-end">
-                            @Model.Rows[i].ConsultationHours.ToString("0.##")
-                        </td>
-                        <td class="text-end fw-semibold">
-                            @Model.Rows[i].TotalHours.ToString("0.##")
-                        </td>
+                        <td>@row.ConsultationHours.ToString("0.##")</td>
+                        <td class="fw-semibold">@row.TotalHours.ToString("0.##")</td>
                     </tr>
                 }
             </tbody>
         </table>
     </div>
+}
+
+@section Scripts {
+    <script>
+        function isAutumnSemester(value) {
+            const text = String(value || "").toLowerCase();
+
+            return text.includes("осен")
+                || text.includes("осень")
+                || text.includes("1 сем")
+                || text.includes("1-й")
+                || text === "1";
+        }
+
+        function isSpringSemester(value) {
+            const text = String(value || "").toLowerCase();
+
+            return text.includes("вес")
+                || text.includes("весна")
+                || text.includes("2 сем")
+                || text.includes("2-й")
+                || text === "2";
+        }
+
+        function parseCalculationNumber(value) {
+            if (!value) {
+                return 0;
+            }
+
+            return Number(String(value).replace(",", ".")) || 0;
+        }
+
+        function applyCalculationFiltersAndSort() {
+            const tbody = document.querySelector(".js-calculation-table-body");
+
+            if (!tbody) {
+                return;
+            }
+
+            const search = (document.querySelector(".js-calculation-search")?.value || "").toLowerCase().trim();
+            const filter = document.querySelector(".js-calculation-filter")?.value || "all";
+            const sort = document.querySelector(".js-calculation-sort")?.value || "name-asc";
+            const rows = Array.from(tbody.querySelectorAll(".js-calculation-row"));
+
+            rows.forEach(function (row) {
+                const semester = row.dataset.semester || "";
+                const direction = row.dataset.direction || "";
+                const name = row.dataset.name || "";
+                const merged = row.dataset.merged === "true";
+                const hasExam = row.dataset.exam === "true";
+                const hasCredit = row.dataset.credit === "true";
+
+                let visible = true;
+
+                if (search && !name.includes(search) && !direction.includes(search) && !semester.includes(search)) {
+                    visible = false;
+                }
+
+                if (filter === "autumn" && !isAutumnSemester(semester)) {
+                    visible = false;
+                }
+
+                if (filter === "spring" && !isSpringSemester(semester)) {
+                    visible = false;
+                }
+
+                if (filter === "merged" && !merged) {
+                    visible = false;
+                }
+
+                if (filter === "exam" && !hasExam) {
+                    visible = false;
+                }
+
+                if (filter === "credit" && !hasCredit) {
+                    visible = false;
+                }
+
+                row.classList.toggle("d-none", !visible);
+            });
+
+            rows.sort(function (a, b) {
+                const nameA = a.dataset.name || "";
+                const nameB = b.dataset.name || "";
+                const directionA = a.dataset.direction || "";
+                const directionB = b.dataset.direction || "";
+                const courseA = parseCalculationNumber(a.dataset.course);
+                const courseB = parseCalculationNumber(b.dataset.course);
+
+                if (sort === "course-asc") {
+                    return courseA - courseB || nameA.localeCompare(nameB);
+                }
+
+                if (sort === "direction-asc") {
+                    return directionA.localeCompare(directionB) || nameA.localeCompare(nameB);
+                }
+
+                return nameA.localeCompare(nameB) || directionA.localeCompare(directionB);
+            });
+
+            rows.forEach(function (row) {
+                tbody.appendChild(row);
+            });
+        }
+
+        document.addEventListener("input", function (event) {
+            if (event.target.classList.contains("js-calculation-search")) {
+                applyCalculationFiltersAndSort();
+            }
+        });
+
+        document.addEventListener("change", function (event) {
+            if (event.target.classList.contains("js-calculation-filter")
+                || event.target.classList.contains("js-calculation-sort")) {
+                applyCalculationFiltersAndSort();
+            }
+        });
+
+        applyCalculationFiltersAndSort();
+    </script>
 }

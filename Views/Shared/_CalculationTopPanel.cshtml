@@ -1,6 +1,18 @@
 ﻿@model DepartmentLoadApp.ViewModels.Shared.CalculationTopPanelViewModel
 
 @{
+    const int minAvailableStartYear = 2018;
+
+    var currentAcademicStartYear = DateTime.Now.Month >= 9
+        ? DateTime.Now.Year
+        : DateTime.Now.Year - 1;
+
+    var maxAvailableStartYear = currentAcademicStartYear + 1;
+
+    var availableYearStarts = Enumerable
+        .Range(minAvailableStartYear, maxAvailableStartYear - minAvailableStartYear + 1)
+        .ToList();
+
     var controllerName = Model.ActiveTab switch
     {
         "workload" => "WorkloadCalculation",
@@ -8,64 +20,221 @@
         "gia" => "GiaCalculation",
         _ => "WorkloadCalculation"
     };
+
+    var workloadTabClass = Model.ActiveTab == "workload"
+        ? "btn-primary"
+        : "btn-outline-primary";
+
+    var practiceTabClass = Model.ActiveTab == "practice"
+        ? "btn-primary"
+        : "btn-outline-primary";
+
+    var giaTabClass = Model.ActiveTab == "gia"
+        ? "btn-primary"
+        : "btn-outline-primary";
 }
 
-<form asp-controller="@controllerName" asp-action="ImportFromAcademicPlan" method="post" class="row g-3 align-items-end mb-4">
-    @Html.AntiForgeryToken()
+<style>
+    .calculation-top-panel {
+        margin-bottom: 16px;
+    }
 
-    <div class="col-auto">
-        <label class="form-label">Год начала расчета</label>
-        <select name="startYear" class="form-select">
-            @foreach (var year in Model.AvailableYearStarts)
-            {
-                if (year == Model.SelectedYearStart)
+    .calculation-toolbar {
+        display: grid;
+        grid-template-columns: 170px minmax(260px, 1fr) 220px 220px auto auto;
+        gap: 12px;
+        align-items: end;
+        margin-bottom: 12px;
+    }
+
+    .calculation-tabs {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+    }
+
+    .calculation-toolbar-action {
+        white-space: nowrap;
+    }
+
+    .calculation-year-select {
+        max-height: 220px;
+        overflow-y: auto;
+    }
+
+    .direction-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .direction-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid #dee2e6;
+        border-radius: 999px;
+        padding: 4px 10px;
+        background: #fff;
+        font-size: 0.88rem;
+    }
+
+    .direction-legend-color {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        flex: 0 0 auto;
+    }
+
+    .calculation-row-colored > td {
+        background-color: var(--direction-color) !important;
+    }
+
+    @@media (max-width: 1399.98px) {
+        .calculation-toolbar {
+            grid-template-columns: 170px minmax(240px, 1fr) 210px 210px;
+        }
+
+        .calculation-toolbar-action {
+            grid-column: span 2;
+        }
+    }
+
+    @@media (max-width: 991.98px) {
+        .calculation-toolbar {
+            grid-template-columns: 1fr;
+        }
+
+        .calculation-toolbar-action {
+            grid-column: auto;
+        }
+    }
+</style>
+
+<div class="calculation-top-panel">
+    <form asp-controller="@controllerName"
+          asp-action="Index"
+          method="get"
+          class="calculation-toolbar">
+
+        <div>
+            <label class="form-label">Учебный год</label>
+            <select name="startYear"
+                    class="form-select form-select-sm calculation-year-select"
+                    onchange="this.form.submit()">
+                @foreach (var year in availableYearStarts)
                 {
-                    <option value="@year" selected>@year</option>
+                    var text = $"{year}-{year + 1}";
+
+                    if (year == Model.SelectedYearStart)
+                    {
+                        <option value="@year" selected>@text</option>
+                    }
+                    else
+                    {
+                        <option value="@year">@text</option>
+                    }
                 }
-                else
+            </select>
+        </div>
+
+        <div>
+            <label class="form-label">Поиск</label>
+            <input type="text"
+                   class="form-control form-control-sm js-calculation-search"
+                   placeholder="Введите название, направление или семестр" />
+        </div>
+
+        <div>
+            <label class="form-label">Фильтр</label>
+            <select class="form-select form-select-sm js-calculation-filter">
+                <option value="all">Все строки</option>
+                <option value="autumn">Осень</option>
+                <option value="spring">Весна</option>
+
+                @if (Model.ActiveTab == "workload")
                 {
-                    <option value="@year">@year</option>
+                    <option value="merged">Объединенные потоки</option>
+                    <option value="exam">С экзаменом</option>
+                    <option value="credit">С зачетом</option>
                 }
-            }
-        </select>
+
+                @if (Model.ActiveTab == "gia")
+                {
+                    <option value="state-exam">Госэкзамен</option>
+                    <option value="vkr">Дипломное проектирование</option>
+                    <option value="gek">ГЭК</option>
+                }
+            </select>
+        </div>
+
+        <div>
+            <label class="form-label">Сортировка</label>
+            <select class="form-select form-select-sm js-calculation-sort">
+                <option value="name-asc">По дисциплине</option>
+                <option value="course-asc">По курсу</option>
+                <option value="direction-asc">По направлению</option>
+            </select>
+        </div>
+
+        <div class="calculation-toolbar-action">
+            <label class="form-label d-none d-lg-block">&nbsp;</label>
+            <button type="submit"
+                    class="btn btn-sm btn-outline-secondary w-100">
+                Показать
+            </button>
+        </div>
+    </form>
+
+    <div class="calculation-toolbar">
+        <div class="calculation-toolbar-action">
+            <form asp-controller="@controllerName"
+                  asp-action="ImportFromAcademicPlan"
+                  method="post"
+                  class="m-0">
+                @Html.AntiForgeryToken()
+
+                <input type="hidden" name="startYear" value="@Model.SelectedYearStart" />
+
+                <button type="submit" class="btn btn-sm btn-primary w-100">
+                    Рассчитать
+                </button>
+            </form>
+        </div>
+
+        <div class="calculation-toolbar-action">
+            <a asp-controller="@controllerName"
+               asp-action="ExportToExcel"
+               asp-route-startYear="@Model.SelectedYearStart"
+               class="btn btn-sm btn-success w-100">
+                Выгрузить в Excel
+            </a>
+        </div>
     </div>
 
-    <div class="col-auto">
-        <label class="form-label">Учебный год</label>
-        <input class="form-control" value="@Model.SelectedYear" readonly />
-    </div>
-
-    <div class="col-auto d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Рассчитать</button>
-
-        <a asp-controller="@controllerName"
-           asp-action="ExportToExcel"
+    <div class="calculation-tabs">
+        <a asp-controller="WorkloadCalculation"
+           asp-action="Index"
            asp-route-startYear="@Model.SelectedYearStart"
-           class="btn btn-outline-success">
-            Выгрузить в Excel
+           class="btn btn-sm @workloadTabClass">
+            Дисциплины
+        </a>
+
+        <a asp-controller="PracticeCalculation"
+           asp-action="Index"
+           asp-route-startYear="@Model.SelectedYearStart"
+           class="btn btn-sm @practiceTabClass">
+            Практики
+        </a>
+
+        <a asp-controller="GiaCalculation"
+           asp-action="Index"
+           asp-route-startYear="@Model.SelectedYearStart"
+           class="btn btn-sm @giaTabClass">
+            ГИА
         </a>
     </div>
-</form>
-
-<div class="mb-3 d-flex gap-2">
-    <a asp-controller="WorkloadCalculation"
-       asp-action="Index"
-       asp-route-startYear="@Model.SelectedYearStart"
-       class="btn @(Model.ActiveTab == "workload" ? "btn-primary" : "btn-outline-primary")">
-        Дисциплины
-    </a>
-
-    <a asp-controller="PracticeCalculation"
-       asp-action="Index"
-       asp-route-startYear="@Model.SelectedYearStart"
-       class="btn @(Model.ActiveTab == "practice" ? "btn-primary" : "btn-outline-primary")">
-        Практики
-    </a>
-
-    <a asp-controller="GiaCalculation"
-       asp-action="Index"
-       asp-route-startYear="@Model.SelectedYearStart"
-       class="btn @(Model.ActiveTab == "gia" ? "btn-primary" : "btn-outline-primary")">
-        ГИА
-    </a>
 </div>

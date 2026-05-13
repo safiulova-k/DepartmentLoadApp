@@ -3,15 +3,16 @@
 @{
     ViewData["Title"] = "Распределение нагрузки";
 
+    const int minAvailableStartYear = 2018;
+
     var currentAcademicStartYear = DateTime.Now.Month >= 9
         ? DateTime.Now.Year
         : DateTime.Now.Year - 1;
 
     var maxAvailableStartYear = currentAcademicStartYear + 1;
 
-    var availableYearStarts = Model.AvailableYearStarts
-        .Where(x => x <= maxAvailableStartYear)
-        .OrderByDescending(x => x)
+    var availableYearStarts = Enumerable
+        .Range(minAvailableStartYear, maxAvailableStartYear - minAvailableStartYear + 1)
         .ToList();
 }
 

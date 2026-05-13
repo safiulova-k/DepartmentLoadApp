@@ -2,149 +2,276 @@
 
 @{
     ViewData["Title"] = "Практики";
+
+    var pastelColors = new[]
+    {
+        "#fff4d6",
+        "#e3f2fd",
+        "#e8f5e9",
+        "#fce4ec",
+        "#ede7f6",
+        "#e0f7fa",
+        "#f3e5f5",
+        "#fffde7",
+        "#f1f8e9",
+        "#e8eaf6"
+    };
+
+    var directions = (Model.Rows ?? new())
+        .Select(x => x.DirectionCode)
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(x => x)
+        .ToList();
+
+    var directionColorMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    for (var i = 0; i < directions.Count; i++)
+    {
+        directionColorMap[directions[i]] = pastelColors[i % pastelColors.Length];
+    }
 }
 
-<h1 class="mb-4">Расчет нагрузки по практикам</h1>
+<style>
+    .practice-calculation-table th,
+    .practice-calculation-table td {
+        vertical-align: middle;
+    }
 
-<form asp-action="ImportFromAcademicPlan" method="post" class="row g-3 align-items-end mb-4">
-    @Html.AntiForgeryToken()
+    .practice-calculation-table th {
+        white-space: nowrap;
+    }
 
-    <div class="col-auto">
-        <label class="form-label">Год начала расчета</label>
-        <select name="startYear" class="form-select">
-            @foreach (var year in Model.AvailableYearStarts)
-            {
-                if (year == Model.SelectedYearStart)
-                {
-                    <option value="@year" selected>@year</option>
-                }
-                else
-                {
-                    <option value="@year">@year</option>
-                }
-            }
-        </select>
-    </div>
+    .practice-calculation-table .number-column {
+        width: 110px;
+        text-align: center;
+    }
 
-    <div class="col-auto">
-        <label class="form-label">Учебный год</label>
-        <input class="form-control" value="@Model.SelectedYear" readonly />
-    </div>
+    .practice-calculation-table .weeks-input {
+        max-width: 90px;
+        margin: 0 auto;
+    }
+</style>
 
-    <div class="col-auto d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Рассчитать</button>
-    </div>
-</form>
-<form asp-controller="WorkloadCalculation" asp-action="ExportToExcel" method="get" class="d-inline">
-    <input type="hidden" name="startYear" value="@Model.SelectedYearStart" />
-    <button type="submit" class="btn btn-success">
-        Выгрузить в Excel
-    </button>
-</form>
-<div class="mb-3 d-flex gap-2">
-    <a asp-controller="WorkloadCalculation"
-       asp-action="Index"
-       asp-route-startYear="@Model.SelectedYearStart"
-       class="btn btn-outline-primary">
-        Дисциплины
-    </a>
+<h1>Расчет нагрузки по практикам</h1>
 
-    <a asp-controller="PracticeCalculation"
-       asp-action="Index"
-       asp-route-startYear="@Model.SelectedYearStart"
-       class="btn btn-primary">
-        Практики
-    </a>
+@await Html.PartialAsync(
+        "_CalculationTopPanel",
+        new DepartmentLoadApp.ViewModels.Shared.CalculationTopPanelViewModel
+    {
+        SelectedYear = Model.SelectedYear,
+        SelectedYearStart = Model.SelectedYearStart,
+        AvailableYearStarts = Model.AvailableYearStarts,
+        ActiveTab = "practice"
+    })
 
-    <a asp-controller="GiaCalculation"
-       asp-action="Index"
-       asp-route-startYear="@Model.SelectedYearStart"
-       class="btn btn-outline-primary">
-        ГИА
-    </a>
+<div class="alert alert-light border">
+    Для практик вручную задается только количество недель. Остальные данные подтягиваются автоматически из учебных планов, контингента и норм времени.
 </div>
 
-<p class="text-muted">
-    Для практик вручную задается только количество недель. Остальные данные
-    подтягиваются автоматически из учебных планов, контингента и норм времени.
-</p>
-
-<form asp-action="Save" method="post">
-    @Html.AntiForgeryToken()
-
-    <input type="hidden" asp-for="SelectedYearStart" />
-    <input type="hidden" asp-for="SelectedYear" />
-
-    <div class="table-responsive">
-        <table class="table table-bordered table-striped align-middle">
-            <thead class="table-light text-center align-middle">
-                <tr>
-                    <th>Семестр</th>
-                    <th>Код направления</th>
-                    <th>Вид практики</th>
-                    <th>Курс</th>
-                    <th>Групп</th>
-                    <th>Студентов</th>
-                    <th>Количество недель</th>
-                    <th>Итого</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.Rows == null || !Model.Rows.Any())
-                {
-                    <tr>
-                        <td colspan="9" class="text-center text-muted py-4">
-                            По выбранному учебному году данных пока нет
-                        </td>
-                    </tr>
-                }
-                else
-                {
-                    @for (int i = 0; i < Model.Rows.Count; i++)
-                    {
-                        <tr>
-                            <td>
-                                @Model.Rows[i].SemesterName
-
-                                <input type="hidden" name="Rows[@i].Id" value="@Model.Rows[i].Id" />
-                                <input type="hidden" name="Rows[@i].PlanYear" value="@Model.Rows[i].PlanYear" />
-                                <input type="hidden" name="Rows[@i].AcademicPlanId" value="@Model.Rows[i].AcademicPlanId" />
-                                <input type="hidden" name="Rows[@i].AcademicPlanRecordId" value="@Model.Rows[i].AcademicPlanRecordId" />
-                                <input type="hidden" name="Rows[@i].PracticeName" value="@Model.Rows[i].PracticeName" />
-                                <input type="hidden" name="Rows[@i].DirectionCode" value="@Model.Rows[i].DirectionCode" />
-                                <input type="hidden" name="Rows[@i].DirectionName" value="@Model.Rows[i].DirectionName" />
-                                <input type="hidden" name="Rows[@i].Course" value="@Model.Rows[i].Course" />
-                                <input type="hidden" name="Rows[@i].SemesterName" value="@Model.Rows[i].SemesterName" />
-                                <input type="hidden" name="Rows[@i].StudentsCount" value="@Model.Rows[i].StudentsCount" />
-                                <input type="hidden" name="Rows[@i].GroupCount" value="@Model.Rows[i].GroupCount" />
-                                <input type="hidden" name="Rows[@i].TotalHours" value="@Model.Rows[i].TotalHours.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
-                            </td>
-
-                            <td>@Model.Rows[i].DirectionCode</td>
-                            <td>@Model.Rows[i].PracticeName</td>
-                            <td>@Model.Rows[i].Course</td>
-                            <td>@Model.Rows[i].GroupCount</td>
-                            <td>@Model.Rows[i].StudentsCount</td>
-
-                            <td style="max-width: 140px;">
-                                <input type="number"
-                                       min="0"
-                                       step="1"
-                                       name="Rows[@i].WeeksCount"
-                                       value="@Model.Rows[i].WeeksCount"
-                                       class="form-control" />
-                            </td>
-
-                            <td>@Model.Rows[i].TotalHours.ToString("0.##")</td>
-                        </tr>
-                    }
-                }
-            </tbody>
-        </table>
+@if (Model.Rows == null || !Model.Rows.Any())
+{
+    <div class="alert alert-info">
+        По выбранному учебному году данных пока нет.
+    </div>
+}
+else
+{
+    <div class="direction-legend">
+        @foreach (var direction in directions)
+        {
+            <div class="direction-legend-item">
+                <span class="direction-legend-color"
+                      style="background-color:@directionColorMap[direction]"></span>
+                <span>@direction</span>
+            </div>
+        }
     </div>
 
-    @if (Model.Rows != null && Model.Rows.Any())
-    {
-        <button type="submit" class="btn btn-primary">Сохранить недели и пересчитать</button>
-    }
-</form>
+    <form asp-action="Save" method="post">
+        @Html.AntiForgeryToken()
+
+        <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
+        <input type="hidden" name="SelectedYear" value="@Model.SelectedYear" />
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-sm practice-calculation-table">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Семестр</th>
+                        <th>Код направления</th>
+                        <th>Вид практики</th>
+                        <th class="number-column">Курс</th>
+                        <th class="number-column">Групп</th>
+                        <th class="number-column">Студентов</th>
+                        <th class="number-column">Недель</th>
+                        <th class="number-column">Итого</th>
+                    </tr>
+                </thead>
+
+                <tbody class="js-calculation-table-body">
+                    @for (var i = 0; i < Model.Rows.Count; i++)
+                    {
+                        var row = Model.Rows[i];
+
+                        var directionColor = directionColorMap.TryGetValue(row.DirectionCode, out var color)
+                        ? color
+                        : "#ffffff";
+
+                        <tr class="js-calculation-row calculation-row-colored"
+                            style="--direction-color:@directionColor"
+                            data-semester="@((row.SemesterName ?? string.Empty).ToLower())"
+                            data-direction="@((row.DirectionCode ?? string.Empty).ToLower())"
+                            data-name="@((row.PracticeName ?? string.Empty).ToLower())"
+                            data-course="@row.Course">
+
+                            <td>
+                                @row.SemesterName
+
+                                <input type="hidden" name="Rows[@i].Id" value="@row.Id" />
+                                <input type="hidden" name="Rows[@i].PlanYear" value="@row.PlanYear" />
+                                <input type="hidden" name="Rows[@i].AcademicPlanId" value="@row.AcademicPlanId" />
+                                <input type="hidden" name="Rows[@i].AcademicPlanRecordId" value="@row.AcademicPlanRecordId" />
+                                <input type="hidden" name="Rows[@i].PracticeName" value="@row.PracticeName" />
+                                <input type="hidden" name="Rows[@i].DirectionCode" value="@row.DirectionCode" />
+                                <input type="hidden" name="Rows[@i].DirectionName" value="@row.DirectionName" />
+                                <input type="hidden" name="Rows[@i].Course" value="@row.Course" />
+                                <input type="hidden" name="Rows[@i].SemesterName" value="@row.SemesterName" />
+                                <input type="hidden" name="Rows[@i].EducationForm" value="@row.EducationForm" />
+                                <input type="hidden" name="Rows[@i].StudentsCount" value="@row.StudentsCount" />
+                                <input type="hidden" name="Rows[@i].GroupCount" value="@row.GroupCount" />
+                                <input type="hidden" name="Rows[@i].TotalHours" value="@row.TotalHours.ToString("0.####").Replace(",", ".")" />
+                            </td>
+
+                            <td>@row.DirectionCode</td>
+                            <td>@row.PracticeName</td>
+                            <td class="text-center">@row.Course</td>
+                            <td class="text-center">@row.GroupCount</td>
+                            <td class="text-center">@row.StudentsCount</td>
+                            <td>
+                                <input type="number"
+                                       name="Rows[@i].WeeksCount"
+                                       value="@row.WeeksCount"
+                                       min="0"
+                                       step="1"
+                                       class="form-control form-control-sm weeks-input" />
+                            </td>
+                            <td class="text-center fw-semibold">
+                                @row.TotalHours.ToString("0.##")
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <button type="submit" class="btn btn-success">
+            Сохранить недели и пересчитать
+        </button>
+    </form>
+}
+
+@section Scripts {
+    <script>
+        function isAutumnSemester(value) {
+            const text = String(value || "").toLowerCase();
+
+            return text.includes("осен")
+                || text.includes("осень")
+                || text.includes("1 сем")
+                || text.includes("1-й")
+                || text === "1";
+        }
+
+        function isSpringSemester(value) {
+            const text = String(value || "").toLowerCase();
+
+            return text.includes("вес")
+                || text.includes("весна")
+                || text.includes("2 сем")
+                || text.includes("2-й")
+                || text === "2";
+        }
+
+        function parseCalculationNumber(value) {
+            if (!value) {
+                return 0;
+            }
+
+            return Number(String(value).replace(",", ".")) || 0;
+        }
+
+        function applyCalculationFiltersAndSort() {
+            const tbody = document.querySelector(".js-calculation-table-body");
+
+            if (!tbody) {
+                return;
+            }
+
+            const search = (document.querySelector(".js-calculation-search")?.value || "").toLowerCase().trim();
+            const filter = document.querySelector(".js-calculation-filter")?.value || "all";
+            const sort = document.querySelector(".js-calculation-sort")?.value || "name-asc";
+            const rows = Array.from(tbody.querySelectorAll(".js-calculation-row"));
+
+            rows.forEach(function (row) {
+                const semester = row.dataset.semester || "";
+                const direction = row.dataset.direction || "";
+                const name = row.dataset.name || "";
+
+                let visible = true;
+
+                if (search && !name.includes(search) && !direction.includes(search) && !semester.includes(search)) {
+                    visible = false;
+                }
+
+                if (filter === "autumn" && !isAutumnSemester(semester)) {
+                    visible = false;
+                }
+
+                if (filter === "spring" && !isSpringSemester(semester)) {
+                    visible = false;
+                }
+
+                row.classList.toggle("d-none", !visible);
+            });
+
+            rows.sort(function (a, b) {
+                const nameA = a.dataset.name || "";
+                const nameB = b.dataset.name || "";
+                const directionA = a.dataset.direction || "";
+                const directionB = b.dataset.direction || "";
+                const courseA = parseCalculationNumber(a.dataset.course);
+                const courseB = parseCalculationNumber(b.dataset.course);
+
+                if (sort === "course-asc") {
+                    return courseA - courseB || nameA.localeCompare(nameB);
+                }
+
+                if (sort === "direction-asc") {
+                    return directionA.localeCompare(directionB) || nameA.localeCompare(nameB);
+                }
+
+                return nameA.localeCompare(nameB) || directionA.localeCompare(directionB);
+            });
+
+            rows.forEach(function (row) {
+                tbody.appendChild(row);
+            });
+        }
+
+        document.addEventListener("input", function (event) {
+            if (event.target.classList.contains("js-calculation-search")) {
+                applyCalculationFiltersAndSort();
+            }
+        });
+
+        document.addEventListener("change", function (event) {
+            if (event.target.classList.contains("js-calculation-filter")
+                || event.target.classList.contains("js-calculation-sort")) {
+                applyCalculationFiltersAndSort();
+            }
+        });
+
+        applyCalculationFiltersAndSort();
+    </script>
+}

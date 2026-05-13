@@ -2,61 +2,135 @@
 
 @{
     ViewData["Title"] = "Индивидуальные планы";
+
+    const int minAvailableStartYear = 2018;
+
+    var currentAcademicStartYear = DateTime.Now.Month >= 9
+        ? DateTime.Now.Year
+        : DateTime.Now.Year - 1;
+
+    var maxAvailableStartYear = currentAcademicStartYear + 1;
+
+    var availableYearStarts = Enumerable
+        .Range(minAvailableStartYear, maxAvailableStartYear - minAvailableStartYear + 1)
+        .ToList();
 }
 
-<h1 class="mb-4">Индивидуальные планы преподавателей</h1>
+<style>
+    .individual-plans-toolbar {
+        display: grid;
+        grid-template-columns: 170px minmax(240px, 1fr) 210px 210px;
+        gap: 12px;
+        align-items: end;
+        margin-bottom: 18px;
+    }
+
+    .individual-plans-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+    }
+
+    .individual-plans-table th {
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .individual-plans-table td {
+        vertical-align: middle;
+    }
+
+    @@media (max-width: 991.98px) {
+        .individual-plans-toolbar {
+            grid-template-columns: 1fr;
+        }
+
+        .individual-plans-actions {
+            justify-content: flex-start;
+        }
+    }
+</style>
+
+<h1>Индивидуальные планы преподавателей</h1>
+
+<form asp-action="Index" method="get" class="individual-plans-toolbar">
+    <div>
+        <label class="form-label">Учебный год</label>
+        <select name="startYear" class="form-select form-select-sm" onchange="this.form.submit()">
+            @foreach (var year in availableYearStarts)
+            {
+                var text = $"{year}-{year + 1}";
+
+                if (year == Model.SelectedYearStart)
+                {
+                    <option value="@year" selected>@text</option>
+                }
+                else
+                {
+                    <option value="@year">@text</option>
+                }
+            }
+        </select>
+    </div>
+
+    <div>
+        <label class="form-label">Поиск преподавателя</label>
+        <input type="text"
+               class="form-control form-control-sm js-individual-search"
+               placeholder="Введите ФИО или должность" />
+    </div>
+
+    <div>
+        <label class="form-label">Фильтр</label>
+        <select class="form-select form-select-sm js-individual-filter">
+            <option value="all">Все преподаватели</option>
+            <option value="with-load">С нагрузкой</option>
+            <option value="without-load">Без нагрузки</option>
+            <option value="assistant">Ассистенты</option>
+        </select>
+    </div>
+
+    <div>
+        <label class="form-label">Сортировка</label>
+        <select class="form-select form-select-sm js-individual-sort">
+            <option value="name-asc">По ФИО</option>
+            <option value="assigned-desc">Больше часов</option>
+            <option value="assigned-asc">Меньше часов</option>
+            <option value="rate-desc">Больше ставка</option>
+            <option value="rate-asc">Меньше ставка</option>
+        </select>
+    </div>
+</form>
 
 @if (TempData["SuccessMessage"] != null)
 {
-    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    <div class="alert alert-success">
+        @TempData["SuccessMessage"]
+    </div>
 }
 
 @if (TempData["ErrorMessage"] != null)
 {
-    <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    <div class="alert alert-danger">
+        @TempData["ErrorMessage"]
+    </div>
 }
 
 @if (!Model.TemplateExists)
 {
     <div class="alert alert-warning">
-        Не найден Excel-шаблон.
-        Помести файл шаблона по пути <strong>Templates/IndividualPlanTemplate.xlsx</strong>.
+        Не найден Excel-шаблон. Помести файл шаблона по пути Templates/IndividualPlanTemplate.xlsx.
     </div>
 }
 
-<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
-    <form asp-action="Index" method="get" class="row g-3 align-items-end m-0">
-        <div class="col-auto">
-            <label class="form-label">Год начала расчета</label>
-            <select name="startYear" class="form-select">
-                @foreach (var year in Model.AvailableYearStarts)
-                {
-                    if (year == Model.SelectedYearStart)
-                    {
-                        <option value="@year" selected>@year</option>
-                    }
-                    else
-                    {
-                        <option value="@year">@year</option>
-                    }
-                }
-            </select>
-        </div>
-
-        <div class="col-auto">
-            <label class="form-label">Учебный год</label>
-            <input class="form-control" value="@Model.SelectedAcademicYear" readonly />
-        </div>
-
-        <div class="col-auto">
-            <button type="submit" class="btn btn-primary">Показать</button>
-        </div>
-    </form>
-
-    <form asp-action="ExportAll" method="post" class="m-0">
+<div class="individual-plans-actions">
+    <form asp-action="ExportAll" method="post">
         @Html.AntiForgeryToken()
         <input type="hidden" name="startYear" value="@Model.SelectedYearStart" />
-        <button type="submit" class="btn btn-success" @(Model.Lecturers.Count == 0 ? "disabled" : null)>
+
+        <button type="submit" class="btn btn-success" @(Model.TemplateExists ? "" : "disabled")>
             Выгрузить все планы
         </button>
     </form>
@@ -64,37 +138,47 @@
 
 @if (Model.Lecturers.Count == 0)
 {
-    <div class="alert alert-secondary">
+    <div class="alert alert-info">
         Для выбранного учебного года преподаватели не найдены.
     </div>
 }
 else
 {
     <div class="table-responsive">
-        <table class="table table-bordered table-striped align-middle">
+        <table class="table table-bordered table-striped individual-plans-table">
             <thead class="table-dark">
                 <tr>
                     <th>ФИО</th>
                     <th>Учебная должность</th>
                     <th>Ставка</th>
                     <th>Распределено часов</th>
-                    <th style="width: 220px;">Действия</th>
+                    <th>Действия</th>
                 </tr>
             </thead>
-            <tbody>
+
+            <tbody class="js-individual-table-body">
                 @foreach (var lecturer in Model.Lecturers)
                 {
-                    <tr>
+                    <tr class="js-individual-row"
+                        data-name="@((lecturer.FullName ?? string.Empty).ToLower())"
+                        data-post="@((lecturer.StudyPostTitle ?? string.Empty).ToLower())"
+                        data-assigned="@lecturer.AssignedHours"
+                        data-rate="@lecturer.Rate.ToString("0.####").Replace(",", ".")"
+                        data-assistant="@((lecturer.StudyPostTitle ?? string.Empty).ToLower().Contains("ассистент") ? "true" : "false")">
                         <td>@lecturer.FullName</td>
                         <td>@lecturer.StudyPostTitle</td>
                         <td>@lecturer.Rate.ToString("0.##")</td>
                         <td>@lecturer.AssignedHours</td>
                         <td>
-                            <form asp-action="Export" method="post" class="d-inline">
+                            <form asp-action="Export" method="post" class="m-0">
                                 @Html.AntiForgeryToken()
+
                                 <input type="hidden" name="startYear" value="@Model.SelectedYearStart" />
                                 <input type="hidden" name="lecturerId" value="@lecturer.LecturerId" />
-                                <button type="submit" class="btn btn-outline-primary btn-sm">
+
+                                <button type="submit"
+                                        class="btn btn-outline-primary btn-sm"
+                                @(Model.TemplateExists ? "" : "disabled")>
                                     Выгрузить план
                                 </button>
                             </form>
@@ -104,4 +188,102 @@ else
             </tbody>
         </table>
     </div>
+}
+
+@section Scripts {
+    <script>
+        function parseIndividualNumber(value) {
+            if (!value) {
+                return 0;
+            }
+
+            return Number(String(value).replace(",", ".")) || 0;
+        }
+
+        function applyIndividualFiltersAndSort() {
+            const tbody = document.querySelector(".js-individual-table-body");
+
+            if (!tbody) {
+                return;
+            }
+
+            const search = (document.querySelector(".js-individual-search")?.value || "").toLowerCase().trim();
+            const filter = document.querySelector(".js-individual-filter")?.value || "all";
+            const sort = document.querySelector(".js-individual-sort")?.value || "name-asc";
+            const rows = Array.from(tbody.querySelectorAll(".js-individual-row"));
+
+            rows.forEach(function (row) {
+                const name = row.dataset.name || "";
+                const post = row.dataset.post || "";
+                const assigned = parseIndividualNumber(row.dataset.assigned);
+                const assistant = row.dataset.assistant === "true";
+
+                let visible = true;
+
+                if (search && !name.includes(search) && !post.includes(search)) {
+                    visible = false;
+                }
+
+                if (filter === "with-load" && assigned <= 0) {
+                    visible = false;
+                }
+
+                if (filter === "without-load" && assigned > 0) {
+                    visible = false;
+                }
+
+                if (filter === "assistant" && !assistant) {
+                    visible = false;
+                }
+
+                row.classList.toggle("d-none", !visible);
+            });
+
+            rows.sort(function (a, b) {
+                const nameA = a.dataset.name || "";
+                const nameB = b.dataset.name || "";
+                const assignedA = parseIndividualNumber(a.dataset.assigned);
+                const assignedB = parseIndividualNumber(b.dataset.assigned);
+                const rateA = parseIndividualNumber(a.dataset.rate);
+                const rateB = parseIndividualNumber(b.dataset.rate);
+
+                if (sort === "assigned-desc") {
+                    return assignedB - assignedA || nameA.localeCompare(nameB);
+                }
+
+                if (sort === "assigned-asc") {
+                    return assignedA - assignedB || nameA.localeCompare(nameB);
+                }
+
+                if (sort === "rate-desc") {
+                    return rateB - rateA || nameA.localeCompare(nameB);
+                }
+
+                if (sort === "rate-asc") {
+                    return rateA - rateB || nameA.localeCompare(nameB);
+                }
+
+                return nameA.localeCompare(nameB);
+            });
+
+            rows.forEach(function (row) {
+                tbody.appendChild(row);
+            });
+        }
+
+        document.addEventListener("input", function (event) {
+            if (event.target.classList.contains("js-individual-search")) {
+                applyIndividualFiltersAndSort();
+            }
+        });
+
+        document.addEventListener("change", function (event) {
+            if (event.target.classList.contains("js-individual-filter")
+                || event.target.classList.contains("js-individual-sort")) {
+                applyIndividualFiltersAndSort();
+            }
+        });
+
+        applyIndividualFiltersAndSort();
+    </script>
 }
