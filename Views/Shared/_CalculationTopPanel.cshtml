@@ -41,8 +41,8 @@
 
     .calculation-toolbar {
         display: grid;
-        grid-template-columns: 170px minmax(260px, 1fr) 220px 220px auto auto;
-        gap: 12px;
+        grid-template-columns: 150px minmax(220px, 1fr) 190px 190px 170px 145px 145px;
+        gap: 10px;
         align-items: end;
         margin-bottom: 12px;
     }
@@ -54,13 +54,34 @@
         margin-bottom: 14px;
     }
 
-    .calculation-toolbar-action {
+    .calculation-action-button {
+        width: 100%;
+        min-width: 130px;
+        height: 31px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         white-space: nowrap;
     }
 
     .calculation-year-select {
         max-height: 220px;
         overflow-y: auto;
+    }
+
+    .calculation-direction-dropdown .dropdown-menu {
+        max-height: 260px;
+        overflow-y: auto;
+        min-width: 260px;
+    }
+
+    .calculation-direction-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 2px;
+        font-size: 0.9rem;
+        cursor: pointer;
     }
 
     .direction-legend {
@@ -95,11 +116,7 @@
 
     @@media (max-width: 1399.98px) {
         .calculation-toolbar {
-            grid-template-columns: 170px minmax(240px, 1fr) 210px 210px;
-        }
-
-        .calculation-toolbar-action {
-            grid-column: span 2;
+            grid-template-columns: 150px minmax(220px, 1fr) 180px 180px;
         }
     }
 
@@ -108,8 +125,8 @@
             grid-template-columns: 1fr;
         }
 
-        .calculation-toolbar-action {
-            grid-column: auto;
+        .calculation-action-button {
+            width: 100%;
         }
     }
 </style>
@@ -180,17 +197,36 @@
             </select>
         </div>
 
-        <div class="calculation-toolbar-action">
+        <div class="calculation-direction-dropdown">
+            <label class="form-label">Направления</label>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle w-100 js-direction-filter-button"
+                        type="button"
+                        data-bs-toggle="dropdown"
+                        data-bs-auto-close="outside"
+                        aria-expanded="false">
+                    Все направления
+                </button>
+
+                <div class="dropdown-menu p-2 js-direction-filter-menu">
+                    <div class="text-muted small px-1">
+                        Направления появятся после загрузки таблицы.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div>
             <label class="form-label d-none d-lg-block">&nbsp;</label>
             <button type="submit"
-                    class="btn btn-sm btn-outline-secondary w-100">
+                    class="btn btn-sm btn-outline-secondary calculation-action-button">
                 Показать
             </button>
         </div>
     </form>
 
     <div class="calculation-toolbar">
-        <div class="calculation-toolbar-action">
+        <div>
             <form asp-controller="@controllerName"
                   asp-action="ImportFromAcademicPlan"
                   method="post"
@@ -199,17 +235,18 @@
 
                 <input type="hidden" name="startYear" value="@Model.SelectedYearStart" />
 
-                <button type="submit" class="btn btn-sm btn-primary w-100">
+                <button type="submit"
+                        class="btn btn-sm btn-primary calculation-action-button">
                     Рассчитать
                 </button>
             </form>
         </div>
 
-        <div class="calculation-toolbar-action">
+        <div>
             <a asp-controller="@controllerName"
                asp-action="ExportToExcel"
                asp-route-startYear="@Model.SelectedYearStart"
-               class="btn btn-sm btn-success w-100">
+               class="btn btn-sm btn-success calculation-action-button">
                 Выгрузить в Excel
             </a>
         </div>

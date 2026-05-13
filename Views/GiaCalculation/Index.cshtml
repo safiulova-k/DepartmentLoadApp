@@ -100,6 +100,10 @@ else
         ["DirectionColorMap"] = directionColorMap
     })
 
+        <button type="submit" class="btn btn-success mt-1 mb-4">
+            Сохранить часы консультаций и пересчитать
+        </button>
+
         @{
             offset += stateExamRows.Count;
         }
@@ -129,10 +133,6 @@ else
         ["IndexOffset"] = offset,
         ["DirectionColorMap"] = directionColorMap
     })
-
-        <button type="submit" class="btn btn-success mt-2">
-            Сохранить часы консультаций и пересчитать
-        </button>
     </form>
 }
 
@@ -166,11 +166,83 @@ else
             return Number(String(value).replace(",", ".")) || 0;
         }
 
+        function getSelectedDirections() {
+            return Array.from(document.querySelectorAll(".js-direction-filter-checkbox:checked"))
+                .map(function (checkbox) {
+                    return checkbox.value;
+                });
+        }
+
+        function updateDirectionFilterButton() {
+            const button = document.querySelector(".js-direction-filter-button");
+            const selectedDirections = getSelectedDirections();
+
+            if (!button) {
+                return;
+            }
+
+            if (selectedDirections.length === 0) {
+                button.textContent = "Все направления";
+                return;
+            }
+
+            if (selectedDirections.length === 1) {
+                button.textContent = selectedDirections[0];
+                return;
+            }
+
+            button.textContent = "Выбрано: " + selectedDirections.length;
+        }
+
+        function buildDirectionFilter() {
+            const menu = document.querySelector(".js-direction-filter-menu");
+
+            if (!menu) {
+                return;
+            }
+
+            const directions = Array.from(document.querySelectorAll(".js-calculation-row"))
+                .map(function (row) {
+                    return row.dataset.direction || "";
+                })
+                .filter(function (direction) {
+                    return direction.length > 0;
+                })
+                .filter(function (direction, index, array) {
+                    return array.indexOf(direction) === index;
+                })
+                .sort();
+
+            if (directions.length === 0) {
+                menu.innerHTML = '<div class="text-muted small px-1">Направления не найдены.</div>';
+                return;
+            }
+
+            menu.innerHTML = "";
+
+            directions.forEach(function (direction) {
+                const id = "directionFilter_" + direction.replace(/[^a-zA-Zа-яА-Я0-9]/g, "_");
+
+                const label = document.createElement("label");
+                label.className = "calculation-direction-option";
+
+                label.innerHTML =
+                    `<input type="checkbox"
+                                    class="form-check-input js-direction-filter-checkbox"
+                                    value="${direction}"
+                                    id="${id}" />
+                             <span>${direction}</span>`;
+
+                menu.appendChild(label);
+            });
+        }
+
         function applyCalculationFiltersAndSort() {
             const sections = document.querySelectorAll(".js-gia-section");
             const search = (document.querySelector(".js-calculation-search")?.value || "").toLowerCase().trim();
             const filter = document.querySelector(".js-calculation-filter")?.value || "all";
             const sort = document.querySelector(".js-calculation-sort")?.value || "name-asc";
+            const selectedDirections = getSelectedDirections();
 
             sections.forEach(function (section) {
                 const tbody = section.querySelector(".js-calculation-table-body");
@@ -190,6 +262,10 @@ else
                     let visible = true;
 
                     if (search && !name.includes(search) && !direction.includes(search) && !semester.includes(search) && !giaSection.includes(search)) {
+                        visible = false;
+                    }
+
+                    if (selectedDirections.length > 0 && !selectedDirections.includes(direction)) {
                         visible = false;
                     }
 
@@ -245,6 +321,8 @@ else
 
                 section.classList.toggle("d-none", visibleCount === 0);
             });
+
+            updateDirectionFilterButton();
         }
 
         document.addEventListener("input", function (event) {
@@ -255,11 +333,13 @@ else
 
         document.addEventListener("change", function (event) {
             if (event.target.classList.contains("js-calculation-filter")
-                || event.target.classList.contains("js-calculation-sort")) {
+                || event.target.classList.contains("js-calculation-sort")
+                || event.target.classList.contains("js-direction-filter-checkbox")) {
                 applyCalculationFiltersAndSort();
             }
         });
 
+        buildDirectionFilter();
         applyCalculationFiltersAndSort();
     </script>
 }

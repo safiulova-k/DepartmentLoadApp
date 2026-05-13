@@ -36,14 +36,28 @@
     .workload-calculation-table {
         width: 100%;
         table-layout: fixed;
-        font-size: 0.76rem;
+        font-size: 0.84rem;
     }
 
         .workload-calculation-table th,
         .workload-calculation-table td {
             vertical-align: middle;
             text-align: center;
-            padding: 0.25rem;
+            padding: 0.22rem;
+        }
+
+        .workload-calculation-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: #f8f9fa !important;
+            color: #212529 !important;
+            border-color: #dee2e6 !important;
+        }
+
+        .workload-calculation-table thead tr:nth-child(2) th {
+            top: 35px;
+            z-index: 4;
         }
 
         .workload-calculation-table .text-cell {
@@ -51,24 +65,24 @@
         }
 
         .workload-calculation-table .direction-column {
-            width: 96px;
+            width: 82px;
         }
 
         .workload-calculation-table .discipline-column {
-            width: 260px;
+            width: 250px;
         }
 
         .workload-calculation-table .small-column {
-            width: 42px;
+            width: 38px;
         }
 
         .workload-calculation-table .medium-column {
-            width: 54px;
+            width: 48px;
         }
 
         .workload-calculation-table .vertical-header {
             height: 150px;
-            width: 38px;
+            width: 34px;
             padding: 4px 2px;
         }
 
@@ -76,25 +90,38 @@
                 writing-mode: vertical-rl;
                 transform: rotate(180deg);
                 display: inline-block;
-                line-height: 1.1;
+                line-height: 1.05;
                 white-space: nowrap;
             }
 
-        .workload-calculation-table .total-column {
-            width: 56px;
+        .workload-calculation-table .control-column {
+            width: 34px;
+        }
+
+        .workload-calculation-table .control-cell {
+            font-size: 0.76rem;
+            line-height: 1.05;
+        }
+
+        .workload-calculation-table .control-check {
+            font-weight: 700;
+            display: block;
+        }
+
+        .workload-calculation-table .control-hours {
+            display: block;
+            font-size: 0.74rem;
+        }
+
+        .workload-calculation-table .total-column,
+        .workload-calculation-table .total-cell {
+            width: 54px;
             font-weight: 700;
         }
 
-    .workload-merged-badge {
-        display: block;
-        margin-top: 4px;
-        font-size: 0.68rem;
-        white-space: normal;
-    }
-
     @@media (max-width: 1199.98px) {
         .workload-calculation-table {
-            font-size: 0.68rem;
+            font-size: 0.78rem;
         }
 
             .workload-calculation-table .discipline-column {
@@ -102,7 +129,7 @@
             }
 
             .workload-calculation-table .direction-column {
-                width: 82px;
+                width: 76px;
             }
 
             .workload-calculation-table .vertical-header {
@@ -158,7 +185,7 @@ else
 
     <div class="table-responsive">
         <table class="table table-bordered table-sm workload-calculation-table">
-            <thead class="table-dark">
+            <thead>
                 <tr>
                     <th class="vertical-header small-column" rowspan="2">
                         <span>Семестр</span>
@@ -184,7 +211,6 @@ else
                     <th colspan="2">Практика</th>
                     <th colspan="2">Лабораторные</th>
                     <th colspan="5">Контроль</th>
-                    <th colspan="5">Часы контроля</th>
                     <th class="vertical-header medium-column" rowspan="2">
                         <span>Консультации</span>
                     </th>
@@ -200,16 +226,11 @@ else
                     <th class="vertical-header"><span>Всего</span></th>
                     <th class="vertical-header"><span>План</span></th>
                     <th class="vertical-header"><span>Всего</span></th>
-                    <th class="vertical-header"><span>Экзамен</span></th>
-                    <th class="vertical-header"><span>Зачет</span></th>
-                    <th class="vertical-header"><span>КР</span></th>
-                    <th class="vertical-header"><span>КП</span></th>
-                    <th class="vertical-header"><span>РГР</span></th>
-                    <th class="vertical-header"><span>Экзамен</span></th>
-                    <th class="vertical-header"><span>Зачет</span></th>
-                    <th class="vertical-header"><span>КР</span></th>
-                    <th class="vertical-header"><span>КП</span></th>
-                    <th class="vertical-header"><span>РГР</span></th>
+                    <th class="vertical-header control-column"><span>Экзамен</span></th>
+                    <th class="vertical-header control-column"><span>Зачет</span></th>
+                    <th class="vertical-header control-column"><span>Курсовая работа</span></th>
+                    <th class="vertical-header control-column"><span>Курсовой проект</span></th>
+                    <th class="vertical-header control-column"><span>РГР</span></th>
                 </tr>
             </thead>
 
@@ -231,18 +252,7 @@ else
                         data-credit="@(row.HasCredit ? "true" : "false")">
 
                         <td>@row.SemesterName</td>
-
-                        <td>
-                            @row.DirectionCode
-
-                            @if (row.IsMergedStream)
-                            {
-                                <span class="badge bg-info text-dark workload-merged-badge">
-                                    объединенный
-                                </span>
-                            }
-                        </td>
-
+                        <td>@row.DirectionCode</td>
                         <td class="text-cell">@row.DisciplineName</td>
                         <td>@row.Course</td>
                         <td>@row.StudentsCount</td>
@@ -259,20 +269,48 @@ else
                         <td>@row.LabPlanHours.ToString("0.##")</td>
                         <td>@row.LabTotalHours.ToString("0.##")</td>
 
-                        <td>@(row.HasExam ? "✓" : "")</td>
-                        <td>@(row.HasCredit ? "✓" : "")</td>
-                        <td>@(row.HasCourseWork ? "✓" : "")</td>
-                        <td>@(row.HasCourseProject ? "✓" : "")</td>
-                        <td>@(row.HasRgr ? "✓" : "")</td>
+                        <td class="control-cell">
+                            @if (row.HasExam || row.ExamHours > 0)
+                            {
+                                <span class="control-check">✓</span>
+                                <span class="control-hours">@row.ExamHours.ToString("0.##")</span>
+                            }
+                        </td>
 
-                        <td>@row.ExamHours.ToString("0.##")</td>
-                        <td>@row.CreditHours.ToString("0.##")</td>
-                        <td>@row.CourseWorkHours.ToString("0.##")</td>
-                        <td>@row.CourseProjectHours.ToString("0.##")</td>
-                        <td>@row.RgrHours.ToString("0.##")</td>
+                        <td class="control-cell">
+                            @if (row.HasCredit || row.CreditHours > 0)
+                            {
+                                <span class="control-check">✓</span>
+                                <span class="control-hours">@row.CreditHours.ToString("0.##")</span>
+                            }
+                        </td>
+
+                        <td class="control-cell">
+                            @if (row.HasCourseWork || row.CourseWorkHours > 0)
+                            {
+                                <span class="control-check">✓</span>
+                                <span class="control-hours">@row.CourseWorkHours.ToString("0.##")</span>
+                            }
+                        </td>
+
+                        <td class="control-cell">
+                            @if (row.HasCourseProject || row.CourseProjectHours > 0)
+                            {
+                                <span class="control-check">✓</span>
+                                <span class="control-hours">@row.CourseProjectHours.ToString("0.##")</span>
+                            }
+                        </td>
+
+                        <td class="control-cell">
+                            @if (row.HasRgr || row.RgrHours > 0)
+                            {
+                                <span class="control-check">✓</span>
+                                <span class="control-hours">@row.RgrHours.ToString("0.##")</span>
+                            }
+                        </td>
 
                         <td>@row.ConsultationHours.ToString("0.##")</td>
-                        <td class="fw-semibold">@row.TotalHours.ToString("0.##")</td>
+                        <td class="total-cell">@row.TotalHours.ToString("0.##")</td>
                     </tr>
                 }
             </tbody>
@@ -310,6 +348,77 @@ else
             return Number(String(value).replace(",", ".")) || 0;
         }
 
+        function getSelectedDirections() {
+            return Array.from(document.querySelectorAll(".js-direction-filter-checkbox:checked"))
+                .map(function (checkbox) {
+                    return checkbox.value;
+                });
+        }
+
+        function updateDirectionFilterButton() {
+            const button = document.querySelector(".js-direction-filter-button");
+            const selectedDirections = getSelectedDirections();
+
+            if (!button) {
+                return;
+            }
+
+            if (selectedDirections.length === 0) {
+                button.textContent = "Все направления";
+                return;
+            }
+
+            if (selectedDirections.length === 1) {
+                button.textContent = selectedDirections[0];
+                return;
+            }
+
+            button.textContent = "Выбрано: " + selectedDirections.length;
+        }
+
+        function buildDirectionFilter() {
+            const menu = document.querySelector(".js-direction-filter-menu");
+
+            if (!menu) {
+                return;
+            }
+
+            const directions = Array.from(document.querySelectorAll(".js-calculation-row"))
+                .map(function (row) {
+                    return row.dataset.direction || "";
+                })
+                .filter(function (direction) {
+                    return direction.length > 0;
+                })
+                .filter(function (direction, index, array) {
+                    return array.indexOf(direction) === index;
+                })
+                .sort();
+
+            if (directions.length === 0) {
+                menu.innerHTML = '<div class="text-muted small px-1">Направления не найдены.</div>';
+                return;
+            }
+
+            menu.innerHTML = "";
+
+            directions.forEach(function (direction) {
+                const id = "directionFilter_" + direction.replace(/[^a-zA-Zа-яА-Я0-9]/g, "_");
+
+                const label = document.createElement("label");
+                label.className = "calculation-direction-option";
+
+                label.innerHTML =
+                    `<input type="checkbox"
+                                    class="form-check-input js-direction-filter-checkbox"
+                                    value="${direction}"
+                                    id="${id}" />
+                             <span>${direction}</span>`;
+
+                menu.appendChild(label);
+            });
+        }
+
         function applyCalculationFiltersAndSort() {
             const tbody = document.querySelector(".js-calculation-table-body");
 
@@ -320,6 +429,7 @@ else
             const search = (document.querySelector(".js-calculation-search")?.value || "").toLowerCase().trim();
             const filter = document.querySelector(".js-calculation-filter")?.value || "all";
             const sort = document.querySelector(".js-calculation-sort")?.value || "name-asc";
+            const selectedDirections = getSelectedDirections();
             const rows = Array.from(tbody.querySelectorAll(".js-calculation-row"));
 
             rows.forEach(function (row) {
@@ -333,6 +443,10 @@ else
                 let visible = true;
 
                 if (search && !name.includes(search) && !direction.includes(search) && !semester.includes(search)) {
+                    visible = false;
+                }
+
+                if (selectedDirections.length > 0 && !selectedDirections.includes(direction)) {
                     visible = false;
                 }
 
@@ -381,6 +495,8 @@ else
             rows.forEach(function (row) {
                 tbody.appendChild(row);
             });
+
+            updateDirectionFilterButton();
         }
 
         document.addEventListener("input", function (event) {
@@ -391,11 +507,13 @@ else
 
         document.addEventListener("change", function (event) {
             if (event.target.classList.contains("js-calculation-filter")
-                || event.target.classList.contains("js-calculation-sort")) {
+                || event.target.classList.contains("js-calculation-sort")
+                || event.target.classList.contains("js-direction-filter-checkbox")) {
                 applyCalculationFiltersAndSort();
             }
         });
 
+        buildDirectionFilter();
         applyCalculationFiltersAndSort();
     </script>
 }

@@ -16,7 +16,10 @@
         vertical-align: middle;
     }
 
-    .gia-calculation-table th {
+    .gia-calculation-table thead th {
+        background: #f8f9fa !important;
+        color: #212529 !important;
+        border-color: #dee2e6 !important;
         white-space: nowrap;
     }
 
@@ -28,6 +31,11 @@
     .gia-calculation-table .hours-input {
         max-width: 100px;
         margin: 0 auto;
+    }
+
+    .gia-calculation-table .total-column,
+    .gia-calculation-table .total-cell {
+        font-weight: 700;
     }
 </style>
 
@@ -42,7 +50,7 @@
     {
         <div class="table-responsive mb-3">
             <table class="table table-bordered table-sm gia-calculation-table">
-                <thead class="table-dark">
+                <thead>
                     <tr>
                         <th>Семестр</th>
                         <th>Код направления</th>
@@ -51,7 +59,7 @@
                         <th class="number-column">Групп</th>
                         <th class="number-column">Студентов</th>
                         <th class="number-column">Часы</th>
-                        <th class="number-column">Итого</th>
+                        <th class="number-column total-column">Итого</th>
                     </tr>
                 </thead>
 
@@ -117,7 +125,7 @@
                                 }
                             </td>
 
-                            <td class="text-center fw-semibold">
+                            <td class="text-center total-cell">
                                 @Math.Round(row.TotalHours, 0, MidpointRounding.AwayFromZero)
                             </td>
                         </tr>
