@@ -244,7 +244,7 @@ namespace DepartmentLoadApp.Helpers
             ws.Cell(5, 22).Value = "РГР";
             ws.Cell(5, 23).Value = "Практика";
             ws.Cell(5, 24).Value = "ГИА";
-            ws.Cell(5, 25).Value = "Ручные / доп.";
+            ws.Cell(5, 25).Value = "Доп. работа";
             ws.Cell(5, 26).Value = "Итого";
 
             var headerRange = ws.Range(5, 1, 5, lastColumn);

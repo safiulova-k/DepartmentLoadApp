@@ -1,75 +1,107 @@
 ﻿@{
-    ViewData["Title"] = "Главная";
+    ViewData["Title"] = "Главная страница";
 }
 
-<div class="container py-4">
-    <div class="mb-4">
-        <h1 class="mb-3">Модуль расчета нагрузки преподавателей</h1>
-        <p class="text-muted mb-0">
-            Система предназначена для автоматического расчета учебной нагрузки
-            и формирования индивидуальных планов преподавателей кафедры.
+<div class="department-home-hero-card mb-4">
+    <div class="department-home-hero-header">
+        <h1 class="department-home-hero-title">Главная страница</h1>
+    </div>
+
+    <div class="department-home-hero-body">
+        <p class="department-home-hero-text">
+            Добро пожаловать в модуль расчета нагрузки преподавателей кафедры.
+        </p>
+        <p class="department-home-hero-subtext">
+            Здесь доступны основные действия для расчёта учебной нагрузки,
+            распределения часов и формирования индивидуальных планов преподавателей.
         </p>
     </div>
+</div>
 
-    <div class="card shadow-sm border-0 rounded-4 mb-4">
-        <div class="card-body p-4">
-            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
-                <div>
-                    <h4 class="mb-2">Синхронизация с главным модулем</h4>
-                </div>
+<div class="department-home-hero-card mb-4">
+    <div class="department-home-hero-header">
+        <h2 class="department-home-section-title">Синхронизация с ядром</h2>
+    </div>
 
-                <div class="d-flex align-items-center gap-2">
-                    <button id="syncCoreBtn" type="button" class="btn btn-primary">
-                        Синхронизировать с ядром
-                    </button>
-                </div>
+    <div class="department-home-hero-body">
+        <p class="department-home-hero-subtext mb-3">
+            Загрузка и обновление данных из основного модуля кафедрального портала:
+            направления, преподаватели, группы, учебные планы и записи учебных планов.
+        </p>
+
+        <button type="button"
+                class="btn department-dashboard-btn"
+                id="syncCoreButton">
+            Синхронизировать с ядром
+        </button>
+
+        <div id="syncCoreMessage" class="mt-3 d-none"></div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-4 col-lg-4 col-md-6">
+        <div class="department-dashboard-card">
+            <div class="department-dashboard-card-header">
+                Расчет нагрузки
             </div>
 
-            <div id="syncStatus" class="mt-3" style="display:none;"></div>
+            <div class="department-dashboard-card-body">
+
+                <div class="department-dashboard-card-text">
+                    Автоматический расчет учебной нагрузки по дисциплинам,
+                    практикам, ГИА и дополнительной работе.
+                </div>
+
+                <a asp-controller="WorkloadCalculation"
+                   asp-action="Index"
+                   class="btn department-dashboard-btn">
+                    Перейти
+                </a>
+            </div>
         </div>
     </div>
 
-    <div class="row g-4">
-        <div class="col-md-4">
-            <div class="card h-100 shadow-sm border-0 rounded-4">
-                <div class="card-body p-4">
-                    <h5 class="card-title">Расчет необходимой нагрузки</h5>
-                    <p class="card-text text-muted">
-                        Автоматический расчет количества часов на основе норм времени
-                        и контингента студентов.
-                    </p>
-                    <a asp-controller="WorkloadCalculation" asp-action="Index" class="btn btn-outline-primary">
-                        Открыть
-                    </a>
+    <div class="col-xl-4 col-lg-4 col-md-6">
+        <div class="department-dashboard-card">
+            <div class="department-dashboard-card-header">
+                Распределение
+            </div>
+
+            <div class="department-dashboard-card-body">
+
+                <div class="department-dashboard-card-text">
+                    Распределение рассчитанных часов между преподавателями кафедры
+                    с учетом ставок и лимитов.
                 </div>
+
+                <a asp-controller="WorkloadDistribution"
+                   asp-action="Index"
+                   class="btn department-dashboard-btn">
+                    Перейти
+                </a>
             </div>
         </div>
+    </div>
 
-        <div class="col-md-4">
-            <div class="card h-100 shadow-sm border-0 rounded-4">
-                <div class="card-body p-4">
-                    <h5 class="card-title">Распределение нагрузки</h5>
-                    <p class="card-text text-muted">
-                        Ручное распределение рассчитанных часов между преподавателями кафедры.
-                    </p>
-                    <a asp-controller="WorkloadDistribution" asp-action="Index" class="btn btn-outline-primary">
-                        Открыть
-                    </a>
-                </div>
+    <div class="col-xl-4 col-lg-4 col-md-6">
+        <div class="department-dashboard-card">
+            <div class="department-dashboard-card-header">
+                Индивидуальные планы
             </div>
-        </div>
 
-        <div class="col-md-4">
-            <div class="card h-100 shadow-sm border-0 rounded-4">
-                <div class="card-body p-4">
-                    <h5 class="card-title">Индивидуальные планы</h5>
-                    <p class="card-text text-muted">
-                        Просмотр и формирование индивидуальных планов преподавателей.
-                    </p>
-                    <a asp-controller="IndividualPlans" asp-action="Index" class="btn btn-outline-primary">
-                        Открыть
-                    </a>
+            <div class="department-dashboard-card-body">
+
+                <div class="department-dashboard-card-text">
+                    Просмотр и выгрузка индивидуальных планов преподавателей
+                    на основе распределённой нагрузки.
                 </div>
+
+                <a asp-controller="IndividualPlans"
+                   asp-action="Index"
+                   class="btn department-dashboard-btn">
+                    Перейти
+                </a>
             </div>
         </div>
     </div>
@@ -77,39 +109,40 @@
 
 @section Scripts {
     <script>
-        const syncButton = document.getElementById('syncCoreBtn');
-        const syncStatus = document.getElementById('syncStatus');
+        document.getElementById("syncCoreButton")?.addEventListener("click", function () {
+            const button = this;
+            const message = document.getElementById("syncCoreMessage");
 
-        function showStatus(message, type) {
-            syncStatus.style.display = 'block';
-            syncStatus.className = `alert alert-${type} mt-3`;
-            syncStatus.textContent = message;
-        }
+            button.disabled = true;
+            button.textContent = "Синхронизация...";
 
-        syncButton.addEventListener('click', async function () {
-            syncButton.disabled = true;
-            syncButton.textContent = 'Синхронизация...';
-            showStatus('Запущена синхронизация данных с ядром...', 'info');
+            message.className = "mt-3 alert alert-info";
+            message.textContent = "Выполняется синхронизация с ядром...";
 
-            try {
-                const response = await fetch('/api/sync/all', {
-                    method: 'POST'
-                });
-
-                const text = await response.text();
-
-                if (!response.ok) {
-                    showStatus(`Ошибка синхронизации: ${text}`, 'danger');
-                    return;
+            fetch("/api/sync/all", {
+                method: "POST",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
                 }
+            })
+                .then(async function (response) {
+                    const text = await response.text();
 
-                showStatus('Синхронизация успешно завершена.', 'success');
-            } catch (error) {
-                showStatus('Не удалось выполнить синхронизацию. Проверь Docker, доступность core-api и сеть между контейнерами.', 'danger');
-            } finally {
-                syncButton.disabled = false;
-                syncButton.textContent = 'Синхронизировать с ядром';
-            }
+                    if (!response.ok) {
+                        throw new Error(text || "Ошибка при синхронизации данных.");
+                    }
+
+                    message.className = "mt-3 alert alert-success";
+                    message.textContent = text || "Синхронизация завершена.";
+                })
+                .catch(function (error) {
+                    message.className = "mt-3 alert alert-danger";
+                    message.textContent = error.message || "Не удалось выполнить синхронизацию.";
+                })
+                .finally(function () {
+                    button.disabled = false;
+                    button.textContent = "Синхронизировать с ядром";
+                });
         });
     </script>
 }

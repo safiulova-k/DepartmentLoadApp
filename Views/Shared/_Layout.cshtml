@@ -3,43 +3,104 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Расчет нагрузки</title>
+    <title>@ViewData["Title"] - Портал кафедры</title>
+
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
+    @{
+        var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+
+        bool IsController(params string[] controllers)
+        {
+            return controllers.Any(x => string.Equals(currentController, x, StringComparison.OrdinalIgnoreCase));
+        }
+
+        var calculationActive = IsController(
+        "WorkloadCalculation",
+        "PracticeCalculation",
+        "GiaCalculation",
+        "AdditionalWorkCalculation")
+        ? "active"
+        : string.Empty;
+
+        var distributionActive = IsController("WorkloadDistribution")
+        ? "active"
+        : string.Empty;
+
+        var plansActive = IsController("IndividualPlans")
+        ? "active"
+        : string.Empty;
+
+        var contingentActive = IsController("Contingent")
+        ? "active"
+        : string.Empty;
+
+        var normTimeActive = IsController("NormTime")
+        ? "active"
+        : string.Empty;
+    }
+
     <header>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <nav class="navbar navbar-expand-xl department-top-navbar">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-controller="Home" asp-action="Index">
-                    Кафедральный портал
+                <a class="navbar-brand department-navbar-brand"
+                   asp-controller="Home"
+                   asp-action="Index">
+                    Портал кафедры
                 </a>
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                <button class="navbar-toggler department-navbar-toggler"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#mainDepartmentNavbar"
+                        aria-controls="mainDepartmentNavbar"
+                        aria-expanded="false"
+                        aria-label="Открыть меню">
                     <span class="navbar-toggler-icon"></span>
                 </button>
 
-                <div class="collapse navbar-collapse" id="navbarMain">
-                    <ul class="navbar-nav me-auto">
+                <div class="collapse navbar-collapse" id="mainDepartmentNavbar">
+                    <ul class="navbar-nav department-navbar-nav ms-3">
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="Index">Главная</a>
+                            <a class="nav-link department-nav-link @calculationActive"
+                               asp-controller="WorkloadCalculation"
+                               asp-action="Index">
+                                Расчет нагрузки
+                            </a>
                         </li>
 
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="WorkloadCalculation" asp-action="Index">Расчет нагрузки</a>
+                            <a class="nav-link department-nav-link @distributionActive"
+                               asp-controller="WorkloadDistribution"
+                               asp-action="Index">
+                                Распределение
+                            </a>
                         </li>
 
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="WorkloadDistribution" asp-action="Index">Распределение</a>
+                            <a class="nav-link department-nav-link @plansActive"
+                               asp-controller="IndividualPlans"
+                               asp-action="Index">
+                                Индивидуальные планы
+                            </a>
                         </li>
+
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="IndividualPlans" asp-action="Index">Индивидуальные планы</a>
+                            <a class="nav-link department-nav-link @contingentActive"
+                               asp-controller="Contingent"
+                               asp-action="Index">
+                                Контингент
+                            </a>
                         </li>
+
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Contingent" asp-action="Index">Контингент</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="NormTime" asp-action="Index">Нормы времени</a>
+                            <a class="nav-link department-nav-link @normTimeActive"
+                               asp-controller="NormTime"
+                               asp-action="Index">
+                                Нормы времени
+                            </a>
                         </li>
                     </ul>
                 </div>
@@ -47,19 +108,15 @@
         </nav>
     </header>
 
-    <div class="container-fluid mt-4">
-        <main role="main">
+    <div class="container-fluid department-page-container">
+        <main role="main" class="pb-3">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer text-muted mt-4">
-        <div class="container-fluid">
-            © @DateTime.Now.Year — Кафедральный портал
-        </div>
-    </footer>
-
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
