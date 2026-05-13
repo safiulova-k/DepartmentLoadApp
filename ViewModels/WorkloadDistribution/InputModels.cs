@@ -24,6 +24,8 @@ public class AddSelectedAssignmentsInputModel
     public List<string> SelectedItemKeys { get; set; } = new();
 
     public List<GiaStudentsAssignmentInputModel> GiaStudents { get; set; } = new();
+
+    public List<AdditionalWorkAssignmentInputModel> AdditionalWorks { get; set; } = new();
 }
 
 public class GiaStudentsAssignmentInputModel
@@ -31,6 +33,15 @@ public class GiaStudentsAssignmentInputModel
     public string ItemKey { get; set; } = string.Empty;
 
     public int StudentsCount { get; set; }
+}
+
+public class AdditionalWorkAssignmentInputModel
+{
+    public string ItemKey { get; set; } = string.Empty;
+
+    public int StudentsCount { get; set; }
+
+    public decimal Hours { get; set; }
 }
 
 public class DeleteAssignmentInputModel

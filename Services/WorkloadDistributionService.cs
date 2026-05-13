@@ -9,6 +9,7 @@ using DepartmentLoadApp.Models.Practice;
 using DepartmentLoadApp.Models.Workload;
 using DepartmentLoadApp.ViewModels.WorkloadDistribution;
 using Microsoft.EntityFrameworkCore;
+using DepartmentLoadApp.Models.AdditionalWork;
 
 namespace DepartmentLoadApp.Services
 {
@@ -297,10 +298,11 @@ namespace DepartmentLoadApp.Services
         }
 
         public async Task<WorkloadDistributionOperationResult> AddSelectedAssignmentsAsync(
-            int selectedYearStart,
-            int lecturerId,
-            List<string> selectedItemKeys,
-            List<GiaStudentsAssignmentInputModel> giaStudents)
+           int selectedYearStart,
+           int lecturerId,
+           List<string> selectedItemKeys,
+           List<GiaStudentsAssignmentInputModel> giaStudents,
+           List<AdditionalWorkAssignmentInputModel> additionalWorks)
         {
             var academicYear = AcademicYearResolver.BuildAcademicYear(
                 AcademicYearResolver.NormalizeStartYear(selectedYearStart));
@@ -322,6 +324,7 @@ namespace DepartmentLoadApp.Services
 
             selectedItemKeys ??= new List<string>();
             giaStudents ??= new List<GiaStudentsAssignmentInputModel>();
+            additionalWorks ??= new List<AdditionalWorkAssignmentInputModel>();
 
             var yearAssignments = await _context.LecturerLoadAssignments
                 .AsNoTracking()
@@ -357,8 +360,8 @@ namespace DepartmentLoadApp.Services
                         "Ассистенту нельзя назначать лекции.",
                         lecturerId);
                 }
-
-                if (item.SourceType == LoadAssignmentSourceType.Gia)
+                if (item.SourceType == LoadAssignmentSourceType.Gia ||
+                    item.SourceType == LoadAssignmentSourceType.AdditionalWork)
                 {
                     continue;
                 }
@@ -395,8 +398,72 @@ namespace DepartmentLoadApp.Services
 
                 giaSelectedItems.Add((item, input.StudentsCount, hours));
             }
+            var additionalSelectedItems = new List<(DistributableLoadItem Item, int StudentsCount, decimal Hours)>();
 
-            if (!selectedItems.Any() && !giaSelectedItems.Any())
+            foreach (var input in additionalWorks.Where(x => x.StudentsCount > 0 || x.Hours > 0))
+            {
+                var item = availableItems.FirstOrDefault(x => BuildItemKey(x) == input.ItemKey);
+
+                if (item == null || item.SourceType != LoadAssignmentSourceType.AdditionalWork)
+                {
+                    return WorkloadDistributionOperationResult.Fail(
+                        "Некорректная строка доп. работы.",
+                        lecturerId);
+                }
+
+                if (item.LoadElementType == LoadAssignmentElementType.PostgraduateSupervision)
+                {
+                    if (input.StudentsCount <= 0)
+                    {
+                        continue;
+                    }
+
+                    if (input.StudentsCount > item.RemainingStudentsCount)
+                    {
+                        return WorkloadDistributionOperationResult.Fail(
+                            $"По строке «{item.ElementDisplayName}» осталось только {item.RemainingStudentsCount} аспирантов.",
+                            lecturerId);
+                    }
+
+                    if (item.HoursPerStudent <= 0)
+                    {
+                        return WorkloadDistributionOperationResult.Fail(
+                            $"Для строки «{item.ElementDisplayName}» не задана норма часов.",
+                            lecturerId);
+                    }
+
+                    var hours = RoundHours(input.StudentsCount * item.HoursPerStudent);
+
+                    if (hours <= 0)
+                    {
+                        continue;
+                    }
+
+                    additionalSelectedItems.Add((item, input.StudentsCount, hours));
+
+                    continue;
+                }
+
+                if (item.LoadElementType == LoadAssignmentElementType.OrganizationalWork)
+                {
+                    var hours = RoundHours(input.Hours);
+
+                    if (hours <= 0)
+                    {
+                        continue;
+                    }
+
+                    if (hours > item.RemainingHours)
+                    {
+                        return WorkloadDistributionOperationResult.Fail(
+                            $"По строке «{item.ElementDisplayName}» осталось только {item.RemainingHours:0.##} ч.",
+                            lecturerId);
+                    }
+
+                    additionalSelectedItems.Add((item, 0, hours));
+                }
+            }
+            if (!selectedItems.Any() && !giaSelectedItems.Any() && !additionalSelectedItems.Any())
             {
                 return WorkloadDistributionOperationResult.Fail(
                     "Выберите хотя бы один элемент нагрузки.",
@@ -410,7 +477,8 @@ namespace DepartmentLoadApp.Services
             var limitHours = CalculateLimitHours(plan.LecturerStudyPost?.Hours ?? 0, plan.Rate);
 
             var selectedHours = selectedItems.Sum(x => x.RemainingHours)
-                                + giaSelectedItems.Sum(x => x.Hours);
+                                + giaSelectedItems.Sum(x => x.Hours)
+                                + additionalSelectedItems.Sum(x => x.Hours);
 
             if (lecturerAssignedHours + selectedHours > limitHours)
             {
@@ -456,7 +524,28 @@ namespace DepartmentLoadApp.Services
                     AssignedHours = giaItem.Hours
                 });
             }
+            foreach (var additionalItem in additionalSelectedItems)
+            {
+                var unitName = additionalItem.Item.LoadElementType == LoadAssignmentElementType.PostgraduateSupervision
+                    ? $"{additionalItem.StudentsCount} асп."
+                    : $"{additionalItem.Hours:0.##} ч.";
 
+                _context.LecturerLoadAssignments.Add(new LecturerLoadAssignment
+                {
+                    AcademicYear = academicYear,
+                    LecturerAcademicYearPlanId = plan.Id,
+                    SourceType = additionalItem.Item.SourceType,
+                    SourceRowId = additionalItem.Item.SourceRowId,
+                    SourceAcademicPlanRecordId = additionalItem.Item.SourceAcademicPlanRecordId,
+                    LoadElementType = additionalItem.Item.LoadElementType,
+                    DistributionUnitType = DistributionUnitType.Students,
+                    StudentGroupId = null,
+                    ContingentSubgroupId = null,
+                    UnitName = unitName,
+                    StudentsCount = additionalItem.StudentsCount,
+                    AssignedHours = additionalItem.Hours
+                });
+            }
             await _context.SaveChangesAsync();
 
             return WorkloadDistributionOperationResult.Ok(
@@ -649,23 +738,30 @@ namespace DepartmentLoadApp.Services
 
             foreach (var row in additionalWorkItems)
             {
+                var isPostgraduate = row.WorkType == AdditionalWorkType.PostgraduateSupervision;
+
                 result.Add(new DistributableLoadItem
                 {
                     SourceType = LoadAssignmentSourceType.AdditionalWork,
                     SourceRowId = row.SourceRowId,
                     SourceAcademicPlanRecordId = row.SourceAcademicPlanRecordId,
                     LoadElementType = row.LoadElementType,
-                    DistributionUnitType = DistributionUnitType.Flow,
+                    DistributionUnitType = isPostgraduate
+                        ? DistributionUnitType.Students
+                        : DistributionUnitType.Flow,
                     StudentGroupId = null,
                     ContingentSubgroupId = null,
                     SemesterName = "Доп. работа",
                     Title = row.Title,
                     Subtitle = row.Subtitle,
                     ElementDisplayName = row.ElementDisplayName,
-                    UnitName = "без группы",
-                    StudentsCount = 0,
+                    UnitName = isPostgraduate ? "аспиранты" : "часы",
+                    StudentsCount = isPostgraduate ? row.Count : 0,
                     TotalHours = row.TotalHours,
-                    RemainingHours = row.TotalHours
+                    RemainingHours = row.TotalHours,
+                    TotalStudentsCount = isPostgraduate ? row.Count : 0,
+                    RemainingStudentsCount = isPostgraduate ? row.Count : 0,
+                    HoursPerStudent = isPostgraduate ? row.HoursPerUnit : 0
                 });
             }
 
@@ -913,7 +1009,8 @@ namespace DepartmentLoadApp.Services
                 item.AssignedHours = 0;
                 item.RemainingHours = item.TotalHours;
 
-                if (item.SourceType == LoadAssignmentSourceType.Gia)
+                if (item.SourceType == LoadAssignmentSourceType.Gia ||
+                    item.LoadElementType == LoadAssignmentElementType.PostgraduateSupervision)
                 {
                     item.AssignedStudentsCount = 0;
                     item.RemainingStudentsCount = item.TotalStudentsCount;
@@ -932,7 +1029,8 @@ namespace DepartmentLoadApp.Services
                 item.AssignedHours += assignment.AssignedHours;
                 item.RemainingHours = Math.Max(0, item.TotalHours - item.AssignedHours);
 
-                if (item.SourceType == LoadAssignmentSourceType.Gia)
+                if (item.SourceType == LoadAssignmentSourceType.Gia ||
+     item.LoadElementType == LoadAssignmentElementType.PostgraduateSupervision)
                 {
                     item.AssignedStudentsCount += assignment.StudentsCount;
                     item.RemainingStudentsCount = Math.Max(

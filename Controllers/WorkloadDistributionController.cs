@@ -45,10 +45,11 @@ public class WorkloadDistributionController : Controller
     public async Task<IActionResult> AddSelectedAssignments(AddSelectedAssignmentsInputModel model)
     {
         var result = await _service.AddSelectedAssignmentsAsync(
-            model.SelectedYearStart,
-            model.LecturerId,
-            model.SelectedItemKeys,
-            model.GiaStudents);
+          model.SelectedYearStart,
+          model.LecturerId,
+          model.SelectedItemKeys,
+          model.GiaStudents,
+          model.AdditionalWorks);
 
         PutMessage(result);
 

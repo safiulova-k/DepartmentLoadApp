@@ -84,22 +84,25 @@ namespace DepartmentLoadApp.Services
             var rows = await LoadRowsAsync(academicYear);
 
             return rows
-                .Where(x => x.TotalHours > 0)
-                .Select(x => new AdditionalWorkDistributionItem
-                {
-                    SourceRowId = x.Id,
-                    SourceAcademicPlanRecordId = x.Id,
-                    LoadElementType = x.WorkType == AdditionalWorkType.PostgraduateSupervision
-                        ? LoadAssignmentElementType.PostgraduateSupervision
-                        : LoadAssignmentElementType.OrganizationalWork,
-                    Title = "Доп. работа",
-                    Subtitle = x.WorkType == AdditionalWorkType.PostgraduateSupervision
-                        ? $"Количество: {x.Count}, норма: {x.HoursPerUnit:0.##} ч."
-                        : $"Норма: {x.HoursPerUnit:0.##} ч.",
-                    ElementDisplayName = x.WorkName,
-                    TotalHours = x.TotalHours
-                })
-                .ToList();
+             .Where(x => x.TotalHours > 0)
+             .Select(x => new AdditionalWorkDistributionItem
+             {
+                 SourceRowId = x.Id,
+                 SourceAcademicPlanRecordId = x.Id,
+                 WorkType = x.WorkType,
+                 LoadElementType = x.WorkType == AdditionalWorkType.PostgraduateSupervision
+                     ? LoadAssignmentElementType.PostgraduateSupervision
+                     : LoadAssignmentElementType.OrganizationalWork,
+                 Title = "Доп. работа",
+                 Subtitle = x.WorkType == AdditionalWorkType.PostgraduateSupervision
+                     ? $"Всего аспирантов: {x.Count}, норма: {x.HoursPerUnit:0.##} ч."
+                     : $"Доступно часов: {x.TotalHours:0.##}",
+                 ElementDisplayName = x.WorkName,
+                 Count = x.Count,
+                 HoursPerUnit = x.HoursPerUnit,
+                 TotalHours = x.TotalHours
+             })
+             .ToList();
         }
 
         private async Task EnsureDefaultNormsAsync()
@@ -286,6 +289,8 @@ namespace DepartmentLoadApp.Services
 
         public int SourceAcademicPlanRecordId { get; set; }
 
+        public AdditionalWorkType WorkType { get; set; }
+
         public LoadAssignmentElementType LoadElementType { get; set; }
 
         public string Title { get; set; } = string.Empty;
@@ -293,6 +298,10 @@ namespace DepartmentLoadApp.Services
         public string Subtitle { get; set; } = string.Empty;
 
         public string ElementDisplayName { get; set; } = string.Empty;
+
+        public int Count { get; set; }
+
+        public decimal HoursPerUnit { get; set; }
 
         public int TotalHours { get; set; }
     }
