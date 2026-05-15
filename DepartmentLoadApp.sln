@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34723.18
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DepartmentLoadApp", "DepartmentLoadApp.csproj", "{00BD432B-0490-48FA-9A4F-59BB7D0A254D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DepartmentLoadApp", "DepartmentLoadApp.csproj", "{00BD432B-0490-48FA-9A4F-59BB7D0A254D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DepartmentLoadApp.Tests", "..\DepartmentLoadApp.Tests\DepartmentLoadApp.Tests.csproj", "{63082F1B-E9C6-4288-AD04-B1304EA42124}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{00BD432B-0490-48FA-9A4F-59BB7D0A254D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{00BD432B-0490-48FA-9A4F-59BB7D0A254D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{00BD432B-0490-48FA-9A4F-59BB7D0A254D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63082F1B-E9C6-4288-AD04-B1304EA42124}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63082F1B-E9C6-4288-AD04-B1304EA42124}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63082F1B-E9C6-4288-AD04-B1304EA42124}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63082F1B-E9C6-4288-AD04-B1304EA42124}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

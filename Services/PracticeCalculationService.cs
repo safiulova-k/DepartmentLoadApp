@@ -8,8 +8,8 @@ namespace DepartmentLoadApp.Services
 {
     public class PracticeCalculationService
     {
-        private const string PracticeCategoryKeyword = "%практи%";
-        private const string ResearchCategoryKeyword = "%науч%";
+        private const string PracticeCategoryKeyword = "практи";
+        private const string ResearchCategoryKeyword = "науч";
 
         private const string TechnologyPracticeKeyword = "технологическ";
         private const string PreDiplomaPracticeKeyword = "преддиплом";
@@ -27,13 +27,16 @@ namespace DepartmentLoadApp.Services
 
         public async Task RecalculateAsync(List<PracticeWorkloadRow> rows)
         {
-            var norms = await _context.NormTimes
-                .AsNoTracking()
+            var allNorms = await _context.NormTimes
+     .AsNoTracking()
+     .Where(x => !string.IsNullOrWhiteSpace(x.CategoryName))
+     .ToListAsync();
+
+            var norms = allNorms
                 .Where(x =>
-                    !string.IsNullOrWhiteSpace(x.CategoryName)
-                    && (EF.Functions.ILike(x.CategoryName, PracticeCategoryKeyword)
-                        || EF.Functions.ILike(x.CategoryName, ResearchCategoryKeyword)))
-                .ToListAsync();
+                    ContainsNormalized(x.CategoryName, PracticeCategoryKeyword) ||
+                    ContainsNormalized(x.CategoryName, ResearchCategoryKeyword))
+                .ToList();
 
             var contingents = await _context.ContingentRows
                 .AsNoTracking()
@@ -152,6 +155,20 @@ namespace DepartmentLoadApp.Services
                 .Replace("(производственная)", string.Empty);
 
             return string.Join(' ', normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        private static bool ContainsNormalized(string? value, string fragment)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            return value
+                .Trim()
+                .ToLowerInvariant()
+                .Replace("ё", "е")
+                .Contains(fragment.Trim().ToLowerInvariant().Replace("ё", "е"));
         }
     }
 }
