@@ -52,3 +52,10 @@ public class DeleteAssignmentInputModel
 
     public int AssignmentId { get; set; }
 }
+
+public class AutoDistributeInputModel
+{
+    public int SelectedYearStart { get; set; }
+
+    public int? SelectedLecturerId { get; set; }
+}

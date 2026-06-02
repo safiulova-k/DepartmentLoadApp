@@ -7,6 +7,7 @@ namespace DepartmentLoadApp.Controllers;
 
 public class WorkloadDistributionController : Controller
 {
+
     private readonly WorkloadDistributionService _service;
 
     public WorkloadDistributionController(WorkloadDistributionService service)
@@ -18,6 +19,7 @@ public class WorkloadDistributionController : Controller
     public async Task<IActionResult> Index(int? startYear, int? selectedLecturerId)
     {
         var model = await _service.BuildPageAsync(startYear, selectedLecturerId);
+
         return View(model);
     }
 
@@ -45,17 +47,37 @@ public class WorkloadDistributionController : Controller
     public async Task<IActionResult> AddSelectedAssignments(AddSelectedAssignmentsInputModel model)
     {
         var result = await _service.AddSelectedAssignmentsAsync(
-          model.SelectedYearStart,
-          model.LecturerId,
-          model.SelectedItemKeys,
-          model.GiaStudents,
-          model.AdditionalWorks);
+            model.SelectedYearStart,
+            model.LecturerId,
+            model.SelectedItemKeys,
+            model.GiaStudents,
+            model.AdditionalWorks);
 
         PutMessage(result);
 
         return RedirectToIndex(
             model.SelectedYearStart,
             result.LecturerId ?? model.SelectedLecturerId ?? model.LecturerId);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AutoDistribute(AutoDistributeInputModel model)
+    {
+        var result = await _service.AutoDistributeByHistoryAsync(model.SelectedYearStart);
+
+        TempData[result.IsSuccess ? "SuccessMessage" : "ErrorMessage"] = result.Message;
+
+        var selectedLecturerId = result.Groups.FirstOrDefault()?.LecturerId
+                                 ?? model.SelectedLecturerId;
+
+        var pageModel = await _service.BuildPageAsync(
+            model.SelectedYearStart,
+            selectedLecturerId);
+
+        ViewData["AutoDistributionResult"] = result;
+
+        return View("Index", pageModel);
     }
 
     [HttpPost]

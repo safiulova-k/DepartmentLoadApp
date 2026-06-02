@@ -12,6 +12,7 @@
         Credit = 6,
         CourseWork = 7,
         CourseProject = 8,
+        Rgr = 9,
 
         PracticeWork = 20,
         GiaWork = 30,

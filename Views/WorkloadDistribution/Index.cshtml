@@ -1,7 +1,10 @@
 ﻿@model DepartmentLoadApp.ViewModels.WorkloadDistribution.WorkloadDistributionPageViewModel
+@using DepartmentLoadApp.ViewModels.WorkloadDistribution
 
 @{
     ViewData["Title"] = "Распределение нагрузки";
+
+    var autoDistributionResult = ViewData["AutoDistributionResult"] as AutoDistributionResultViewModel;
 }
 
 <style>
@@ -370,6 +373,19 @@
 
 <div class="distribution-current-year-line">
     Текущий учебный год: @Model.SelectedYear
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <form asp-action="AutoDistribute" method="post">
+        @Html.AntiForgeryToken()
+
+        <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
+        <input type="hidden" name="SelectedLecturerId" value="@Model.SelectedLecturerId" />
+
+        <button type="submit" class="btn btn-success">
+            Распределить автоматически
+        </button>
+    </form>
 </div>
 
 <div class="distribution-toolbar">
@@ -1466,6 +1482,125 @@ else
     </div>
 }
 
+@if (autoDistributionResult != null)
+{
+    <div class="modal fade" id="autoDistributionResultModal" tabindex="-1" aria-labelledby="autoDistributionResultModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title" id="autoDistributionResultModalLabel">
+                            Автоматически распределено
+                        </h5>
+                        <div class="text-muted small">
+                            Учебный год: @autoDistributionResult.TargetAcademicYear
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+
+                <div class="modal-body">
+                    @if (!autoDistributionResult.Groups.Any())
+                    {
+                        <div class="alert alert-info mb-0">
+                            Новых назначений не создано. Возможно, в прошлом году нет лекций по совпадающим дисциплинам или у преподавателей не осталось свободных часов.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-light border">
+                            Создано назначений: <strong>@autoDistributionResult.CreatedAssignmentsCount</strong>.
+                            История проверялась за годы:
+                            <strong>@string.Join(", ", autoDistributionResult.HistoryAcademicYears)</strong>.
+                        </div>
+
+                        <div class="accordion" id="autoDistributionAccordion">
+                            @for (var groupIndex = 0; groupIndex < autoDistributionResult.Groups.Count; groupIndex++)
+                            {
+                                var group = autoDistributionResult.Groups[groupIndex];
+                                var collapseId = $"autoDistributionGroup_{groupIndex}";
+
+                                <div class="accordion-item mb-2">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed"
+                                                type="button"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#@collapseId">
+                                            <div class="d-flex justify-content-between align-items-center w-100 pe-3 gap-3 flex-wrap">
+                                                <div>
+                                                    <div class="fw-semibold">
+                                                        @group.LecturerName — @group.DisciplineName
+                                                    </div>
+                                                    <div class="small text-muted">
+                                                        @group.Subtitle
+                                                    </div>
+                                                </div>
+
+                                                <span class="badge bg-primary">
+                                                    @group.TotalHours.ToString("0.##") ч.
+                                                </span>
+                                            </div>
+                                        </button>
+                                    </h2>
+
+                                    <div id="@collapseId"
+                                         class="accordion-collapse collapse"
+                                         data-bs-parent="#autoDistributionAccordion">
+                                        <div class="accordion-body">
+                                            <div class="table-responsive">
+                                                <table class="table table-sm align-middle mb-0">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>Вид нагрузки</th>
+                                                            <th>Единица</th>
+                                                            <th class="text-end">Часы</th>
+                                                            <th class="text-end">Действие</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var assignment in group.Assignments)
+                                                        {
+                                                            <tr>
+                                                                <td>@assignment.ElementName</td>
+                                                                <td>@assignment.UnitName</td>
+                                                                <td class="text-end">@assignment.Hours.ToString("0.##")</td>
+                                                                <td class="text-end">
+                                                                    <form asp-action="DeleteAssignment" method="post" class="d-inline">
+                                                                        @Html.AntiForgeryToken()
+
+                                                                        <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
+                                                                        <input type="hidden" name="SelectedLecturerId" value="@group.LecturerId" />
+                                                                        <input type="hidden" name="AssignmentId" value="@assignment.AssignmentId" />
+
+                                                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                                            Удалить
+                                                                        </button>
+                                                                    </form>
+                                                                </td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                        Закрыть
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @section Scripts {
     <script>
         function parseNumber(value) {
@@ -1956,6 +2091,17 @@ else
         });
 
         applyLecturerFiltersAndSort();
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const autoDistributionModalElement = document.getElementById('autoDistributionResultModal');
+
+            if (autoDistributionModalElement && window.bootstrap) {
+                const autoDistributionModal = new bootstrap.Modal(autoDistributionModalElement);
+                autoDistributionModal.show();
+            }
+        });
     </script>
 }
 
