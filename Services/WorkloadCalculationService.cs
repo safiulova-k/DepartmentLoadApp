@@ -44,15 +44,16 @@ namespace DepartmentLoadApp.Services
                 .ToListAsync();
 
             var flowMap = flows
-            .GroupBy(x => BuildFlowKey(
-                x.AcademicYear,
-                TextNormalizeHelper.Normalize(x.DirectionCode),
-                x.Course))
-            .ToDictionary(x => x.Key, x => x.Count());
+                .GroupBy(x => BuildFlowKey(
+                    x.AcademicYear,
+                    TextNormalizeHelper.Normalize(x.DirectionCode),
+                    x.Course))
+                .ToDictionary(x => x.Key, x => x.Count());
 
             foreach (var row in rows)
             {
                 RecalculateSingleRow(row, norms, contingentMap, flowMap);
+
                 row.SourceRowIds = row.Id.ToString();
                 row.IsMergedStream = false;
             }
@@ -94,7 +95,9 @@ namespace DepartmentLoadApp.Services
 
             var flowKey = BuildFlowKey(row.AcademicYear, directionCode, row.Course);
 
-            row.FlowCount = flowMap.TryGetValue(flowKey, out var flowCount) ? flowCount : 0;
+            row.FlowCount = flowMap.TryGetValue(flowKey, out var flowCount)
+                ? flowCount
+                : 0;
 
             if (row.FlowCount <= 0)
             {
@@ -114,11 +117,9 @@ namespace DepartmentLoadApp.Services
                 .GroupBy(x => new
                 {
                     AcademicYear = TextNormalizeHelper.Normalize(x.AcademicYear),
-                    EducationLevel = TextNormalizeHelper.Normalize(x.EducationLevel),
-                    EducationForm = TextNormalizeHelper.Normalize(x.EducationForm),
-                    SemesterName = TextNormalizeHelper.Normalize(x.SemesterName),
                     DisciplineName = TextNormalizeHelper.Normalize(x.DisciplineName),
-                    x.Course
+                    x.Course,
+                    SemesterName = TextNormalizeHelper.Normalize(x.SemesterName)
                 });
 
             foreach (var group in groups)
@@ -131,8 +132,10 @@ namespace DepartmentLoadApp.Services
                 if (groupRows.Count == 1)
                 {
                     var singleRow = groupRows.First();
+
                     singleRow.SourceRowIds = singleRow.Id.ToString();
                     singleRow.IsMergedStream = false;
+
                     result.Add(singleRow);
                     continue;
                 }
@@ -147,15 +150,19 @@ namespace DepartmentLoadApp.Services
                     AcademicPlanRecordId = first.AcademicPlanRecordId,
                     DisciplineId = first.DisciplineId,
                     RecordIndex = first.RecordIndex,
+
                     DisciplineName = first.DisciplineName,
+
                     DirectionCode = string.Join(", ", groupRows
                         .Select(x => x.DirectionCode)
                         .Where(x => !string.IsNullOrWhiteSpace(x))
                         .Distinct()),
+
                     DirectionName = string.Join(", ", groupRows
                         .Select(x => x.DirectionName)
                         .Where(x => !string.IsNullOrWhiteSpace(x))
                         .Distinct()),
+
                     SemesterName = first.SemesterName,
                     EducationForm = first.EducationForm,
                     EducationLevel = first.EducationLevel,
@@ -166,8 +173,11 @@ namespace DepartmentLoadApp.Services
                     GroupCount = groupRows.Sum(x => x.GroupCount),
                     SubgroupCount = groupRows.Sum(x => x.SubgroupCount),
 
+                    // Главное: лекционный поток один общий.
                     FlowCount = groupRows.Sum(x => x.GroupCount) > 0 ? 1 : 0,
 
+                    // Плановые часы лекций, практик и лабораторных не суммируем,
+                    // потому что это часы из учебного плана по одной дисциплине.
                     LecturePlanHours = groupRows.Max(x => x.LecturePlanHours),
                     PracticePlanHours = groupRows.Max(x => x.PracticePlanHours),
                     LabPlanHours = groupRows.Max(x => x.LabPlanHours),
@@ -293,22 +303,30 @@ namespace DepartmentLoadApp.Services
             row.FlowCount = 0;
             row.GroupCount = 0;
             row.SubgroupCount = 0;
+
             row.LectureTotalHours = 0;
             row.PracticeTotalHours = 0;
             row.LabTotalHours = 0;
+
             row.ConsultationHours = 0;
             row.ExamHours = 0;
             row.CreditHours = 0;
             row.CourseWorkHours = 0;
             row.CourseProjectHours = 0;
             row.RgrHours = 0;
+
             row.SourceRowIds = row.Id.ToString();
             row.IsMergedStream = false;
         }
-        private static string BuildFlowKey(string academicYear, string directionCode, int course)
+
+        private static string BuildFlowKey(
+            string academicYear,
+            string directionCode,
+            int course)
         {
             return $"{TextNormalizeHelper.Normalize(academicYear)}|{TextNormalizeHelper.Normalize(directionCode)}|{course}";
         }
+
         private sealed class WorkloadNorms
         {
             public NormTime? LectureNorm { get; set; }

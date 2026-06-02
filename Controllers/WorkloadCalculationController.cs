@@ -42,15 +42,14 @@ namespace DepartmentLoadApp.Controllers
             var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
             var rows = await LoadWorkloadRowsAsync(selectedYear, asNoTracking: true);
-
-            await _workloadCalculationService.RecalculateAsync(rows);
+            var tableRows = await _workloadCalculationService.BuildRowsForTableAsync(rows);
 
             return View(new WorkloadTablePageViewModel
             {
                 SelectedYearStart = selectedYearStart,
                 SelectedYear = selectedYear,
                 AvailableYearStarts = AcademicYearResolver.BuildAvailableStartYears(selectedYearStart),
-                Rows = rows
+                Rows = tableRows
             });
         }
 
@@ -94,6 +93,7 @@ namespace DepartmentLoadApp.Controllers
                 dbRow.LecturePlanHours = inputRow.LecturePlanHours;
                 dbRow.PracticePlanHours = inputRow.PracticePlanHours;
                 dbRow.LabPlanHours = inputRow.LabPlanHours;
+
                 dbRow.HasExam = inputRow.HasExam;
                 dbRow.HasCredit = inputRow.HasCredit;
                 dbRow.HasCourseWork = inputRow.HasCourseWork;
@@ -114,7 +114,7 @@ namespace DepartmentLoadApp.Controllers
             var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
             var workloadRows = await LoadWorkloadRowsAsync(selectedYear, asNoTracking: true);
-            await _workloadCalculationService.RecalculateAsync(workloadRows);
+            var workloadTableRows = await _workloadCalculationService.BuildRowsForTableAsync(workloadRows);
 
             var practiceRows = await LoadPracticeRowsAsync(selectedYear);
             await _practiceCalculationService.RecalculateAsync(practiceRows);
@@ -127,7 +127,7 @@ namespace DepartmentLoadApp.Controllers
 
             var content = ExcelExportHelper.ExportCombinedCalculation(
                 selectedYear,
-                workloadRows,
+                workloadTableRows,
                 practiceRows,
                 giaRows,
                 additionalWorkRows);

@@ -649,7 +649,7 @@ namespace DepartmentLoadApp.Services
                 .Where(x => x.SourceType == LoadAssignmentSourceType.Discipline)
                 .Where(x => IsAutoDistributionElement(x.LoadElementType))
                 .Where(x => x.RemainingHours > 0)
-                .GroupBy(x => BuildCurrentAutoDisciplineKey(x, currentRowsById))
+                .GroupBy(x => BuildCurrentAutoFlowKey(x, currentRowsById))
                 .Where(x => !string.IsNullOrWhiteSpace(x.Key))
                 .OrderBy(x => x.First().Title)
                 .ToList();
@@ -736,8 +736,10 @@ namespace DepartmentLoadApp.Services
                         Assignment = assignment,
                         LecturerId = plan.LecturerId,
                         LecturerName = lecturerName,
+                        GroupKey = disciplineGroup.Key,
                         DisciplineName = item.Title,
                         Subtitle = item.Subtitle,
+                        SemesterName = item.SemesterName,
                         ElementName = item.ElementDisplayName,
                         UnitName = item.UnitName,
                         Hours = item.RemainingHours
@@ -760,7 +762,7 @@ namespace DepartmentLoadApp.Services
                     x.LecturerId,
                     x.LecturerName,
                     x.DisciplineName,
-                    x.Subtitle
+                    x.GroupKey
                 })
                 .OrderBy(x => x.Key.LecturerName)
                 .ThenBy(x => x.Key.DisciplineName)
@@ -769,7 +771,7 @@ namespace DepartmentLoadApp.Services
                     LecturerId = x.Key.LecturerId,
                     LecturerName = x.Key.LecturerName,
                     DisciplineName = x.Key.DisciplineName,
-                    Subtitle = x.Key.Subtitle,
+                    Subtitle = BuildAutoDistributionGroupSubtitle(x),
                     TotalHours = x.Sum(a => a.Hours),
                     Assignments = x
                         .OrderBy(a => GetAutoElementNameSortOrder(a.ElementName))
@@ -870,10 +872,7 @@ namespace DepartmentLoadApp.Services
 
                 candidates.Add(new LectureHistoryCandidate
                 {
-                    Key = BuildAutoDisciplineKey(
-                        row.DisciplineName,
-                        row.DirectionCode,
-                        row.SemesterName),
+                    Key = BuildAutoFlowKey(row),
                     LecturerId = assignment.LecturerAcademicYearPlan.LecturerId,
                     AcademicYear = assignment.AcademicYear,
                     AcademicYearStart = ExtractAcademicYearStart(assignment.AcademicYear),
@@ -889,6 +888,93 @@ namespace DepartmentLoadApp.Services
                         .OrderByDescending(c => c.AcademicYearStart)
                         .ThenByDescending(c => c.Hours)
                         .ToList());
+        }
+
+        private static string BuildCurrentAutoFlowKey(
+    DistributableLoadItem item,
+    Dictionary<int, WorkloadRow> currentRowsById)
+        {
+            if (currentRowsById.TryGetValue(item.SourceRowId, out var row))
+            {
+                return BuildAutoFlowKey(row);
+            }
+
+            return BuildAutoFlowKey(
+                item.Title,
+                ExtractCourseNumberFromSubtitle(item.Subtitle),
+                item.SemesterName);
+        }
+
+        private static string BuildAutoFlowKey(WorkloadRow row)
+        {
+            return BuildAutoFlowKey(
+                row.DisciplineName,
+                row.Course,
+                row.SemesterName);
+        }
+
+        private static string BuildAutoFlowKey(
+            string? disciplineName,
+            int course,
+            string? semesterName)
+        {
+            return string.Join("|", new[]
+            {
+        NormalizeAutoKeyPart(disciplineName),
+        course.ToString(),
+        NormalizeAutoKeyPart(semesterName)
+    });
+        }
+
+        private static int ExtractCourseNumberFromSubtitle(string? subtitle)
+        {
+            if (string.IsNullOrWhiteSpace(subtitle))
+            {
+                return 0;
+            }
+
+            var coursePart = ExtractCoursePart(subtitle);
+
+            var digits = new string(coursePart
+                .Where(char.IsDigit)
+                .ToArray());
+
+            return int.TryParse(digits, out var course)
+                ? course
+                : 0;
+        }
+
+        private static string BuildAutoDistributionGroupSubtitle(
+            IEnumerable<AutoCreatedAssignmentInfo> infos)
+        {
+            var list = infos.ToList();
+
+            if (list.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            var directions = list
+                .SelectMany(x => ExtractDirectionParts(x.Subtitle))
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x)
+                .ToList();
+
+            var coursePart = list
+                .Select(x => ExtractCoursePart(x.Subtitle))
+                .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+
+            var semesterName = list
+                .Select(x => x.SemesterName)
+                .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+
+            return string.Join(" · ", new[]
+            {
+        directions.Count > 0 ? string.Join(", ", directions) : null,
+        coursePart,
+        semesterName
+    }.Where(x => !string.IsNullOrWhiteSpace(x)));
         }
 
         private static string BuildCurrentAutoDisciplineKey(
@@ -1029,9 +1115,13 @@ namespace DepartmentLoadApp.Services
 
             public string LecturerName { get; set; } = string.Empty;
 
+            public string GroupKey { get; set; } = string.Empty;
+
             public string DisciplineName { get; set; } = string.Empty;
 
             public string Subtitle { get; set; } = string.Empty;
+
+            public string SemesterName { get; set; } = string.Empty;
 
             public string ElementName { get; set; } = string.Empty;
 
