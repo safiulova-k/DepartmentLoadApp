@@ -142,7 +142,6 @@ public class DepartmentLoadDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // ---------- ТВОЙ МОДУЛЬ ----------
         modelBuilder.Entity<ContingentSubgroup>(entity =>
         {
             entity.HasKey(x => x.Id);
