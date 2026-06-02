@@ -441,3 +441,105 @@ body {
     font-size: 1.35rem;
     font-weight: 700;
 }
+
+.auto-distribution-modal .modal-body {
+    background: #f8f9fa;
+}
+
+.auto-distribution-item {
+    border: 1px solid #e2e6ea;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    background: #ffffff;
+}
+
+    .auto-distribution-item .accordion-button {
+        background: #ffffff;
+        box-shadow: none;
+    }
+
+        .auto-distribution-item .accordion-button:not(.collapsed) {
+            background: #f3f7ff;
+        }
+
+.auto-distribution-total {
+    min-width: 64px;
+    font-size: 0.9rem;
+}
+
+.auto-distribution-work-row {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid #eef0f2;
+}
+
+    .auto-distribution-work-row:last-child {
+        border-bottom: 0;
+    }
+
+.auto-distribution-work-title {
+    font-weight: 600;
+    padding-top: 5px;
+}
+
+.auto-distribution-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.auto-distribution-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #cfe2ff;
+    background: #eef5ff;
+    color: #1f3f68;
+    border-radius: 999px;
+    padding: 5px 8px 5px 12px;
+    font-size: 0.92rem;
+}
+
+.auto-distribution-pill-text {
+    white-space: nowrap;
+}
+
+.auto-distribution-delete-form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.auto-distribution-pill-delete {
+    width: 22px;
+    height: 22px;
+    border: 0;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #dc3545;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-weight: 700;
+    padding: 0;
+}
+
+    .auto-distribution-pill-delete:hover {
+        background: #dc3545;
+        color: #ffffff;
+    }
+
+@media (max-width: 768px) {
+    .auto-distribution-work-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .auto-distribution-pill-text {
+        white-space: normal;
+    }
+}

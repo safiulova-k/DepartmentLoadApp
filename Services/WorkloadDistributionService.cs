@@ -1658,8 +1658,8 @@ namespace DepartmentLoadApp.Services
         }
 
         private static List<(StudentGroupDistributionItem Group, decimal Hours)> SplitHoursByGroups(
-            decimal totalHours,
-            List<StudentGroupDistributionItem> groups)
+     decimal totalHours,
+     List<StudentGroupDistributionItem> groups)
         {
             var result = new List<(StudentGroupDistributionItem Group, decimal Hours)>();
 
@@ -1668,17 +1668,19 @@ namespace DepartmentLoadApp.Services
                 return result;
             }
 
-            var baseHours = Math.Floor((totalHours / groups.Count) * 100m) / 100m;
-            var usedHours = 0m;
+            var roundedTotalHours = (int)RoundHours(totalHours);
+
+            if (roundedTotalHours <= 0)
+            {
+                return result;
+            }
+
+            var baseHours = roundedTotalHours / groups.Count;
+            var remainder = roundedTotalHours % groups.Count;
 
             for (var i = 0; i < groups.Count; i++)
             {
-                var hours = i == groups.Count - 1
-                    ? totalHours - usedHours
-                    : baseHours;
-
-                hours = RoundHours(hours);
-                usedHours += hours;
+                var hours = baseHours + (i < remainder ? 1 : 0);
 
                 if (hours <= 0)
                 {
@@ -1690,25 +1692,23 @@ namespace DepartmentLoadApp.Services
 
             return result;
         }
-
         private static decimal CalculateSingleUnitHours(
-            decimal planHours,
-            decimal totalHours,
-            int unitsCount)
+     decimal planHours,
+     decimal totalHours,
+     int unitsCount)
         {
-            if (unitsCount <= 0)
-            {
-                return RoundHours(totalHours);
-            }
-
             if (planHours > 0)
             {
                 return RoundHours(planHours);
             }
 
+            if (unitsCount <= 0)
+            {
+                return RoundHours(totalHours);
+            }
+
             return RoundHours(totalHours / unitsCount);
         }
-
         private static List<WorkloadDistributionSemesterGroupViewModel> BuildSemesterGroups(
       List<DistributableLoadItem> items)
         {
@@ -1803,7 +1803,7 @@ namespace DepartmentLoadApp.Services
 
         private static decimal RoundHours(decimal value)
         {
-            return Math.Round(value, 2, MidpointRounding.AwayFromZero);
+            return Math.Round(value, 0, MidpointRounding.AwayFromZero);
         }
 
         private static bool IsAssistant(string? studyPostTitle)

@@ -331,6 +331,98 @@
         line-height: 1.35;
     }
 
+
+    .auto-distribution-modal .modal-body {
+        background: #f8f9fa;
+    }
+
+    .auto-distribution-item {
+        border: 1px solid #e2e6ea;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 10px;
+        background: #ffffff;
+    }
+
+        .auto-distribution-item .accordion-button {
+            background: #ffffff;
+            box-shadow: none;
+        }
+
+            .auto-distribution-item .accordion-button:not(.collapsed) {
+                background: #f3f7ff;
+            }
+
+    .auto-distribution-total {
+        min-width: 64px;
+        font-size: 0.9rem;
+    }
+
+    .auto-distribution-work-row {
+        display: grid;
+        grid-template-columns: 170px 1fr;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 8px 0;
+        border-bottom: 1px solid #eef0f2;
+    }
+
+        .auto-distribution-work-row:last-child {
+            border-bottom: 0;
+        }
+
+    .auto-distribution-work-title {
+        font-weight: 600;
+        padding-top: 5px;
+    }
+
+    .auto-distribution-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .auto-distribution-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid #cfe2ff;
+        background: #eef5ff;
+        color: #1f3f68;
+        border-radius: 999px;
+        padding: 5px 8px 5px 12px;
+        font-size: 0.92rem;
+    }
+
+    .auto-distribution-pill-text {
+        white-space: nowrap;
+    }
+
+    .auto-distribution-delete-form {
+        display: inline-flex;
+        margin: 0;
+    }
+
+    .auto-distribution-pill-delete {
+        width: 22px;
+        height: 22px;
+        border: 0;
+        border-radius: 50%;
+        background: #ffffff;
+        color: #dc3545;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        font-weight: 700;
+        padding: 0;
+    }
+
+        .auto-distribution-pill-delete:hover {
+            background: #dc3545;
+            color: #ffffff;
+        }
+
     @@media (max-width: 991.98px) {
         .distribution-toolbar {
             grid-template-columns: 1fr;
@@ -366,6 +458,15 @@
         .distribution-view-additional-row {
             grid-template-columns: 1fr;
         }
+
+        .auto-distribution-work-row {
+            grid-template-columns: 1fr;
+            gap: 6px;
+        }
+
+        .auto-distribution-pill-text {
+            white-space: normal;
+        }
     }
 </style>
 
@@ -386,6 +487,16 @@
             Распределить автоматически
         </button>
     </form>
+
+    @if (autoDistributionResult != null)
+    {
+        <button type="button"
+                class="btn btn-outline-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#autoDistributionResultModal">
+            Показать результат автораспределения
+        </button>
+    }
 </div>
 
 <div class="distribution-toolbar">
@@ -418,17 +529,17 @@
     </div>
 </div>
 
-@if (TempData["SuccessMessage"] != null)
+@if (TempData["SuccessMessage"] != null || ViewData["SuccessMessage"] != null)
 {
     <div class="alert alert-success">
-        @TempData["SuccessMessage"]
+        @(TempData["SuccessMessage"] ?? ViewData["SuccessMessage"])
     </div>
 }
 
-@if (TempData["ErrorMessage"] != null)
+@if (TempData["ErrorMessage"] != null || ViewData["ErrorMessage"] != null)
 {
     <div class="alert alert-danger">
-        @TempData["ErrorMessage"]
+        @(TempData["ErrorMessage"] ?? ViewData["ErrorMessage"])
     </div>
 }
 
@@ -1486,7 +1597,7 @@ else
 {
     <div class="modal fade" id="autoDistributionResultModal" tabindex="-1" aria-labelledby="autoDistributionResultModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
-            <div class="modal-content">
+            <div class="modal-content auto-distribution-modal">
                 <div class="modal-header">
                     <div>
                         <h5 class="modal-title" id="autoDistributionResultModalLabel">
@@ -1504,12 +1615,12 @@ else
                     @if (!autoDistributionResult.Groups.Any())
                     {
                         <div class="alert alert-info mb-0">
-                            Новых назначений не создано. Возможно, в прошлом году нет лекций по совпадающим дисциплинам или у преподавателей не осталось свободных часов.
+                            Новых назначений не создано.
                         </div>
                     }
                     else
                     {
-                        <div class="alert alert-light border">
+                        <div class="alert alert-light border mb-3">
                             Создано назначений: <strong>@autoDistributionResult.CreatedAssignmentsCount</strong>.
                             История проверялась за годы:
                             <strong>@string.Join(", ", autoDistributionResult.HistoryAcademicYears)</strong>.
@@ -1520,14 +1631,21 @@ else
                             {
                                 var group = autoDistributionResult.Groups[groupIndex];
                                 var collapseId = $"autoDistributionGroup_{groupIndex}";
+                                var workTypeGroups = group.Assignments
+                                .GroupBy(x => x.ElementName)
+                                .OrderBy(x => GetAutoDistributionElementSortOrder(x.Key))
+                                .ThenBy(x => x.Key)
+                                .ToList();
 
-                                <div class="accordion-item mb-2">
+                                <div class="accordion-item auto-distribution-item">
                                     <h2 class="accordion-header">
                                         <button class="accordion-button collapsed"
                                                 type="button"
                                                 data-bs-toggle="collapse"
-                                                data-bs-target="#@collapseId">
-                                            <div class="d-flex justify-content-between align-items-center w-100 pe-3 gap-3 flex-wrap">
+                                                data-bs-target="#@collapseId"
+                                                aria-expanded="false"
+                                                aria-controls="@collapseId">
+                                            <div class="d-flex justify-content-between align-items-center w-100 gap-3 pe-3">
                                                 <div>
                                                     <div class="fw-semibold">
                                                         @group.LecturerName — @group.DisciplineName
@@ -1537,8 +1655,8 @@ else
                                                     </div>
                                                 </div>
 
-                                                <span class="badge bg-primary">
-                                                    @group.TotalHours.ToString("0.##") ч.
+                                                <span class="badge bg-primary rounded-pill auto-distribution-total">
+                                                    @group.TotalHours.ToString("0") ч.
                                                 </span>
                                             </div>
                                         </button>
@@ -1548,41 +1666,40 @@ else
                                          class="accordion-collapse collapse"
                                          data-bs-parent="#autoDistributionAccordion">
                                         <div class="accordion-body">
-                                            <div class="table-responsive">
-                                                <table class="table table-sm align-middle mb-0">
-                                                    <thead class="table-light">
-                                                        <tr>
-                                                            <th>Вид нагрузки</th>
-                                                            <th>Единица</th>
-                                                            <th class="text-end">Часы</th>
-                                                            <th class="text-end">Действие</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach (var assignment in group.Assignments)
+                                            @foreach (var workTypeGroup in workTypeGroups)
+                                            {
+                                                <div class="auto-distribution-work-row">
+                                                    <div class="auto-distribution-work-title">
+                                                        @workTypeGroup.Key:
+                                                    </div>
+
+                                                    <div class="auto-distribution-pills">
+                                                        @foreach (var assignment in workTypeGroup.OrderBy(x => x.UnitName))
                                                         {
-                                                            <tr>
-                                                                <td>@assignment.ElementName</td>
-                                                                <td>@assignment.UnitName</td>
-                                                                <td class="text-end">@assignment.Hours.ToString("0.##")</td>
-                                                                <td class="text-end">
-                                                                    <form asp-action="DeleteAssignment" method="post" class="d-inline">
-                                                                        @Html.AntiForgeryToken()
+                                                            <div class="auto-distribution-pill">
+                                                                <span class="auto-distribution-pill-text">
+                                                                    @FormatAutoDistributionUnitName(assignment.UnitName)
+                                                                    · @assignment.Hours.ToString("0") ч.
+                                                                </span>
 
-                                                                        <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
-                                                                        <input type="hidden" name="SelectedLecturerId" value="@group.LecturerId" />
-                                                                        <input type="hidden" name="AssignmentId" value="@assignment.AssignmentId" />
+                                                                <form asp-action="DeleteAssignment" method="post" class="auto-distribution-delete-form">
+                                                                    @Html.AntiForgeryToken()
 
-                                                                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                                            Удалить
-                                                                        </button>
-                                                                    </form>
-                                                                </td>
-                                                            </tr>
+                                                                    <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
+                                                                    <input type="hidden" name="SelectedLecturerId" value="@group.LecturerId" />
+                                                                    <input type="hidden" name="AssignmentId" value="@assignment.AssignmentId" />
+
+                                                                    <button type="submit"
+                                                                            class="auto-distribution-pill-delete"
+                                                                            title="Удалить">
+                                                                        ×
+                                                                    </button>
+                                                                </form>
+                                                            </div>
                                                         }
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                                    </div>
+                                                </div>
+                                            }
                                         </div>
                                     </div>
                                 </div>
@@ -2093,19 +2210,103 @@ else
         applyLecturerFiltersAndSort();
     </script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const autoDistributionModalElement = document.getElementById('autoDistributionResultModal');
+    @if (autoDistributionResult != null)
+    {
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                const modalElement = document.getElementById("autoDistributionResultModal");
 
-            if (autoDistributionModalElement && window.bootstrap) {
-                const autoDistributionModal = new bootstrap.Modal(autoDistributionModalElement);
-                autoDistributionModal.show();
-            }
-        });
-    </script>
+                if (!modalElement || !window.bootstrap) {
+                    return;
+                }
+
+                function cleanupModalBackdrop() {
+                    document.querySelectorAll(".modal-backdrop").forEach(function (backdrop) {
+                        backdrop.remove();
+                    });
+
+                    document.body.classList.remove("modal-open");
+                    document.body.style.removeProperty("overflow");
+                    document.body.style.removeProperty("padding-right");
+                }
+
+                modalElement.addEventListener("hidden.bs.modal", function () {
+                    cleanupModalBackdrop();
+                });
+
+                const modal = bootstrap.Modal.getOrCreateInstance(modalElement, {
+                    backdrop: true,
+                    keyboard: true
+                });
+
+                modal.show();
+
+                document.querySelectorAll('[data-bs-target="#autoDistributionResultModal"]').forEach(function (button) {
+                    button.addEventListener("click", function () {
+                        cleanupModalBackdrop();
+
+                        const modalForOpen = bootstrap.Modal.getOrCreateInstance(modalElement, {
+                            backdrop: true,
+                            keyboard: true
+                        });
+
+                        modalForOpen.show();
+                    });
+                });
+            });
+        </script>
+    }
+
+    @if (autoDistributionResult != null)
+    {
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                const autoDistributionModalElement = document.getElementById("autoDistributionResultModal");
+
+                if (autoDistributionModalElement && window.bootstrap) {
+                    const autoDistributionModal = new bootstrap.Modal(autoDistributionModalElement);
+                    autoDistributionModal.show();
+                }
+            });
+        </script>
+    }
 }
 
 @functions {
+    private static int GetAutoDistributionElementSortOrder(string? elementName)
+    {
+        if (string.IsNullOrWhiteSpace(elementName))
+        {
+            return 100;
+        }
+
+        var value = elementName.Trim().ToLowerInvariant().Replace("ё", "е");
+
+        return value switch
+        {
+            "лекции" => 1,
+            "консультации" => 2,
+            "экзамен" => 3,
+            "зачет" => 4,
+            "курсовая работа" => 5,
+            "курсовой проект" => 6,
+            "ргр" => 7,
+            _ => 100
+        };
+    }
+
+    private static string FormatAutoDistributionUnitName(string? unitName)
+    {
+        if (string.IsNullOrWhiteSpace(unitName))
+        {
+            return "нагрузка";
+        }
+
+        return unitName
+            .Replace("гр. ", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("поток ", "поток ", StringComparison.OrdinalIgnoreCase)
+            .Trim();
+    }
     private static bool IsGiaAssignment(string? sourceTypeDisplayName)
     {
         return !string.IsNullOrWhiteSpace(sourceTypeDisplayName)

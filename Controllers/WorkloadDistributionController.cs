@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Text.Json;
 using DepartmentLoadApp.Services;
 using DepartmentLoadApp.ViewModels.WorkloadDistribution;
 using Microsoft.AspNetCore.Mvc;
@@ -64,18 +65,16 @@ public class WorkloadDistributionController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AutoDistribute(AutoDistributeInputModel model)
     {
+        TempData.Remove("AutoDistributionResult");
+
         var result = await _service.AutoDistributeByHistoryAsync(model.SelectedYearStart);
-
-        TempData[result.IsSuccess ? "SuccessMessage" : "ErrorMessage"] = result.Message;
-
-        var selectedLecturerId = result.Groups.FirstOrDefault()?.LecturerId
-                                 ?? model.SelectedLecturerId;
 
         var pageModel = await _service.BuildPageAsync(
             model.SelectedYearStart,
-            selectedLecturerId);
+            model.SelectedLecturerId);
 
         ViewData["AutoDistributionResult"] = result;
+        ViewData[result.IsSuccess ? "SuccessMessage" : "ErrorMessage"] = result.Message;
 
         return View("Index", pageModel);
     }
