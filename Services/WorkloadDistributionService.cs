@@ -553,6 +553,30 @@ namespace DepartmentLoadApp.Services
                 lecturerId);
         }
 
+        public async Task<WorkloadDistributionOperationResult> ClearAssignmentsForYearAsync(
+    int selectedYearStart)
+        {
+            var academicYear = AcademicYearResolver.BuildAcademicYear(
+                AcademicYearResolver.NormalizeStartYear(selectedYearStart));
+
+            var assignments = await _context.LecturerLoadAssignments
+                .Where(x => x.AcademicYear == academicYear)
+                .ToListAsync();
+
+            if (assignments.Count == 0)
+            {
+                return WorkloadDistributionOperationResult.Ok(
+                    $"За {academicYear} учебный год распределений для очистки нет.");
+            }
+
+            _context.LecturerLoadAssignments.RemoveRange(assignments);
+
+            await _context.SaveChangesAsync();
+
+            return WorkloadDistributionOperationResult.Ok(
+                $"Распределения за {academicYear} учебный год очищены. Удалено назначений: {assignments.Count}.");
+        }
+
         public async Task<WorkloadDistributionOperationResult> DeleteAssignmentAsync(
             int selectedYearStart,
             int assignmentId)

@@ -488,6 +488,19 @@
         </button>
     </form>
 
+    <form asp-action="ClearDistribution"
+          method="post"
+          onsubmit="return confirm('Удалить все распределения за текущий учебный год?');">
+        @Html.AntiForgeryToken()
+
+        <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
+        <input type="hidden" name="SelectedLecturerId" value="@Model.SelectedLecturerId" />
+
+        <button type="submit" class="btn btn-outline-danger">
+            Очистить распределения
+        </button>
+    </form>
+
     @if (autoDistributionResult != null)
     {
         <button type="button"

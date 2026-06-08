@@ -59,3 +59,10 @@ public class AutoDistributeInputModel
 
     public int? SelectedLecturerId { get; set; }
 }
+
+public class ClearDistributionInputModel
+{
+    public int SelectedYearStart { get; set; }
+
+    public int? SelectedLecturerId { get; set; }
+}

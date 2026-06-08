@@ -81,6 +81,19 @@ public class WorkloadDistributionController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ClearDistribution(ClearDistributionInputModel model)
+    {
+        var result = await _service.ClearAssignmentsForYearAsync(model.SelectedYearStart);
+
+        PutMessage(result);
+
+        return RedirectToIndex(
+            model.SelectedYearStart,
+            model.SelectedLecturerId);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteAssignment(DeleteAssignmentInputModel model)
     {
         var result = await _service.DeleteAssignmentAsync(
