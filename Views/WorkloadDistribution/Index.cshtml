@@ -2188,10 +2188,6 @@ else
                 return;
             }
 
-            if (!confirm("Удалить этот элемент нагрузки?")) {
-                return;
-            }
-
             const lecturerId = form.dataset.lecturerId;
             const hours = parseNumber(form.dataset.hours);
             const button = form.querySelector("button[type='submit']");
