@@ -1,18 +1,15 @@
-﻿using System.Globalization;
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Text.RegularExpressions;
 using ClosedXML.Excel;
 using DepartmentLoadApp.Data;
 using DepartmentLoadApp.Helpers;
-using DepartmentLoadApp.Models;
 using DepartmentLoadApp.Models.Core;
 using DepartmentLoadApp.Models.Enums;
-using DepartmentLoadApp.Models.Gia;
-using DepartmentLoadApp.Models.Practice;
-using DepartmentLoadApp.Models.Workload;
 using DepartmentLoadApp.ViewModels.IndividualPlans;
 using Microsoft.EntityFrameworkCore;
 using DepartmentLoadApp.Models.Core.Enums;
+using DepartmentLoadApp.Models.AdditionalWork;
+using DepartmentLoadApp.Models;
 
 namespace DepartmentLoadApp.Services
 {
@@ -118,7 +115,6 @@ namespace DepartmentLoadApp.Services
             using var workbook = new XLWorkbook(templatePath);
 
             FillTitleSheet(workbook, plan, academicYear);
-            FillSummarySheet(workbook, plan, academicYear);
 
             FillAutumnSheet(
                 workbook,
@@ -130,12 +126,20 @@ namespace DepartmentLoadApp.Services
                 academicYear,
                 planRows.Where(x => x.Semester == SemesterKind.Spring).ToList());
 
-            workbook.CalculateMode = XLCalculateMode.Auto;
+            var umrTotals = FillUmrSheet(workbook, planRows);
 
-            using var stream = new MemoryStream();
+            FillSummarySheet(
+                workbook,
+                plan,
+                academicYear,
+                planRows,
+                umrTotals);
 
             ActivateTitleSheet(workbook);
 
+            workbook.CalculateMode = XLCalculateMode.Auto;
+
+            using var stream = new MemoryStream();
             workbook.SaveAs(stream);
 
             var lecturerNamePart = BuildSafeFileNamePart(
@@ -200,15 +204,14 @@ namespace DepartmentLoadApp.Services
         }
 
         private async Task<List<IndividualPlanRowData>> BuildPlanRowsAsync(
-            string academicYear,
-            int lecturerAcademicYearPlanId)
+       string academicYear,
+       int lecturerAcademicYearPlanId)
         {
             var assignments = await _context.LecturerLoadAssignments
                 .AsNoTracking()
                 .Where(x =>
                     x.AcademicYear == academicYear &&
                     x.LecturerAcademicYearPlanId == lecturerAcademicYearPlanId)
-                .Where(x => x.SourceType != LoadAssignmentSourceType.AdditionalWork)
                 .OrderBy(x => x.SourceType)
                 .ThenBy(x => x.SourceAcademicPlanRecordId)
                 .ThenBy(x => x.LoadElementType)
@@ -234,6 +237,12 @@ namespace DepartmentLoadApp.Services
             var giaPlanRecordIds = assignments
                 .Where(x => x.SourceType == LoadAssignmentSourceType.Gia)
                 .Select(x => x.SourceAcademicPlanRecordId)
+                .Distinct()
+                .ToList();
+
+            var additionalWorkRowIds = assignments
+                .Where(x => x.SourceType == LoadAssignmentSourceType.AdditionalWork)
+                .Select(x => x.SourceRowId)
                 .Distinct()
                 .ToList();
 
@@ -270,6 +279,17 @@ namespace DepartmentLoadApp.Services
                 .GroupBy(x => x.AcademicPlanRecordId)
                 .ToDictionary(x => x.Key, x => x.First());
 
+            var additionalWorkRows = await _context.AdditionalWorkloadRows
+                .AsNoTracking()
+                .Where(x =>
+                    x.AcademicYear == academicYear &&
+                    additionalWorkRowIds.Contains(x.Id))
+                .ToListAsync();
+
+            var additionalWorkMap = additionalWorkRows
+                .GroupBy(x => x.Id)
+                .ToDictionary(x => x.Key, x => x.First());
+
             var result = new Dictionary<string, IndividualPlanRowData>();
 
             foreach (var assignment in assignments)
@@ -286,6 +306,7 @@ namespace DepartmentLoadApp.Services
                             }
 
                             var semester = ResolveSemester(row.SemesterName);
+
                             var key = BuildRowKey(
                                 assignment.SourceType,
                                 assignment.SourceAcademicPlanRecordId,
@@ -306,6 +327,7 @@ namespace DepartmentLoadApp.Services
                             }
 
                             AddHoursToRow(item, assignment.LoadElementType, assignment.AssignedHours);
+
                             break;
                         }
 
@@ -319,6 +341,7 @@ namespace DepartmentLoadApp.Services
                             }
 
                             var semester = ResolveSemester(row.SemesterName);
+
                             var key = BuildRowKey(
                                 assignment.SourceType,
                                 assignment.SourceAcademicPlanRecordId,
@@ -339,6 +362,7 @@ namespace DepartmentLoadApp.Services
                             }
 
                             AddHoursToRow(item, assignment.LoadElementType, assignment.AssignedHours);
+
                             break;
                         }
 
@@ -352,6 +376,7 @@ namespace DepartmentLoadApp.Services
                             }
 
                             var semester = ResolveSemester(row.SemesterName);
+
                             var key = BuildRowKey(
                                 assignment.SourceType,
                                 assignment.SourceAcademicPlanRecordId,
@@ -372,6 +397,19 @@ namespace DepartmentLoadApp.Services
                             }
 
                             AddHoursToRow(item, assignment.LoadElementType, assignment.AssignedHours);
+
+                            break;
+                        }
+
+                    case LoadAssignmentSourceType.AdditionalWork:
+                        {
+                            if (!additionalWorkMap.TryGetValue(assignment.SourceRowId, out var row))
+                            {
+                                continue;
+                            }
+
+                            AddAdditionalWorkToRows(result, row, assignment);
+
                             break;
                         }
                 }
@@ -383,7 +421,6 @@ namespace DepartmentLoadApp.Services
                 .ThenBy(x => x.DisplayText)
                 .ToList();
         }
-
         private static void FillTitleSheet(
        XLWorkbook workbook,
        LecturerAcademicYearPlan plan,
@@ -425,18 +462,40 @@ namespace DepartmentLoadApp.Services
         }
 
         private static void FillSummarySheet(
-            XLWorkbook workbook,
-            LecturerAcademicYearPlan plan,
-            string academicYear)
+       XLWorkbook workbook,
+       LecturerAcademicYearPlan plan,
+       string academicYear,
+       List<IndividualPlanRowData> planRows,
+       UmrTotals umrTotals)
         {
             var sheet = workbook.Worksheet("Сводная таблица");
             var academicYearForTemplate = academicYear.Replace("-", "/");
 
+            var educationWorkTotal = RoundHours(planRows.Sum(GetIndividualPlanRowTotal));
+            var umrTotal = RoundHours(umrTotals.Total);
+
             sheet.Cell("A3").Value = $"на {academicYearForTemplate} учебный год";
+
             sheet.Cell("H4").Value = plan.Rate;
             sheet.Cell("H4").Style.NumberFormat.Format = "0.##";
-        }
 
+            // 1. Учебная работа
+            sheet.Cell("G7").Value = educationWorkTotal;
+            sheet.Cell("H7").Value = educationWorkTotal;
+
+            // 2. Учебно-методическая работа
+            sheet.Cell("G8").Value = umrTotal;
+            sheet.Cell("H8").Value = umrTotal;
+
+            // Всего
+            sheet.Cell("G11").FormulaA1 = "SUM(G7:G10)";
+            sheet.Cell("H11").FormulaA1 = "SUM(H7:H10)";
+
+            sheet.Range("G7:H11").Style.NumberFormat.Format = "0";
+
+            // Преподаватель: инициалы и фамилия
+            sheet.Cell("F30").Value = $"({BuildLecturerInitialsAndLastName(plan.Lecturer)})";
+        }
         private static void FillAutumnSheet(
             XLWorkbook workbook,
             string academicYear,
@@ -461,6 +520,58 @@ namespace DepartmentLoadApp.Services
                 actualRow: 21,
                 yearTotalRow: null,
                 yearActualRow: null);
+        }
+
+        private static UmrTotals FillUmrSheet(
+    XLWorkbook workbook,
+    List<IndividualPlanRowData> planRows)
+        {
+            var sheet = workbook.Worksheet("УМР");
+
+            var totals = CalculateUmrTotals(planRows);
+
+            // Очищаем старые демонстрационные значения из шаблона.
+            for (var row = 8; row <= 23; row++)
+            {
+                for (var col = 4; col <= 7; col++)
+                {
+                    sheet.Cell(row, col).Clear(XLClearOptions.Contents);
+                }
+            }
+
+            // 2.1.2 Подготовка к лекциям = лекции * 0,75
+            SetUmrPlanFactRow(
+                sheet,
+                row: 9,
+                autumnHours: totals.AutumnLecturePreparationHours,
+                springHours: totals.SpringLecturePreparationHours);
+
+            // 2.1.3 Подготовка к практическим, семинарским и лабораторным занятиям
+            // = (практики + лабораторные) * 0,25
+            SetUmrPlanFactRow(
+                sheet,
+                row: 10,
+                autumnHours: totals.AutumnPracticeLaboratoryPreparationHours,
+                springHours: totals.SpringPracticeLaboratoryPreparationHours);
+
+            // 2.1.9 Составление экзаменационных билетов
+            // = количество экзаменационных потоков * 10
+            SetUmrPlanFactRow(
+                sheet,
+                row: 16,
+                autumnHours: totals.AutumnExamTicketHours,
+                springHours: totals.SpringExamTicketHours);
+
+            // Всего часов
+            SetUmrPlanFactRow(
+                sheet,
+                row: 24,
+                autumnHours: totals.AutumnTotal,
+                springHours: totals.SpringTotal);
+
+            sheet.Range("D8:G24").Style.NumberFormat.Format = "0";
+
+            return totals;
         }
 
         private static void ActivateTitleSheet(XLWorkbook workbook)
@@ -575,6 +686,11 @@ namespace DepartmentLoadApp.Services
                 SetHourValue(sheet, targetRow, 11, item.ExamHours);
                 SetHourValue(sheet, targetRow, 13, item.PracticeHoursGuidance);
                 SetHourValue(sheet, targetRow, 17, item.GiaHours);
+
+                SetHourValue(sheet, targetRow, 18, item.RgrHours);
+
+                SetHourValue(sheet, targetRow, 19, item.PostgraduateSupervisionHours);
+
                 SetHourValue(sheet, targetRow, 20, item.OtherHours);
 
                 sheet.Cell(targetRow, 21).FormulaA1 = $"SUM(E{targetRow}:T{targetRow})";
@@ -637,9 +753,9 @@ namespace DepartmentLoadApp.Services
         }
 
         private static void AddHoursToRow(
-            IndividualPlanRowData row,
-            LoadAssignmentElementType elementType,
-            decimal hours)
+      IndividualPlanRowData row,
+      LoadAssignmentElementType elementType,
+      decimal hours)
         {
             switch (elementType)
             {
@@ -669,6 +785,12 @@ namespace DepartmentLoadApp.Services
 
                 case LoadAssignmentElementType.Exam:
                     row.ExamHours += hours;
+
+                    if (hours > 0)
+                    {
+                        row.ExamTicketSetCount++;
+                    }
+
                     break;
 
                 case LoadAssignmentElementType.PracticeWork:
@@ -679,10 +801,170 @@ namespace DepartmentLoadApp.Services
                     row.GiaHours += hours;
                     break;
 
+                case LoadAssignmentElementType.Rgr:
+                    row.RgrHours += hours;
+                    break;
+
+                case LoadAssignmentElementType.PostgraduateSupervision:
+                    row.PostgraduateSupervisionHours += hours;
+                    break;
+
+                case LoadAssignmentElementType.OrganizationalWork:
+                    row.OtherHours += hours;
+                    break;
+
                 case LoadAssignmentElementType.CourseWork:
                     row.OtherHours += hours;
                     break;
             }
+        }
+
+        private static void AddAdditionalWorkToRows(
+    Dictionary<string, IndividualPlanRowData> result,
+    AdditionalWorkloadRow additionalWorkRow,
+    LecturerLoadAssignment assignment)
+        {
+            if (assignment.AssignedHours <= 0)
+            {
+                return;
+            }
+
+            // Доп. работа хранится без семестра, поэтому делим ее между осенним и весенним,
+            // чтобы в годовом итоге часы не задваивались.
+            var autumnHours = RoundHours(assignment.AssignedHours / 2m);
+            var springHours = assignment.AssignedHours - autumnHours;
+
+            AddAdditionalWorkToSemester(
+                result,
+                additionalWorkRow,
+                assignment,
+                SemesterKind.Autumn,
+                autumnHours);
+
+            AddAdditionalWorkToSemester(
+                result,
+                additionalWorkRow,
+                assignment,
+                SemesterKind.Spring,
+                springHours);
+        }
+
+        private static void AddAdditionalWorkToSemester(
+            Dictionary<string, IndividualPlanRowData> result,
+            AdditionalWorkloadRow additionalWorkRow,
+            LecturerLoadAssignment assignment,
+            SemesterKind semester,
+            decimal hours)
+        {
+            if (hours <= 0)
+            {
+                return;
+            }
+
+            var key = BuildRowKey(
+                assignment.SourceType,
+                assignment.SourceRowId,
+                semester);
+
+            if (!result.TryGetValue(key, out var item))
+            {
+                item = new IndividualPlanRowData
+                {
+                    Key = key,
+                    Semester = semester,
+                    SortOrder = 4,
+                    DisplayText = $"Доп. работа: {additionalWorkRow.WorkName}",
+                    StudentsCount = 0
+                };
+
+                result[key] = item;
+            }
+
+            AddHoursToRow(item, assignment.LoadElementType, hours);
+        }
+
+        private static UmrTotals CalculateUmrTotals(List<IndividualPlanRowData> planRows)
+        {
+            var autumnRows = planRows
+                .Where(x => x.Semester == SemesterKind.Autumn)
+                .ToList();
+
+            var springRows = planRows
+                .Where(x => x.Semester == SemesterKind.Spring)
+                .ToList();
+
+            var totals = new UmrTotals
+            {
+                AutumnLecturePreparationHours = RoundHours(
+                    autumnRows.Sum(x => x.LectureHours) * 0.75m),
+
+                SpringLecturePreparationHours = RoundHours(
+                    springRows.Sum(x => x.LectureHours) * 0.75m),
+
+                AutumnPracticeLaboratoryPreparationHours = RoundHours(
+                    autumnRows.Sum(x => x.PracticeHours + x.LaboratoryHours) * 0.25m),
+
+                SpringPracticeLaboratoryPreparationHours = RoundHours(
+                    springRows.Sum(x => x.PracticeHours + x.LaboratoryHours) * 0.25m),
+
+                AutumnExamTicketHours = autumnRows.Sum(x => x.ExamTicketSetCount) * 10m,
+
+                SpringExamTicketHours = springRows.Sum(x => x.ExamTicketSetCount) * 10m
+            };
+
+            return totals;
+        }
+
+        private static void SetUmrPlanFactRow(
+            IXLWorksheet sheet,
+            int row,
+            decimal autumnHours,
+            decimal springHours)
+        {
+            SetHourValue(sheet, row, 4, autumnHours);
+            SetHourValue(sheet, row, 5, autumnHours);
+
+            SetHourValue(sheet, row, 6, springHours);
+            SetHourValue(sheet, row, 7, springHours);
+        }
+
+        private static decimal GetIndividualPlanRowTotal(IndividualPlanRowData row)
+        {
+            return row.LectureHours
+                   + row.PracticeHours
+                   + row.LaboratoryHours
+                   + row.CourseProjectHours
+                   + row.ConsultationHours
+                   + row.CreditHours
+                   + row.ExamHours
+                   + row.PracticeHoursGuidance
+                   + row.GiaHours
+                   + row.RgrHours
+                   + row.PostgraduateSupervisionHours
+                   + row.OtherHours;
+        }
+
+        private static decimal RoundHours(decimal value)
+        {
+            return Math.Round(value, 0, MidpointRounding.AwayFromZero);
+        }
+
+        private static string BuildLecturerInitialsAndLastName(Lecturer? lecturer)
+        {
+            if (lecturer == null)
+            {
+                return string.Empty;
+            }
+
+            var firstInitial = string.IsNullOrWhiteSpace(lecturer.FirstName)
+                ? string.Empty
+                : $"{lecturer.FirstName.Trim()[0]}.";
+
+            var patronymicInitial = string.IsNullOrWhiteSpace(lecturer.Patronymic)
+                ? string.Empty
+                : $"{lecturer.Patronymic.Trim()[0]}.";
+
+            return $"{firstInitial}{patronymicInitial} {lecturer.LastName}".Trim();
         }
 
         private async Task EnsureAcademicYearPlansAsync(string academicYear)
@@ -789,6 +1071,33 @@ namespace DepartmentLoadApp.Services
             return sanitized.Trim('_');
         }
 
+        private sealed class UmrTotals
+        {
+            public decimal AutumnLecturePreparationHours { get; set; }
+
+            public decimal SpringLecturePreparationHours { get; set; }
+
+            public decimal AutumnPracticeLaboratoryPreparationHours { get; set; }
+
+            public decimal SpringPracticeLaboratoryPreparationHours { get; set; }
+
+            public decimal AutumnExamTicketHours { get; set; }
+
+            public decimal SpringExamTicketHours { get; set; }
+
+            public decimal AutumnTotal =>
+                AutumnLecturePreparationHours
+                + AutumnPracticeLaboratoryPreparationHours
+                + AutumnExamTicketHours;
+
+            public decimal SpringTotal =>
+                SpringLecturePreparationHours
+                + SpringPracticeLaboratoryPreparationHours
+                + SpringExamTicketHours;
+
+            public decimal Total => AutumnTotal + SpringTotal;
+        }
+
         private sealed class IndividualPlanRowData
         {
             public string Key { get; set; } = string.Empty;
@@ -819,9 +1128,14 @@ namespace DepartmentLoadApp.Services
 
             public decimal GiaHours { get; set; }
 
-            public decimal OtherHours { get; set; }
-        }
+            public decimal RgrHours { get; set; }
 
+            public decimal PostgraduateSupervisionHours { get; set; }
+
+            public decimal OtherHours { get; set; }
+
+            public int ExamTicketSetCount { get; set; }
+        }
         private enum SemesterKind
         {
             Autumn = 1,
