@@ -12,6 +12,7 @@ using DepartmentLoadApp.Models.Practice;
 using DepartmentLoadApp.Models.Workload;
 using DepartmentLoadApp.ViewModels.IndividualPlans;
 using Microsoft.EntityFrameworkCore;
+using DepartmentLoadApp.Models.Core.Enums;
 
 namespace DepartmentLoadApp.Services
 {
@@ -132,6 +133,8 @@ namespace DepartmentLoadApp.Services
             workbook.CalculateMode = XLCalculateMode.Auto;
 
             using var stream = new MemoryStream();
+
+            ActivateTitleSheet(workbook);
 
             workbook.SaveAs(stream);
 
@@ -382,20 +385,43 @@ namespace DepartmentLoadApp.Services
         }
 
         private static void FillTitleSheet(
-            XLWorkbook workbook,
-            LecturerAcademicYearPlan plan,
-            string academicYear)
+       XLWorkbook workbook,
+       LecturerAcademicYearPlan plan,
+       string academicYear)
         {
             var sheet = workbook.Worksheet("Титул");
             var lecturer = plan.Lecturer!;
 
-            sheet.Cell("F17").Value = lecturer.FirstName;
-            sheet.Cell("F18").Value = lecturer.LastName;
+            sheet.Cell("F17").Value = lecturer.LastName;
+            sheet.Cell("F18").Value = lecturer.FirstName;
             sheet.Cell("F19").Value = lecturer.Patronymic;
             sheet.Cell("F20").Value = plan.LecturerStudyPost?.StudyPostTitle ?? string.Empty;
             sheet.Cell("F21").Value = lecturer.DateBirth.Year;
-            sheet.Cell("F22").Value = string.Empty;
-            sheet.Cell("F23").Value = string.Empty;
+
+            sheet.Cell("F22").Value = GetRank2DisplayName(lecturer.Rank2);
+
+            sheet.Cell("F23").Value = GetRankDisplayName(lecturer.Rank);
+        }
+
+        private static string GetRankDisplayName(Rank rank)
+        {
+            return rank switch
+            {
+                Rank.Профессор => "профессор",
+                Rank.Доцент => "доцент",
+                _ => string.Empty
+            };
+        }
+
+        private static string GetRank2DisplayName(Rank2 rank2)
+        {
+            return rank2 switch
+            {
+                Rank2.дтн => "д.т.н.",
+                Rank2.ктн => "к.т.н.",
+                Rank2.кфмн => "к.ф.-м.н.",
+                _ => string.Empty
+            };
         }
 
         private static void FillSummarySheet(
@@ -437,6 +463,19 @@ namespace DepartmentLoadApp.Services
                 yearActualRow: null);
         }
 
+        private static void ActivateTitleSheet(XLWorkbook workbook)
+        {
+            foreach (var worksheet in workbook.Worksheets)
+            {
+                worksheet.SetTabSelected(false);
+            }
+
+            var titleSheet = workbook.Worksheet("Титул");
+
+            titleSheet.Position = 1;
+            titleSheet.SetTabSelected();
+            titleSheet.SetTabActive();
+        }
         private static void FillSpringSheet(
             XLWorkbook workbook,
             string academicYear,
