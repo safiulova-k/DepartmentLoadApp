@@ -543,3 +543,12 @@ body {
         white-space: normal;
     }
 }
+
+.distribution-worktype-title .btn-link {
+    font-size: 12px;
+    text-decoration: none;
+}
+
+    .distribution-worktype-title .btn-link:hover {
+        text-decoration: underline;
+    }

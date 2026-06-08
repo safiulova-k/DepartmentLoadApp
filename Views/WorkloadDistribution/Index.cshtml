@@ -166,6 +166,15 @@
         padding-top: 6px;
     }
 
+        .distribution-worktype-title .btn-link {
+            font-size: 12px;
+            text-decoration: none;
+        }
+
+            .distribution-worktype-title .btn-link:hover {
+                text-decoration: underline;
+            }
+
     .distribution-chip-list {
         display: flex;
         flex-wrap: wrap;
@@ -330,7 +339,6 @@
         color: #0d6efd;
         line-height: 1.35;
     }
-
 
     .auto-distribution-modal .modal-body {
         background: #f8f9fa;
@@ -654,10 +662,7 @@ else
             .ToList();
 
             var autumnSubjectGroups = BuildAssignedSubjectGroups(autumnAssignments);
-
-            var springSubjectGroups = BuildAssignedSubjectGroups(
-            springAssignments.Concat(otherAssignments));
-
+            var springSubjectGroups = BuildAssignedSubjectGroups(springAssignments.Concat(otherAssignments));
             var giaSubjectGroups = BuildAssignedSubjectGroups(giaAssignments);
 
             var additionalWorkTypeGroups = additionalAssignments
@@ -907,8 +912,7 @@ else
                                                     </button>
                                                 </h2>
 
-                                                <div id="@semesterId"
-                                                     class="accordion-collapse collapse">
+                                                <div id="@semesterId" class="accordion-collapse collapse">
                                                     <div class="accordion-body">
                                                         <div class="accordion" id="disciplineAccordion_@lecturer.LecturerId@semesterIndex">
                                                             @for (var disciplineIndex = 0; disciplineIndex < semester.Disciplines.Count; disciplineIndex++)
@@ -929,20 +933,24 @@ else
                                                                         </button>
                                                                     </h2>
 
-                                                                    <div id="@disciplineId"
-                                                                         class="accordion-collapse collapse">
+                                                                    <div id="@disciplineId" class="accordion-collapse collapse">
                                                                         <div class="accordion-body">
                                                                             @foreach (var workType in discipline.WorkTypes)
                                                                             {
-                                                                                <div class="distribution-worktype-row">
+                                                                                <div class="distribution-worktype-row js-worktype-load-block">
                                                                                     <div class="distribution-worktype-title">
-                                                                                        @workType.ElementDisplayName:
+                                                                                        <div>@workType.ElementDisplayName:</div>
+
+                                                                                        <button type="button"
+                                                                                                class="btn btn-link btn-sm p-0 mt-1 js-select-current-worktype">
+                                                                                            Выбрать все
+                                                                                        </button>
                                                                                     </div>
 
                                                                                     <div class="distribution-chip-list">
                                                                                         @foreach (var item in workType.Items)
                                                                                         {
-                                                                                            <label class="distribution-chip js-load-chip">
+                                                                                            <label class="distribution-chip distribution-available-chip js-load-chip">
                                                                                                 <input type="checkbox"
                                                                                                        name="SelectedItemKeys"
                                                                                                        value="@item.ItemKey"
@@ -951,8 +959,11 @@ else
 
                                                                                                 <span class="distribution-chip-main">
                                                                                                     <span class="distribution-chip-title">
-                                                                                                        @item.UnitName
+                                                                                                        @(string.IsNullOrWhiteSpace(item.UnitName)
+                                                                                                            ? item.ElementDisplayName
+                                                                                                            : item.UnitName)
                                                                                                     </span>
+
                                                                                                     <span class="distribution-chip-meta">
                                                                                                         @item.RemainingHours.ToString("0.##") ч.
                                                                                                         @if (item.StudentsCount > 0)
@@ -990,8 +1001,7 @@ else
                                                     </button>
                                                 </h2>
 
-                                                <div id="@giaCollapseId"
-                                                     class="accordion-collapse collapse">
+                                                <div id="@giaCollapseId" class="accordion-collapse collapse">
                                                     <div class="accordion-body">
                                                         @{
                                                             var giaIndex = 0;
@@ -1055,8 +1065,7 @@ else
                                                     </button>
                                                 </h2>
 
-                                                <div id="@additionalCollapseId"
-                                                     class="accordion-collapse collapse">
+                                                <div id="@additionalCollapseId" class="accordion-collapse collapse">
                                                     <div class="accordion-body">
                                                         <div class="distribution-additional-list">
                                                             @foreach (var item in lecturer.AdditionalWorkItems)
@@ -1097,9 +1106,7 @@ else
 
                                                                         @if (isPostgraduate)
                                                                         {
-                                                                            <label class="form-label">
-                                                                                Назначить аспирантов
-                                                                            </label>
+                                                                            <label class="form-label">Назначить аспирантов</label>
 
                                                                             <input type="number"
                                                                                    name="AdditionalWorks[@additionalIndex].StudentsCount"
@@ -1115,9 +1122,7 @@ else
                                                                         }
                                                                         else
                                                                         {
-                                                                            <label class="form-label">
-                                                                                Назначить часов
-                                                                            </label>
+                                                                            <label class="form-label">Назначить часов</label>
 
                                                                             <input type="number"
                                                                                    name="AdditionalWorks[@additionalIndex].Hours"
@@ -1134,10 +1139,7 @@ else
                                                                     </div>
 
                                                                     <div>
-                                                                        <div class="distribution-additional-hours-label">
-                                                                            Часы
-                                                                        </div>
-
+                                                                        <div class="distribution-additional-hours-label">Часы</div>
                                                                         <div class="distribution-additional-hours-value">
                                                                             <span class="js-additional-row-hours">0</span> ч.
                                                                         </div>
@@ -1537,7 +1539,7 @@ else
 
                                             @if (additionalAssignments.Any())
                                             {
-                                                <div class="distribution-view-additional-list">
+                                                <div class="distribution-view-additional-list js-view-subjects">
                                                     @foreach (var workType in additionalWorkTypeGroups)
                                                     {
                                                         <div class="distribution-view-additional-row js-view-worktype-row">
@@ -1650,7 +1652,8 @@ else
                                 .ThenBy(x => x.Key)
                                 .ToList();
 
-                                <div class="accordion-item auto-distribution-item">
+                                <div class="accordion-item auto-distribution-item js-auto-distribution-group"
+                                     data-total-hours="@group.TotalHours.ToString("0.####").Replace(",", ".")">
                                     <h2 class="accordion-header">
                                         <button class="accordion-button collapsed"
                                                 type="button"
@@ -1668,7 +1671,7 @@ else
                                                     </div>
                                                 </div>
 
-                                                <span class="badge bg-primary rounded-pill auto-distribution-total">
+                                                <span class="badge bg-primary rounded-pill auto-distribution-total js-auto-group-total">
                                                     @group.TotalHours.ToString("0") ч.
                                                 </span>
                                             </div>
@@ -1681,7 +1684,7 @@ else
                                         <div class="accordion-body">
                                             @foreach (var workTypeGroup in workTypeGroups)
                                             {
-                                                <div class="auto-distribution-work-row">
+                                                <div class="auto-distribution-work-row js-auto-worktype-row">
                                                     <div class="auto-distribution-work-title">
                                                         @workTypeGroup.Key:
                                                     </div>
@@ -1689,13 +1692,18 @@ else
                                                     <div class="auto-distribution-pills">
                                                         @foreach (var assignment in workTypeGroup.OrderBy(x => x.UnitName))
                                                         {
-                                                            <div class="auto-distribution-pill">
+                                                            <div class="auto-distribution-pill js-auto-assignment-row"
+                                                                 data-hours="@assignment.Hours.ToString("0.####").Replace(",", ".")">
                                                                 <span class="auto-distribution-pill-text">
                                                                     @FormatAutoDistributionUnitName(assignment.UnitName)
                                                                     · @assignment.Hours.ToString("0") ч.
                                                                 </span>
 
-                                                                <form asp-action="DeleteAssignment" method="post" class="auto-distribution-delete-form">
+                                                                <form asp-action="DeleteAssignment"
+                                                                      method="post"
+                                                                      class="auto-distribution-delete-form js-auto-delete-assignment-form"
+                                                                      data-lecturer-id="@group.LecturerId"
+                                                                      data-hours="@assignment.Hours.ToString("0.####").Replace(",", ".")">
                                                                     @Html.AntiForgeryToken()
 
                                                                     <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
@@ -1751,6 +1759,19 @@ else
             return String(rounded).replace(".", ",");
         }
 
+        function setCheckboxChecked(checkbox, checked) {
+            if (!checkbox || checkbox.disabled) {
+                return;
+            }
+
+            if (checkbox.checked === checked) {
+                return;
+            }
+
+            checkbox.checked = checked;
+            checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
         function updateChipState(modal) {
             modal.querySelectorAll(".js-load-chip").forEach(function (chip) {
                 const checkbox = chip.querySelector(".js-load-item-checkbox");
@@ -1759,11 +1780,7 @@ else
                     return;
                 }
 
-                if (checkbox.checked) {
-                    chip.classList.add("selected");
-                } else {
-                    chip.classList.remove("selected");
-                }
+                chip.classList.toggle("selected", checkbox.checked);
             });
         }
 
@@ -1781,7 +1798,7 @@ else
                 const rowHours = Math.round(students * hoursPerStudent);
 
                 const row = input.closest(".distribution-gia-row");
-                const rowHoursElement = row.querySelector(".js-gia-row-hours");
+                const rowHoursElement = row ? row.querySelector(".js-gia-row-hours") : null;
 
                 if (rowHoursElement) {
                     rowHoursElement.textContent = formatNumber(rowHours);
@@ -1796,7 +1813,7 @@ else
                 const rowHours = Math.round(students * hoursPerStudent);
 
                 const row = input.closest(".distribution-gia-row");
-                const rowHoursElement = row.querySelector(".js-additional-row-hours");
+                const rowHoursElement = row ? row.querySelector(".js-additional-row-hours") : null;
 
                 if (rowHoursElement) {
                     rowHoursElement.textContent = formatNumber(rowHours);
@@ -1809,7 +1826,7 @@ else
                 const rowHours = parseNumber(input.value);
 
                 const row = input.closest(".distribution-gia-row");
-                const rowHoursElement = row.querySelector(".js-additional-row-hours");
+                const rowHoursElement = row ? row.querySelector(".js-additional-row-hours") : null;
 
                 if (rowHoursElement) {
                     rowHoursElement.textContent = formatNumber(rowHours);
@@ -1845,6 +1862,24 @@ else
 
             updateChipState(modal);
         }
+
+        document.addEventListener("click", function (event) {
+            const button = event.target.closest(".js-select-current-worktype");
+
+            if (!button) {
+                return;
+            }
+
+            const workTypeBlock = button.closest(".js-worktype-load-block");
+
+            if (!workTypeBlock) {
+                return;
+            }
+
+            workTypeBlock.querySelectorAll(".js-load-item-checkbox").forEach(function (checkbox) {
+                setCheckboxChecked(checkbox, true);
+            });
+        });
 
         document.addEventListener("change", function (event) {
             if (!event.target.classList.contains("js-load-item-checkbox")
@@ -2055,6 +2090,28 @@ else
             }
         }
 
+        async function deleteAssignment(form) {
+            const response = await fetch(form.action, {
+                method: "POST",
+                body: new FormData(form),
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error("Ошибка удаления нагрузки.");
+            }
+
+            const data = await response.json();
+
+            if (!data || data.success !== true) {
+                throw new Error(data && data.message ? data.message : "Ошибка удаления нагрузки.");
+            }
+
+            return data;
+        }
+
         document.addEventListener("submit", function (event) {
             const form = event.target.closest(".js-delete-assignment-form");
 
@@ -2080,25 +2137,8 @@ else
                 submitButton.disabled = true;
             }
 
-            fetch(form.action, {
-                method: "POST",
-                body: new FormData(form),
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest"
-                }
-            })
-                .then(function (response) {
-                    if (!response.ok) {
-                        throw new Error("Ошибка удаления нагрузки.");
-                    }
-
-                    return response.json();
-                })
-                .then(function (data) {
-                    if (!data || data.success !== true) {
-                        throw new Error(data && data.message ? data.message : "Ошибка удаления нагрузки.");
-                    }
-
+            deleteAssignment(form)
+                .then(function () {
                     updatePageHoursAfterDelete(hours);
                     updateLecturerHoursAfterDelete(lecturerId, hours);
                     updateAddModalAfterDelete(lecturerId, hours);
@@ -2129,6 +2169,80 @@ else
 
                     if (submitButton) {
                         submitButton.disabled = false;
+                    }
+
+                    alert(error.message || "Не удалось удалить нагрузку. Обновите страницу и попробуйте ещё раз.");
+                });
+        });
+
+        document.addEventListener("submit", function (event) {
+            const form = event.target.closest(".js-auto-delete-assignment-form");
+
+            if (!form) {
+                return;
+            }
+
+            event.preventDefault();
+
+            if (form.dataset.deleting === "true") {
+                return;
+            }
+
+            if (!confirm("Удалить этот элемент нагрузки?")) {
+                return;
+            }
+
+            const lecturerId = form.dataset.lecturerId;
+            const hours = parseNumber(form.dataset.hours);
+            const button = form.querySelector("button[type='submit']");
+            const pill = form.closest(".js-auto-assignment-row");
+            const workTypeRow = form.closest(".js-auto-worktype-row");
+            const autoGroup = form.closest(".js-auto-distribution-group");
+
+            form.dataset.deleting = "true";
+
+            if (button) {
+                button.disabled = true;
+                button.textContent = "…";
+            }
+
+            deleteAssignment(form)
+                .then(function () {
+                    updatePageHoursAfterDelete(hours);
+                    updateLecturerHoursAfterDelete(lecturerId, hours);
+                    updateAddModalAfterDelete(lecturerId, hours);
+
+                    if (pill) {
+                        pill.remove();
+                    }
+
+                    if (workTypeRow && workTypeRow.querySelectorAll(".js-auto-assignment-row").length === 0) {
+                        workTypeRow.remove();
+                    }
+
+                    if (autoGroup) {
+                        const oldTotal = parseNumber(autoGroup.dataset.totalHours);
+                        const newTotal = Math.max(0, oldTotal - hours);
+                        autoGroup.dataset.totalHours = String(newTotal);
+
+                        const totalElement = autoGroup.querySelector(".js-auto-group-total");
+                        if (totalElement) {
+                            totalElement.textContent = `${formatNumber(newTotal)} ч.`;
+                        }
+
+                        if (autoGroup.querySelectorAll(".js-auto-assignment-row").length === 0) {
+                            autoGroup.remove();
+                        }
+                    }
+
+                    applyLecturerFiltersAndSort();
+                })
+                .catch(function (error) {
+                    form.dataset.deleting = "false";
+
+                    if (button) {
+                        button.disabled = false;
+                        button.textContent = "×";
                     }
 
                     alert(error.message || "Не удалось удалить нагрузку. Обновите страницу и попробуйте ещё раз.");
@@ -2269,20 +2383,6 @@ else
             });
         </script>
     }
-
-    @if (autoDistributionResult != null)
-    {
-        <script>
-            document.addEventListener("DOMContentLoaded", function () {
-                const autoDistributionModalElement = document.getElementById("autoDistributionResultModal");
-
-                if (autoDistributionModalElement && window.bootstrap) {
-                    const autoDistributionModal = new bootstrap.Modal(autoDistributionModalElement);
-                    autoDistributionModal.show();
-                }
-            });
-        </script>
-    }
 }
 
 @functions {
@@ -2320,6 +2420,7 @@ else
             .Replace("поток ", "поток ", StringComparison.OrdinalIgnoreCase)
             .Trim();
     }
+
     private static bool IsGiaAssignment(string? sourceTypeDisplayName)
     {
         return !string.IsNullOrWhiteSpace(sourceTypeDisplayName)
