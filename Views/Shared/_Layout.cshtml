@@ -1,23 +1,12 @@
-﻿<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Портал кафедры</title>
+﻿@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
 
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-</head>
-<body>
-    @{
-        var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+    bool IsController(params string[] controllers)
+    {
+        return controllers.Any(x => string.Equals(currentController, x, StringComparison.OrdinalIgnoreCase));
+    }
 
-        bool IsController(params string[] controllers)
-        {
-            return controllers.Any(x => string.Equals(currentController, x, StringComparison.OrdinalIgnoreCase));
-        }
-
-        var calculationActive = IsController(
+    var calculationActive = IsController(
         "WorkloadCalculation",
         "PracticeCalculation",
         "GiaCalculation",
@@ -25,97 +14,118 @@
         ? "active"
         : string.Empty;
 
-        var distributionActive = IsController("WorkloadDistribution")
-        ? "active"
-        : string.Empty;
+    var distributionActive = IsController("WorkloadDistribution") ? "active" : string.Empty;
+    var plansActive = IsController("IndividualPlans") ? "active" : string.Empty;
+    var contingentActive = IsController("Contingent") ? "active" : string.Empty;
+    var normTimeActive = IsController("NormTime") ? "active" : string.Empty;
+}
 
-        var plansActive = IsController("IndividualPlans")
-        ? "active"
-        : string.Empty;
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"] - Портал кафедры</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-        var contingentActive = IsController("Contingent")
-        ? "active"
-        : string.Empty;
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <nav class="navbar navbar-expand-xl navbar-dark app-navbar mb-3">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand app-navbar-brand" asp-controller="Home" asp-action="Index">
+                Портал кафедры
+            </a>
 
-        var normTimeActive = IsController("NormTime")
-        ? "active"
-        : string.Empty;
-    }
+            <button class="navbar-toggler"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#mainNavbar"
+                    aria-controls="mainNavbar"
+                    aria-expanded="false"
+                    aria-label="Переключатель навигации">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-    <header>
-        <nav class="navbar navbar-expand-xl department-top-navbar">
-            <div class="container-fluid">
-                <a class="navbar-brand department-navbar-brand"
-                   asp-controller="Home"
-                   asp-action="Index">
-                    Портал кафедры
-                </a>
+            <div class="collapse navbar-collapse" id="mainNavbar">
+                <ul class="navbar-nav me-auto mb-2 mb-xl-0 app-navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link app-nav-link @calculationActive"
+                           asp-controller="WorkloadCalculation"
+                           asp-action="Index">
+                            Расчет нагрузки
+                        </a>
+                    </li>
 
-                <button class="navbar-toggler department-navbar-toggler"
-                        type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#mainDepartmentNavbar"
-                        aria-controls="mainDepartmentNavbar"
-                        aria-expanded="false"
-                        aria-label="Открыть меню">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+                    <li class="nav-item">
+                        <a class="nav-link app-nav-link @distributionActive"
+                           asp-controller="WorkloadDistribution"
+                           asp-action="Index">
+                            Распределение
+                        </a>
+                    </li>
 
-                <div class="collapse navbar-collapse" id="mainDepartmentNavbar">
-                    <ul class="navbar-nav department-navbar-nav ms-3">
-                        <li class="nav-item">
-                            <a class="nav-link department-nav-link @calculationActive"
-                               asp-controller="WorkloadCalculation"
-                               asp-action="Index">
-                                Расчет нагрузки
-                            </a>
-                        </li>
+                    <li class="nav-item">
+                        <a class="nav-link app-nav-link @plansActive"
+                           asp-controller="IndividualPlans"
+                           asp-action="Index">
+                            Индивидуальные планы
+                        </a>
+                    </li>
 
-                        <li class="nav-item">
-                            <a class="nav-link department-nav-link @distributionActive"
-                               asp-controller="WorkloadDistribution"
-                               asp-action="Index">
-                                Распределение
-                            </a>
-                        </li>
+                    <li class="nav-item">
+                        <a class="nav-link app-nav-link @contingentActive"
+                           asp-controller="Contingent"
+                           asp-action="Index">
+                            Контингент
+                        </a>
+                    </li>
 
-                        <li class="nav-item">
-                            <a class="nav-link department-nav-link @plansActive"
-                               asp-controller="IndividualPlans"
-                               asp-action="Index">
-                                Индивидуальные планы
-                            </a>
-                        </li>
+                    <li class="nav-item">
+                        <a class="nav-link app-nav-link @normTimeActive"
+                           asp-controller="NormTime"
+                           asp-action="Index">
+                            Нормы времени
+                        </a>
+                    </li>
+                </ul>
 
-                        <li class="nav-item">
-                            <a class="nav-link department-nav-link @contingentActive"
-                               asp-controller="Contingent"
-                               asp-action="Index">
-                                Контингент
-                            </a>
-                        </li>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <a class="btn btn-sm btn-navbar-outline" href="/polina/core">
+                        Вернуться в главный модуль
+                    </a>
 
-                        <li class="nav-item">
-                            <a class="nav-link department-nav-link @normTimeActive"
-                               asp-controller="NormTime"
-                               asp-action="Index">
-                                Нормы времени
-                            </a>
-                        </li>
-                    </ul>
+                    <form method="post" action="/polina/auth/logout" class="m-0">
+                        <button type="submit" class="btn btn-sm btn-outline-light">
+                            Выйти
+                        </button>
+                    </form>
                 </div>
             </div>
-        </nav>
-    </header>
+        </div>
+    </nav>
 
-    <div class="container-fluid department-page-container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
+    <main class="container-fluid department-page-container">
+        @RenderBody()
+    </main>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll("form.js-submit-once").forEach(function (form) {
+                form.addEventListener("submit", function () {
+                    const button = form.querySelector("button[type='submit']");
+
+                    if (button) {
+                        button.disabled = true;
+                        button.dataset.originalText = button.innerText;
+                        button.innerText = button.dataset.loadingText || "Выполняется...";
+                    }
+                });
+            });
+        });
+    </script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

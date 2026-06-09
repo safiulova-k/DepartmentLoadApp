@@ -552,3 +552,89 @@ body {
     .distribution-worktype-title .btn-link:hover {
         text-decoration: underline;
     }
+
+:root {
+    --galaxy: #0B1F5C;
+    --planetary: #334EAC;
+    --sky: #D0E3FF;
+}
+
+.app-navbar {
+    background-color: var(--galaxy);
+}
+
+    .app-navbar .navbar-brand,
+    .app-navbar .nav-link {
+        color: #ffffff;
+    }
+
+        .app-navbar .nav-link:hover,
+        .app-navbar .nav-link:focus {
+            color: var(--sky);
+        }
+
+.app-navbar-brand {
+    color: #ffffff !important;
+    font-weight: 600;
+    font-size: 1.15rem;
+    margin-right: 22px;
+}
+
+    .app-navbar-brand:hover,
+    .app-navbar-brand:focus {
+        color: #ffffff !important;
+    }
+
+.app-navbar-nav {
+    gap: 4px;
+    align-items: center;
+}
+
+.app-nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-weight: 500;
+    padding: 8px 12px !important;
+    border-radius: 4px;
+    transition: background-color .15s ease-in-out, color .15s ease-in-out;
+}
+
+    .app-nav-link:hover,
+    .app-nav-link:focus {
+        color: #ffffff !important;
+        background-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .app-nav-link.active {
+        color: #ffffff !important;
+        background-color: rgba(255, 255, 255, 0.14);
+        font-weight: 600;
+    }
+
+.btn-navbar-outline {
+    color: #ffffff;
+    border-color: #ffffff;
+}
+
+    .btn-navbar-outline:hover,
+    .btn-navbar-outline:focus {
+        color: var(--galaxy);
+        background-color: #ffffff;
+        border-color: #ffffff;
+    }
+
+.department-page-container {
+    padding: 18px 20px 24px 20px;
+}
+
+@media (max-width: 1199.98px) {
+    .app-navbar-nav {
+        padding-top: 12px;
+        gap: 2px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .department-page-container {
+        padding: 14px 12px 20px 12px;
+    }
+}
