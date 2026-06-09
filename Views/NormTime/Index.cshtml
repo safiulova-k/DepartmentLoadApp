@@ -1,5 +1,4 @@
 ﻿@model DepartmentLoadApp.ViewModels.NormTime.NormTimePageViewModel
-
 @using System.Globalization
 
 @{
@@ -12,22 +11,45 @@
 
     var activeTab = Model.ActiveTab;
     var hasActiveTab = !string.IsNullOrWhiteSpace(activeTab);
+
+    static bool IsWeeksCategory(string? categoryName)
+    {
+        if (string.IsNullOrWhiteSpace(categoryName))
+        {
+            return false;
+        }
+
+        var normalized = categoryName
+            .Trim()
+            .ToLowerInvariant()
+            .Replace("ё", "е");
+
+        return normalized.Contains("практи")
+               || normalized.Contains("науч");
+    }
+
+    static string FormatDecimal(decimal value)
+    {
+        return value.ToString("0.##", CultureInfo.GetCultureInfo("ru-RU"));
+    }
 }
 
-<h1>Нормы времени</h1>
+<h1 class="mb-3">Нормы времени</h1>
 
 <p class="text-muted">
     Для каждого вида работы задается основа расчета и значение нормы.
 </p>
 
 <p class="text-muted">
-    Для строк Лекции, Практические занятия и Лабораторные работы в поле Часы пока указывается 1,
-    так как итоговая нагрузка для них считается по формуле: часы по плану × потоки / группы / подгруппы.
+    Для строк Лекции, Практические занятия и Лабораторные работы в поле Часы указывается 1,
+    так как итоговая нагрузка для них считается по формуле:
+    часы по плану × потоки / группы / подгруппы.
 </p>
 
 <p class="text-muted">
-    Для строк категории Практики в поле Часы указывается коэффициент.
-    Итог по практикам считается по формуле: количество недель × основа расчета × коэффициент.
+    Для строк категорий Практика и Научная работа задается количество недель и коэффициент.
+    Итог по практикам считается по формуле:
+    количество недель × основа расчета × коэффициент.
 </p>
 
 @if (TempData["SuccessMessage"] != null)
@@ -40,41 +62,46 @@
 <form asp-action="Save" method="post" id="normTimeForm">
     @Html.AntiForgeryToken()
 
-    <input type="hidden"
-           name="activeTab"
-           id="activeTabInput"
-           value="@activeTab" />
+    <input type="hidden" name="activeTab" id="activeTabInput" value="@activeTab" />
+    <input type="hidden" name="startYear" value="@Model.SelectedYearStart" />
 
-    <ul class="nav nav-tabs mb-3" role="tablist">
+    <ul class="nav nav-tabs mb-4" id="normTimeTabs" role="tablist">
         @for (var g = 0; g < groupedItems.Count; g++)
         {
             var categoryName = groupedItems[g].Key;
-            var tabId = $"tab-{g}";
             var paneId = $"pane-{g}";
-
             var isActive = hasActiveTab
             ? activeTab == paneId
             : g == 0;
 
             <li class="nav-item" role="presentation">
                 <button class="nav-link @(isActive ? "active" : "")"
-                        id="@tabId"
+                        id="tab-@g"
                         data-bs-toggle="tab"
                         data-bs-target="#@paneId"
                         type="button"
-                        role="tab">
+                        role="tab"
+                        aria-controls="@paneId"
+                        aria-selected="@(isActive ? "true" : "false")">
                     @categoryName
                 </button>
             </li>
         }
 
+        @{
+            var additionalPaneId = "pane-additional";
+            var additionalActive = hasActiveTab && activeTab == additionalPaneId;
+        }
+
         <li class="nav-item" role="presentation">
-            <button class="nav-link @(activeTab == "pane-additional-work" ? "active" : "")"
-                    id="tab-additional-work"
+            <button class="nav-link @(additionalActive ? "active" : "")"
+                    id="tab-additional"
                     data-bs-toggle="tab"
-                    data-bs-target="#pane-additional-work"
+                    data-bs-target="#@additionalPaneId"
                     type="button"
-                    role="tab">
+                    role="tab"
+                    aria-controls="@additionalPaneId"
+                    aria-selected="@(additionalActive ? "true" : "false")">
                 Доп. работа
             </button>
         </li>
@@ -86,31 +113,39 @@
             var group = groupedItems[g].ToList();
             var categoryName = groupedItems[g].Key;
             var paneId = $"pane-{g}";
-
             var isActive = hasActiveTab
             ? activeTab == paneId
             : g == 0;
+            var showWeeks = IsWeeksCategory(categoryName);
 
             <div class="tab-pane fade @(isActive ? "show active" : "")"
                  id="@paneId"
-                 role="tabpanel">
+                 role="tabpanel"
+                 aria-labelledby="tab-@g">
 
-                <h4 class="mb-3">@categoryName</h4>
+                <h3 class="mb-3">@categoryName</h3>
 
                 <div class="table-responsive">
-                    <table class="table table-bordered table-sm align-middle">
+                    <table class="table table-bordered align-middle">
                         <thead class="table-light">
                             <tr>
                                 <th>Вид работы</th>
                                 <th style="width: 280px;">Основа расчета</th>
-                                <th style="width: 180px;">Часы</th>
+                                @if (showWeeks)
+                                {
+                                    <th style="width: 160px;">Недель</th>
+                                    <th style="width: 160px;">Коэффициент</th>
+                                }
+                                else
+                                {
+                                    <th style="width: 160px;">Часы</th>
+                                }
                             </tr>
                         </thead>
-
                         <tbody>
                             @foreach (var row in group)
                             {
-                                var index = Model.Items.IndexOf(row);
+                                var index = Model.Items.FindIndex(x => x.Id == row.Id);
 
                                 <tr>
                                     <td>
@@ -120,18 +155,17 @@
                                                name="Items[@index].Id"
                                                value="@row.Id" />
 
-                                        <input type="hidden"
-                                               name="Items[@index].WorkName"
-                                               value="@row.WorkName" />
-
-                                        <input type="hidden"
-                                               name="Items[@index].CategoryName"
-                                               value="@row.CategoryName" />
+                                        @if (!showWeeks)
+                                        {
+                                            <input type="hidden"
+                                                   name="Items[@index].WeeksCount"
+                                                   value="@row.WeeksCount" />
+                                        }
                                     </td>
 
                                     <td>
-                                        <select name="Items[@index].CalculationBase"
-                                                class="form-select form-select-sm">
+                                        <select class="form-select"
+                                                name="Items[@index].CalculationBase">
                                             @foreach (var item in Model.CalculationBaseItems)
                                             {
                                                 var isSelected = item.Value == ((int)row.CalculationBase).ToString();
@@ -143,14 +177,33 @@
                                         </select>
                                     </td>
 
-                                    <td>
-                                        <input name="Items[@index].Hours"
-                                               value="@row.Hours.ToString("0.##", CultureInfo.InvariantCulture)"
-                                               class="form-control form-control-sm"
-                                               type="number"
-                                               min="0"
-                                               step="0.01" />
-                                    </td>
+                                    @if (showWeeks)
+                                    {
+                                        <td>
+                                            <input class="form-control"
+                                                   type="number"
+                                                   min="0"
+                                                   step="1"
+                                                   name="Items[@index].WeeksCount"
+                                                   value="@row.WeeksCount" />
+                                        </td>
+
+                                        <td>
+                                            <input class="form-control"
+                                                   type="text"
+                                                   name="Items[@index].Hours"
+                                                   value="@FormatDecimal(row.Hours)" />
+                                        </td>
+                                    }
+                                    else
+                                    {
+                                        <td>
+                                            <input class="form-control"
+                                                   type="text"
+                                                   name="Items[@index].Hours"
+                                                   value="@FormatDecimal(row.Hours)" />
+                                        </td>
+                                    }
                                 </tr>
                             }
                         </tbody>
@@ -159,21 +212,21 @@
             </div>
         }
 
-        <div class="tab-pane fade @(activeTab == "pane-additional-work" ? "show active" : "")"
-             id="pane-additional-work"
-             role="tabpanel">
+        <div class="tab-pane fade @(additionalActive ? "show active" : "")"
+             id="pane-additional"
+             role="tabpanel"
+             aria-labelledby="tab-additional">
 
-            <h4 class="mb-3">Доп. работа</h4>
+            <h3 class="mb-3">Доп. работа</h3>
 
             <div class="table-responsive">
-                <table class="table table-bordered table-sm align-middle">
+                <table class="table table-bordered align-middle">
                     <thead class="table-light">
                         <tr>
                             <th>Вид работы</th>
-                            <th style="width: 180px;">Часы</th>
+                            <th style="width: 160px;">Часы</th>
                         </tr>
                     </thead>
-
                     <tbody>
                         @for (var i = 0; i < Model.AdditionalWorkNorms.Count; i++)
                         {
@@ -186,27 +239,12 @@
                                     <input type="hidden"
                                            name="AdditionalWorkNorms[@i].Id"
                                            value="@row.Id" />
-
-                                    <input type="hidden"
-                                           name="AdditionalWorkNorms[@i].WorkType"
-                                           value="@((int)row.WorkType)" />
-
-                                    <input type="hidden"
-                                           name="AdditionalWorkNorms[@i].Code"
-                                           value="@row.Code" />
-
-                                    <input type="hidden"
-                                           name="AdditionalWorkNorms[@i].Name"
-                                           value="@row.Name" />
                                 </td>
-
                                 <td>
-                                    <input name="AdditionalWorkNorms[@i].Hours"
-                                           value="@row.Hours.ToString("0.##", CultureInfo.InvariantCulture)"
-                                           class="form-control form-control-sm"
-                                           type="number"
-                                           min="0"
-                                           step="0.01" />
+                                    <input class="form-control"
+                                           type="text"
+                                           name="AdditionalWorkNorms[@i].Hours"
+                                           value="@FormatDecimal(row.Hours)" />
                                 </td>
                             </tr>
                         }
@@ -216,7 +254,7 @@
         </div>
     </div>
 
-    <div class="mt-4 text-end">
+    <div class="d-flex justify-content-end mt-4">
         <button type="submit" class="btn btn-primary px-4">
             Сохранить
         </button>
@@ -225,22 +263,22 @@
 
 @section Scripts {
     <script>
-        document.addEventListener("shown.bs.tab", function (event) {
-            const target = event.target.getAttribute("data-bs-target");
-            const input = document.getElementById("activeTabInput");
+        document.addEventListener('DOMContentLoaded', function () {
+            const activeTabInput = document.getElementById('activeTabInput');
 
-            if (target && input) {
-                input.value = target.replace("#", "");
-            }
-        });
+            document
+                .querySelectorAll('#normTimeTabs button[data-bs-toggle="tab"]')
+                .forEach(function (button) {
+                    button.addEventListener('shown.bs.tab', function (event) {
+                        const target = event.target.getAttribute('data-bs-target');
 
-        document.getElementById("normTimeForm")?.addEventListener("submit", function () {
-            const activeButton = document.querySelector(".nav-link.active[data-bs-target]");
-            const input = document.getElementById("activeTabInput");
+                        if (!target || !activeTabInput) {
+                            return;
+                        }
 
-            if (activeButton && input) {
-                input.value = activeButton.getAttribute("data-bs-target").replace("#", "");
-            }
+                        activeTabInput.value = target.replace('#', '');
+                    });
+                });
         });
     </script>
 }

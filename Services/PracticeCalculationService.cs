@@ -28,14 +28,14 @@ namespace DepartmentLoadApp.Services
         public async Task RecalculateAsync(List<PracticeWorkloadRow> rows)
         {
             var allNorms = await _context.NormTimes
-     .AsNoTracking()
-     .Where(x => !string.IsNullOrWhiteSpace(x.CategoryName))
-     .ToListAsync();
+                .AsNoTracking()
+                .Where(x => !string.IsNullOrWhiteSpace(x.CategoryName))
+                .ToListAsync();
 
             var norms = allNorms
                 .Where(x =>
-                    ContainsNormalized(x.CategoryName, PracticeCategoryKeyword) ||
-                    ContainsNormalized(x.CategoryName, ResearchCategoryKeyword))
+                    ContainsNormalized(x.CategoryName, PracticeCategoryKeyword)
+                    || ContainsNormalized(x.CategoryName, ResearchCategoryKeyword))
                 .ToList();
 
             var contingents = await _context.ContingentRows
@@ -48,6 +48,12 @@ namespace DepartmentLoadApp.Services
 
             foreach (var row in rows)
             {
+                var norm = FindPracticeNorm(norms, row.PracticeName);
+
+                row.WeeksCount = norm == null
+                    ? 0
+                    : Math.Max(0, norm.WeeksCount);
+
                 var directionCode = TextNormalizeHelper.Normalize(row.DirectionCode);
 
                 if (!contingentMap.TryGetValue(directionCode, out var contingent))
@@ -58,8 +64,6 @@ namespace DepartmentLoadApp.Services
 
                 row.StudentsCount = CalculationHelper.GetStudentsByCourse(contingent, row.Course);
                 row.GroupCount = CalculationHelper.GetGroupsByCourse(contingent, row.Course);
-
-                var norm = FindPracticeNorm(norms, row.PracticeName);
 
                 if (norm == null || row.WeeksCount <= 0 || norm.Hours <= 0)
                 {
@@ -92,7 +96,7 @@ namespace DepartmentLoadApp.Services
             var target = NormalizePracticeKey(practiceName);
 
             return norms.FirstOrDefault(x => NormalizePracticeKey(x.WorkName) == target)
-                ?? norms.FirstOrDefault(x => IsSamePracticeType(x.WorkName, practiceName));
+                   ?? norms.FirstOrDefault(x => IsSamePracticeType(x.WorkName, practiceName));
         }
 
         private static bool IsSamePracticeType(string? left, string? right)
@@ -149,6 +153,7 @@ namespace DepartmentLoadApp.Services
                 .Trim()
                 .ToLowerInvariant()
                 .Replace("ё", "е")
+                .Replace("-", " ")
                 .Replace("бакалавров", string.Empty)
                 .Replace("магистров", string.Empty)
                 .Replace("(учебная)", string.Empty)

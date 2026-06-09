@@ -11,6 +11,12 @@ namespace DepartmentLoadApp.ViewModels.NormTime
 
         public string ActiveTab { get; set; } = string.Empty;
 
+        public string SelectedYear { get; set; } = string.Empty;
+
+        public int SelectedYearStart { get; set; }
+
+        public IReadOnlyList<int> AvailableYearStarts { get; set; } = Array.Empty<int>();
+
         public List<SelectListItem> CalculationBaseItems { get; set; } = new()
         {
             new SelectListItem("На поток", ((int)WorkCalculationBase.PerStream).ToString()),

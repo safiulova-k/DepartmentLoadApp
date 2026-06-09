@@ -18,5 +18,9 @@ namespace DepartmentLoadApp.ViewModels.NormTime
         [Display(Name = "Часы")]
         [Range(0, 9999)]
         public decimal Hours { get; set; }
+
+        [Display(Name = "Недель")]
+        [Range(0, 52)]
+        public int WeeksCount { get; set; }
     }
 }

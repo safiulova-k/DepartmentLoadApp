@@ -32,36 +32,7 @@
     }
 }
 
-<style>
-    .practice-calculation-table th,
-    .practice-calculation-table td {
-        vertical-align: middle;
-    }
-
-    .practice-calculation-table thead th {
-        background: #f8f9fa !important;
-        color: #212529 !important;
-        border-color: #dee2e6 !important;
-        white-space: nowrap;
-    }
-
-    .practice-calculation-table .number-column {
-        width: 110px;
-        text-align: center;
-    }
-
-    .practice-calculation-table .weeks-input {
-        max-width: 90px;
-        margin: 0 auto;
-    }
-
-    .practice-calculation-table .total-column,
-    .practice-calculation-table .total-cell {
-        font-weight: 700;
-    }
-</style>
-
-<h1>Расчет нагрузки по практикам</h1>
+<h1 class="mb-4">Расчет нагрузки по практикам</h1>
 
 @await Html.PartialAsync(
         "_CalculationTopPanel",
@@ -73,10 +44,6 @@
         ActiveTab = "practice"
     })
 
-<div class="alert alert-light border">
-    Для практик вручную задается только количество недель. Остальные данные подтягиваются автоматически из учебных планов, контингента и норм времени.
-</div>
-
 @if (Model.Rows == null || !Model.Rows.Any())
 {
     <div class="alert alert-info">
@@ -85,281 +52,54 @@
 }
 else
 {
-    <div class="direction-legend">
+    <div class="d-flex flex-wrap gap-2 mb-3">
         @foreach (var direction in directions)
         {
-            <div class="direction-legend-item">
-                <span class="direction-legend-color"
-                      style="background-color:@directionColorMap[direction]"></span>
-                <span>@direction</span>
-            </div>
+            <span class="badge rounded-pill text-dark border bg-white px-3 py-2">
+                <span class="d-inline-block rounded-circle me-2"
+                      style="width: 18px; height: 18px; background-color: @directionColorMap[direction]; vertical-align: middle;">
+                </span>
+                @direction
+            </span>
         }
     </div>
 
-    <form asp-action="Save" method="post">
-        @Html.AntiForgeryToken()
+    <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Семестр</th>
+                    <th>Код направления</th>
+                    <th>Вид практики</th>
+                    <th class="text-center">Курс</th>
+                    <th class="text-center">Групп</th>
+                    <th class="text-center">Студентов</th>
+                    <th class="text-center">Недель</th>
+                    <th class="text-center">Итого</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    var directionColor = directionColorMap.TryGetValue(row.DirectionCode, out var color)
+                    ? color
+                    : "#ffffff";
 
-        <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
-        <input type="hidden" name="SelectedYear" value="@Model.SelectedYear" />
-
-        <div class="table-responsive">
-            <table class="table table-bordered table-sm practice-calculation-table">
-                <thead>
-                    <tr>
-                        <th>Семестр</th>
-                        <th>Код направления</th>
-                        <th>Вид практики</th>
-                        <th class="number-column">Курс</th>
-                        <th class="number-column">Групп</th>
-                        <th class="number-column">Студентов</th>
-                        <th class="number-column">Недель</th>
-                        <th class="number-column total-column">Итого</th>
+                    <tr style="background-color: @directionColor;">
+                        <td>@row.SemesterName</td>
+                        <td>@row.DirectionCode</td>
+                        <td>@row.PracticeName</td>
+                        <td class="text-center">@row.Course</td>
+                        <td class="text-center">@row.GroupCount</td>
+                        <td class="text-center">@row.StudentsCount</td>
+                        <td class="text-center fw-semibold">@row.WeeksCount</td>
+                        <td class="text-center fw-bold">@row.TotalHours.ToString("0.##")</td>
                     </tr>
-                </thead>
-
-                <tbody class="js-calculation-table-body">
-                    @for (var i = 0; i < Model.Rows.Count; i++)
-                    {
-                        var row = Model.Rows[i];
-
-                        var directionColor = directionColorMap.TryGetValue(row.DirectionCode, out var color)
-                        ? color
-                        : "#ffffff";
-
-                        <tr class="js-calculation-row calculation-row-colored"
-                            style="--direction-color:@directionColor"
-                            data-semester="@((row.SemesterName ?? string.Empty).ToLower())"
-                            data-direction="@((row.DirectionCode ?? string.Empty).ToLower())"
-                            data-name="@((row.PracticeName ?? string.Empty).ToLower())"
-                            data-course="@row.Course">
-
-                            <td>
-                                @row.SemesterName
-
-                                <input type="hidden" name="Rows[@i].Id" value="@row.Id" />
-                                <input type="hidden" name="Rows[@i].PlanYear" value="@row.PlanYear" />
-                                <input type="hidden" name="Rows[@i].AcademicPlanId" value="@row.AcademicPlanId" />
-                                <input type="hidden" name="Rows[@i].AcademicPlanRecordId" value="@row.AcademicPlanRecordId" />
-                                <input type="hidden" name="Rows[@i].PracticeName" value="@row.PracticeName" />
-                                <input type="hidden" name="Rows[@i].DirectionCode" value="@row.DirectionCode" />
-                                <input type="hidden" name="Rows[@i].DirectionName" value="@row.DirectionName" />
-                                <input type="hidden" name="Rows[@i].Course" value="@row.Course" />
-                                <input type="hidden" name="Rows[@i].SemesterName" value="@row.SemesterName" />
-                                <input type="hidden" name="Rows[@i].EducationForm" value="@row.EducationForm" />
-                                <input type="hidden" name="Rows[@i].StudentsCount" value="@row.StudentsCount" />
-                                <input type="hidden" name="Rows[@i].GroupCount" value="@row.GroupCount" />
-                                <input type="hidden" name="Rows[@i].TotalHours" value="@row.TotalHours.ToString("0.####").Replace(",", ".")" />
-                            </td>
-
-                            <td>@row.DirectionCode</td>
-                            <td>@row.PracticeName</td>
-                            <td class="text-center">@row.Course</td>
-                            <td class="text-center">@row.GroupCount</td>
-                            <td class="text-center">@row.StudentsCount</td>
-                            <td>
-                                <input type="number"
-                                       name="Rows[@i].WeeksCount"
-                                       value="@row.WeeksCount"
-                                       min="0"
-                                       step="1"
-                                       class="form-control form-control-sm weeks-input" />
-                            </td>
-                            <td class="text-center total-cell">
-                                @row.TotalHours.ToString("0.##")
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-
-        <button type="submit" class="btn btn-success">
-            Сохранить недели и пересчитать
-        </button>
-    </form>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @section Scripts {
-    <script>
-        function isAutumnSemester(value) {
-            const text = String(value || "").toLowerCase();
-
-            return text.includes("осен")
-                || text.includes("осень")
-                || text.includes("1 сем")
-                || text.includes("1-й")
-                || text === "1";
-        }
-
-        function isSpringSemester(value) {
-            const text = String(value || "").toLowerCase();
-
-            return text.includes("вес")
-                || text.includes("весна")
-                || text.includes("2 сем")
-                || text.includes("2-й")
-                || text === "2";
-        }
-
-        function parseCalculationNumber(value) {
-            if (!value) {
-                return 0;
-            }
-
-            return Number(String(value).replace(",", ".")) || 0;
-        }
-
-        function getSelectedDirections() {
-            return Array.from(document.querySelectorAll(".js-direction-filter-checkbox:checked"))
-                .map(function (checkbox) {
-                    return checkbox.value;
-                });
-        }
-
-        function updateDirectionFilterButton() {
-            const button = document.querySelector(".js-direction-filter-button");
-            const selectedDirections = getSelectedDirections();
-
-            if (!button) {
-                return;
-            }
-
-            if (selectedDirections.length === 0) {
-                button.textContent = "Все направления";
-                return;
-            }
-
-            if (selectedDirections.length === 1) {
-                button.textContent = selectedDirections[0];
-                return;
-            }
-
-            button.textContent = "Выбрано: " + selectedDirections.length;
-        }
-
-        function buildDirectionFilter() {
-            const menu = document.querySelector(".js-direction-filter-menu");
-
-            if (!menu) {
-                return;
-            }
-
-            const directions = Array.from(document.querySelectorAll(".js-calculation-row"))
-                .map(function (row) {
-                    return row.dataset.direction || "";
-                })
-                .filter(function (direction) {
-                    return direction.length > 0;
-                })
-                .filter(function (direction, index, array) {
-                    return array.indexOf(direction) === index;
-                })
-                .sort();
-
-            if (directions.length === 0) {
-                menu.innerHTML = '<div class="text-muted small px-1">Направления не найдены.</div>';
-                return;
-            }
-
-            menu.innerHTML = "";
-
-            directions.forEach(function (direction) {
-                const id = "directionFilter_" + direction.replace(/[^a-zA-Zа-яА-Я0-9]/g, "_");
-
-                const label = document.createElement("label");
-                label.className = "calculation-direction-option";
-
-                label.innerHTML =
-                    `<input type="checkbox"
-                                    class="form-check-input js-direction-filter-checkbox"
-                                    value="${direction}"
-                                    id="${id}" />
-                             <span>${direction}</span>`;
-
-                menu.appendChild(label);
-            });
-        }
-
-        function applyCalculationFiltersAndSort() {
-            const tbody = document.querySelector(".js-calculation-table-body");
-
-            if (!tbody) {
-                return;
-            }
-
-            const search = (document.querySelector(".js-calculation-search")?.value || "").toLowerCase().trim();
-            const filter = document.querySelector(".js-calculation-filter")?.value || "all";
-            const sort = document.querySelector(".js-calculation-sort")?.value || "name-asc";
-            const selectedDirections = getSelectedDirections();
-            const rows = Array.from(tbody.querySelectorAll(".js-calculation-row"));
-
-            rows.forEach(function (row) {
-                const semester = row.dataset.semester || "";
-                const direction = row.dataset.direction || "";
-                const name = row.dataset.name || "";
-
-                let visible = true;
-
-                if (search && !name.includes(search) && !direction.includes(search) && !semester.includes(search)) {
-                    visible = false;
-                }
-
-                if (selectedDirections.length > 0 && !selectedDirections.includes(direction)) {
-                    visible = false;
-                }
-
-                if (filter === "autumn" && !isAutumnSemester(semester)) {
-                    visible = false;
-                }
-
-                if (filter === "spring" && !isSpringSemester(semester)) {
-                    visible = false;
-                }
-
-                row.classList.toggle("d-none", !visible);
-            });
-
-            rows.sort(function (a, b) {
-                const nameA = a.dataset.name || "";
-                const nameB = b.dataset.name || "";
-                const directionA = a.dataset.direction || "";
-                const directionB = b.dataset.direction || "";
-                const courseA = parseCalculationNumber(a.dataset.course);
-                const courseB = parseCalculationNumber(b.dataset.course);
-
-                if (sort === "course-asc") {
-                    return courseA - courseB || nameA.localeCompare(nameB);
-                }
-
-                if (sort === "direction-asc") {
-                    return directionA.localeCompare(directionB) || nameA.localeCompare(nameB);
-                }
-
-                return nameA.localeCompare(nameB) || directionA.localeCompare(directionB);
-            });
-
-            rows.forEach(function (row) {
-                tbody.appendChild(row);
-            });
-
-            updateDirectionFilterButton();
-        }
-
-        document.addEventListener("input", function (event) {
-            if (event.target.classList.contains("js-calculation-search")) {
-                applyCalculationFiltersAndSort();
-            }
-        });
-
-        document.addEventListener("change", function (event) {
-            if (event.target.classList.contains("js-calculation-filter")
-                || event.target.classList.contains("js-calculation-sort")
-                || event.target.classList.contains("js-direction-filter-checkbox")) {
-                applyCalculationFiltersAndSort();
-            }
-        });
-
-        buildDirectionFilter();
-        applyCalculationFiltersAndSort();
-    </script>
 }

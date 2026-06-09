@@ -14,6 +14,8 @@ namespace DepartmentLoadApp.Models
 
         public decimal Hours { get; set; }
 
+        public int WeeksCount { get; set; }
+
         public int SortOrder { get; set; }
     }
 }
