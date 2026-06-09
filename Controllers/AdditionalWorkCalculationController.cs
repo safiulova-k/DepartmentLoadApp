@@ -20,23 +20,5 @@ namespace DepartmentLoadApp.Controllers
 
             return View(model);
         }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SavePostgraduateCount(
-            int selectedYearStart,
-            int count)
-        {
-            await _additionalWorkCalculationService.SavePostgraduateCountAsync(
-                selectedYearStart,
-                count);
-
-            TempData["SuccessMessage"] = "Расчет дополнительной работы сохранен.";
-
-            return RedirectToAction(nameof(Index), new
-            {
-                startYear = selectedYearStart
-            });
-        }
     }
 }

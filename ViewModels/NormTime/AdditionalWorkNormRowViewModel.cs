@@ -14,6 +14,12 @@ namespace DepartmentLoadApp.ViewModels.NormTime
         public string Name { get; set; } = string.Empty;
 
         [Range(0, 9999)]
+        public int Count { get; set; }
+
+        [Range(0, 9999)]
         public decimal Hours { get; set; }
+
+        public bool IsPostgraduate =>
+            WorkType == AdditionalWorkType.PostgraduateSupervision;
     }
 }

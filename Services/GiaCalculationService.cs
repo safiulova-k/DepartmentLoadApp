@@ -10,7 +10,11 @@ namespace DepartmentLoadApp.Services
     public class GiaCalculationService
     {
         private const string GiaCategoryName = "ГИА";
-        private const string StateExamConsultationWorkName = "Консультация к госэкзамену";
+
+        private const string StateExamConsultationRowName = "Консультация к госэкзамену";
+        private const string StateExamConsultationNormName = "Консультации к госэкзамену";
+        private const string OldStateExamConsultationNormName = "Консультация к госэкзамену";
+
         private const string FinalQualificationWorkName = "Руководство ВКР";
         private const string MasterFinalQualificationWorkNormName = "Руководство ВКР магистра";
         private const string BachelorFinalQualificationWorkNormName = "Руководство ВКР бакалавра";
@@ -58,9 +62,16 @@ namespace DepartmentLoadApp.Services
             List<NormTime> norms,
             ContingentRow contingent)
         {
-            if (row.WorkName == StateExamConsultationWorkName)
+            if (IsStateExamConsultation(row.WorkName))
             {
-                return CalculationHelper.RoundHours(row.ManualHours);
+                var consultationNorm = norms.FirstOrDefault(x =>
+                    NormalizeKey(x.WorkName) == NormalizeKey(StateExamConsultationNormName))
+                    ?? norms.FirstOrDefault(x =>
+                        NormalizeKey(x.WorkName) == NormalizeKey(OldStateExamConsultationNormName));
+
+                row.ManualHours = consultationNorm?.Hours ?? 0m;
+
+                return row.ManualHours;
             }
 
             var normName = GetGiaNormName(row, contingent);
@@ -94,11 +105,38 @@ namespace DepartmentLoadApp.Services
             return row.WorkName;
         }
 
+        private static bool IsStateExamConsultation(string? workName)
+        {
+            var normalized = NormalizeKey(workName);
+
+            return normalized == NormalizeKey(StateExamConsultationRowName)
+                   || normalized == NormalizeKey(StateExamConsultationNormName);
+        }
+
         private static void ResetCalculatedFields(GiaWorkloadRow row)
         {
             row.StudentsCount = 0;
             row.GroupCount = 0;
+            row.ManualHours = 0;
             row.TotalHours = 0;
+        }
+
+        private static string NormalizeKey(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            var normalized = value
+                .Trim()
+                .ToLowerInvariant()
+                .Replace("ё", "е")
+                .Replace("-", " ");
+
+            return string.Join(
+                ' ',
+                normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries));
         }
     }
 }

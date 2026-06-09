@@ -224,7 +224,8 @@
                     <thead class="table-light">
                         <tr>
                             <th>Вид работы</th>
-                            <th style="width: 160px;">Часы</th>
+                            <th style="width: 180px;">Количество</th>
+                            <th style="width: 180px;">Часы</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -240,6 +241,27 @@
                                            name="AdditionalWorkNorms[@i].Id"
                                            value="@row.Id" />
                                 </td>
+
+                                <td>
+                                    @if (row.IsPostgraduate)
+                                    {
+                                        <input class="form-control"
+                                               type="number"
+                                               min="0"
+                                               step="1"
+                                               name="AdditionalWorkNorms[@i].Count"
+                                               value="@row.Count" />
+                                    }
+                                    else
+                                    {
+                                        <span class="fw-semibold">1</span>
+
+                                        <input type="hidden"
+                                               name="AdditionalWorkNorms[@i].Count"
+                                               value="1" />
+                                    }
+                                </td>
+
                                 <td>
                                     <input class="form-control"
                                            type="text"
@@ -281,4 +303,11 @@
                 });
         });
     </script>
+}
+
+@functions {
+    private static string FormatDecimal(decimal value)
+    {
+        return value.ToString("0.##", CultureInfo.GetCultureInfo("ru-RU"));
+    }
 }

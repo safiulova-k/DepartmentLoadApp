@@ -48,47 +48,16 @@ namespace DepartmentLoadApp.Controllers
         public async Task<IActionResult> ImportFromAcademicPlan(int? startYear)
         {
             var selectedYearStart = AcademicYearResolver.NormalizeStartYear(startYear);
+            var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
             await _importService.ImportAllAsync(selectedYearStart);
 
-            return RedirectToAction(nameof(Index), new { startYear = selectedYearStart });
-        }
+            var rows = await LoadRowsAsync(selectedYear, asNoTracking: false);
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Save(GiaWorkloadPageViewModel model)
-        {
-            var inputRows = model.Rows ?? new();
-
-            var ids = inputRows
-                .Select(x => x.Id)
-                .ToList();
-
-            var dbRows = await _context.GiaWorkloadRows
-                .Where(x => ids.Contains(x.Id))
-                .OrderBy(x => x.Course)
-                .ThenBy(x => x.DirectionCode)
-                .ThenBy(x => x.GiaSection)
-                .ThenBy(x => x.WorkName)
-                .ToListAsync();
-
-            foreach (var row in inputRows)
-            {
-                var dbRow = dbRows.FirstOrDefault(x => x.Id == row.Id);
-
-                if (dbRow == null)
-                    continue;
-
-                if (dbRow.WorkName == "Консультация к госэкзамену")
-                {
-                    dbRow.ManualHours = row.ManualHours;
-                }
-            }
-
-            await _giaCalculationService.RecalculateAsync(dbRows);
+            await _giaCalculationService.RecalculateAsync(rows);
             await _context.SaveChangesAsync();
 
-            return RedirectToAction(nameof(Index), new { startYear = model.SelectedYearStart });
+            return RedirectToAction(nameof(Index), new { startYear = selectedYearStart });
         }
 
         [HttpGet]

@@ -44,34 +44,11 @@ namespace DepartmentLoadApp.Services
             {
                 SelectedYearStart = selectedYearStart,
                 SelectedYear = academicYear,
-                AvailableYearStarts = AcademicYearResolver.BuildAvailableStartYears(selectedYearStart).ToList(),
+                AvailableYearStarts = AcademicYearResolver
+                    .BuildAvailableStartYears(selectedYearStart)
+                    .ToList(),
                 Rows = rows.Select(MapRow).ToList()
             };
-        }
-
-        public async Task SavePostgraduateCountAsync(int selectedYearStart, int count)
-        {
-            var academicYear = AcademicYearResolver.BuildAcademicYear(
-                AcademicYearResolver.NormalizeStartYear(selectedYearStart));
-
-            await EnsureDefaultNormsAsync();
-            await EnsureRowsAsync(academicYear);
-
-            var row = await _context.AdditionalWorkloadRows
-                .Include(x => x.AdditionalWorkNorm)
-                .FirstOrDefaultAsync(x =>
-                    x.AcademicYear == academicYear &&
-                    x.AdditionalWorkNorm != null &&
-                    x.AdditionalWorkNorm.Code == PostgraduateNormCode);
-
-            if (row == null)
-            {
-                return;
-            }
-
-            row.Count = Math.Max(0, count);
-
-            await RecalculateAndSaveAsync(academicYear);
         }
 
         public async Task<List<AdditionalWorkDistributionItem>> BuildDistributionItemsAsync(
@@ -84,25 +61,25 @@ namespace DepartmentLoadApp.Services
             var rows = await LoadRowsAsync(academicYear);
 
             return rows
-             .Where(x => x.TotalHours > 0)
-             .Select(x => new AdditionalWorkDistributionItem
-             {
-                 SourceRowId = x.Id,
-                 SourceAcademicPlanRecordId = x.Id,
-                 WorkType = x.WorkType,
-                 LoadElementType = x.WorkType == AdditionalWorkType.PostgraduateSupervision
-                     ? LoadAssignmentElementType.PostgraduateSupervision
-                     : LoadAssignmentElementType.OrganizationalWork,
-                 Title = "Доп. работа",
-                 Subtitle = x.WorkType == AdditionalWorkType.PostgraduateSupervision
-                     ? $"Всего аспирантов: {x.Count}, норма: {x.HoursPerUnit:0.##} ч."
-                     : $"Доступно часов: {x.TotalHours:0.##}",
-                 ElementDisplayName = x.WorkName,
-                 Count = x.Count,
-                 HoursPerUnit = x.HoursPerUnit,
-                 TotalHours = x.TotalHours
-             })
-             .ToList();
+                .Where(x => x.TotalHours > 0)
+                .Select(x => new AdditionalWorkDistributionItem
+                {
+                    SourceRowId = x.Id,
+                    SourceAcademicPlanRecordId = x.Id,
+                    WorkType = x.WorkType,
+                    LoadElementType = x.WorkType == AdditionalWorkType.PostgraduateSupervision
+                        ? LoadAssignmentElementType.PostgraduateSupervision
+                        : LoadAssignmentElementType.OrganizationalWork,
+                    Title = "Доп. работа",
+                    Subtitle = x.WorkType == AdditionalWorkType.PostgraduateSupervision
+                        ? $"Всего аспирантов: {x.Count}, норма: {x.HoursPerUnit:0.##} ч."
+                        : $"Доступно часов: {x.TotalHours:0.##}",
+                    ElementDisplayName = x.WorkName,
+                    Count = x.Count,
+                    HoursPerUnit = x.HoursPerUnit,
+                    TotalHours = x.TotalHours
+                })
+                .ToList();
         }
 
         private async Task EnsureDefaultNormsAsync()
@@ -114,7 +91,7 @@ namespace DepartmentLoadApp.Services
                 existingItems,
                 AdditionalWorkType.PostgraduateSupervision,
                 PostgraduateNormCode,
-                "Аспиранты");
+                "Руководство аспирантами (за год), часы на человека");
 
             AddOrUpdateNorm(
                 existingItems,
@@ -153,6 +130,7 @@ namespace DepartmentLoadApp.Services
                     WorkType = workType,
                     Code = code,
                     Name = name,
+                    Count = workType == AdditionalWorkType.PostgraduateSupervision ? 0 : 1,
                     Hours = 0m,
                     IsDefault = false
                 });
@@ -162,6 +140,9 @@ namespace DepartmentLoadApp.Services
 
             existingItem.WorkType = workType;
             existingItem.Name = name;
+            existingItem.Count = workType == AdditionalWorkType.PostgraduateSupervision
+                ? Math.Max(0, existingItem.Count)
+                : 1;
             existingItem.IsDefault = false;
         }
 
@@ -178,13 +159,19 @@ namespace DepartmentLoadApp.Services
 
             foreach (var norm in norms)
             {
-                var row = existingRows.FirstOrDefault(x =>
-                    x.AdditionalWorkNormId == norm.Id);
+                var row = existingRows
+                    .FirstOrDefault(x => x.AdditionalWorkNormId == norm.Id);
+
+                var count = norm.WorkType == AdditionalWorkType.PostgraduateSupervision
+                    ? Math.Max(0, norm.Count)
+                    : 1;
 
                 if (row != null)
                 {
                     row.WorkType = norm.WorkType;
                     row.WorkName = norm.Name;
+                    row.Count = count;
+                    row.HoursPerUnit = norm.Hours;
                     continue;
                 }
 
@@ -194,7 +181,7 @@ namespace DepartmentLoadApp.Services
                     WorkType = norm.WorkType,
                     AdditionalWorkNormId = norm.Id,
                     WorkName = norm.Name,
-                    Count = norm.WorkType == AdditionalWorkType.PostgraduateSupervision ? 0 : 1,
+                    Count = count,
                     HoursPerUnit = norm.Hours,
                     TotalHours = 0
                 });
@@ -222,7 +209,7 @@ namespace DepartmentLoadApp.Services
 
                 if (row.WorkType == AdditionalWorkType.PostgraduateSupervision)
                 {
-                    row.Count = Math.Max(0, row.Count);
+                    row.Count = Math.Max(0, norm.Count);
                     row.TotalHours = RoundHoursToInt(row.Count * row.HoursPerUnit);
                 }
                 else

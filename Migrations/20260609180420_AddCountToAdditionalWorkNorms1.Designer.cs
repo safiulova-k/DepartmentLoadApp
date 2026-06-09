@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DepartmentLoadApp.Migrations
 {
     [DbContext(typeof(DepartmentLoadDbContext))]
-    [Migration("20260609163852_AddWeeksCountToNormTimes")]
-    partial class AddWeeksCountToNormTimes
+    [Migration("20260609180420_AddCountToAdditionalWorkNorms1")]
+    partial class AddCountToAdditionalWorkNorms1
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -82,6 +82,9 @@ namespace DepartmentLoadApp.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("Hours")
                         .HasColumnType("numeric(10,2)");
@@ -739,6 +742,9 @@ namespace DepartmentLoadApp.Migrations
                         .HasColumnType("numeric");
 
                     b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("WeeksCount")
                         .HasColumnType("integer");
 
                     b.Property<string>("WorkName")

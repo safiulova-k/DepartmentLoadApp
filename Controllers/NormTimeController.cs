@@ -14,6 +14,10 @@ namespace DepartmentLoadApp.Controllers
     {
         private const string PracticeCategoryName = "Практика";
         private const string ResearchCategoryName = "Научная работа";
+        private const string GiaCategoryName = "ГИА";
+
+        private const string StateExamConsultationNormName = "Консультации к госэкзамену";
+        private const string OldStateExamConsultationNormName = "Консультация к госэкзамену";
 
         private const string PostgraduateNormCode = "POSTGRADUATE_SUPERVISION";
         private const string DepartmentHeadNormCode = "DEPARTMENT_HEAD";
@@ -42,6 +46,7 @@ namespace DepartmentLoadApp.Controllers
             var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
             await EnsureDefaultAdditionalWorkNormsAsync();
+            await EnsureDefaultGiaNormsAsync();
             await EnsurePracticeNormTimesFromCalculationRowsAsync(selectedYear);
 
             var model = await BuildPageModelAsync(
@@ -60,6 +65,7 @@ namespace DepartmentLoadApp.Controllers
             var selectedYear = AcademicYearResolver.BuildAcademicYear(selectedYearStart);
 
             await EnsureDefaultAdditionalWorkNormsAsync();
+            await EnsureDefaultGiaNormsAsync();
             await EnsurePracticeNormTimesFromCalculationRowsAsync(selectedYear);
 
             await SaveMainNormTimesFromFormAsync();
@@ -79,7 +85,6 @@ namespace DepartmentLoadApp.Controllers
         private async Task SaveMainNormTimesFromFormAsync()
         {
             var form = Request.Form;
-
             var ids = ReadIndexedIntValues(form, "Items", "Id");
 
             if (ids.Count == 0)
@@ -116,7 +121,6 @@ namespace DepartmentLoadApp.Controllers
                     MidpointRounding.AwayFromZero);
 
                 var weeksCount = ReadIntFromForm(form[$"Items[{index}].WeeksCount"].ToString());
-
                 dbItem.WeeksCount = Math.Max(0, weeksCount);
             }
         }
@@ -145,7 +149,15 @@ namespace DepartmentLoadApp.Controllers
                     continue;
                 }
 
-                var hours = ReadDecimalFromForm(form[$"AdditionalWorkNorms[{index}].Hours"].ToString());
+                var count = ReadIntFromForm(
+                    form[$"AdditionalWorkNorms[{index}].Count"].ToString());
+
+                var hours = ReadDecimalFromForm(
+                    form[$"AdditionalWorkNorms[{index}].Hours"].ToString());
+
+                dbItem.Count = dbItem.WorkType == AdditionalWorkType.PostgraduateSupervision
+                    ? Math.Max(0, count)
+                    : 1;
 
                 dbItem.Hours = Math.Round(
                     Math.Max(0, hours),
@@ -155,7 +167,6 @@ namespace DepartmentLoadApp.Controllers
                 dbItem.IsDefault = false;
             }
         }
-
         private async Task<NormTimePageViewModel> BuildPageModelAsync(
             int selectedYearStart,
             string selectedYear,
@@ -207,11 +218,55 @@ namespace DepartmentLoadApp.Controllers
                         WorkType = x.WorkType,
                         Code = x.Code,
                         Name = x.Name,
+                        Count = x.Count,
                         Hours = x.Hours
                     })
                     .ToList(),
                 ActiveTab = NormalizeActiveTab(activeTab)
             };
+        }
+
+        private async Task EnsureDefaultGiaNormsAsync()
+        {
+            var norms = await _context.NormTimes.ToListAsync();
+
+            var oldConsultationNorm = norms.FirstOrDefault(x =>
+                NormalizeKey(x.CategoryName) == NormalizeKey(GiaCategoryName)
+                && NormalizeKey(x.WorkName) == NormalizeKey(OldStateExamConsultationNormName));
+
+            var newConsultationNorm = norms.FirstOrDefault(x =>
+                NormalizeKey(x.CategoryName) == NormalizeKey(GiaCategoryName)
+                && NormalizeKey(x.WorkName) == NormalizeKey(StateExamConsultationNormName));
+
+            if (newConsultationNorm != null)
+            {
+                newConsultationNorm.WorkName = StateExamConsultationNormName;
+                newConsultationNorm.CategoryName = GiaCategoryName;
+                return;
+            }
+
+            if (oldConsultationNorm != null)
+            {
+                oldConsultationNorm.WorkName = StateExamConsultationNormName;
+                oldConsultationNorm.CategoryName = GiaCategoryName;
+                return;
+            }
+
+            var maxSortOrder = norms.Count == 0
+                ? 0
+                : norms.Max(x => x.SortOrder);
+
+            _context.NormTimes.Add(new NormTime
+            {
+                WorkName = StateExamConsultationNormName,
+                CategoryName = GiaCategoryName,
+                CalculationBase = WorkCalculationBase.PerWork,
+                Hours = 0m,
+                WeeksCount = 0,
+                SortOrder = maxSortOrder + 1
+            });
+
+            await _context.SaveChangesAsync();
         }
 
         private async Task EnsurePracticeNormTimesFromCalculationRowsAsync(string selectedYear)
@@ -223,8 +278,7 @@ namespace DepartmentLoadApp.Controllers
                 return;
             }
 
-            var existingNorms = await _context.NormTimes
-                .ToListAsync();
+            var existingNorms = await _context.NormTimes.ToListAsync();
 
             var existingKeys = existingNorms
                 .Select(x => NormalizeKey(x.WorkName))
@@ -324,7 +378,8 @@ namespace DepartmentLoadApp.Controllers
 
             return normalized.Contains("научно исследователь")
                    || normalized.Contains("научно-исследователь")
-                   || normalized == "нир";
+                   || normalized == "нир"
+                   || normalized == "ниrм";
         }
 
         private static bool IsSamePracticeType(string? left, string? right)
@@ -384,7 +439,7 @@ namespace DepartmentLoadApp.Controllers
                 existingItems,
                 AdditionalWorkType.PostgraduateSupervision,
                 PostgraduateNormCode,
-                "Аспиранты");
+                "Руководство аспирантами (за год), часы на человека");
 
             AddOrUpdateNorm(
                 existingItems,
@@ -408,10 +463,10 @@ namespace DepartmentLoadApp.Controllers
         }
 
         private void AddOrUpdateNorm(
-            List<AdditionalWorkNorm> existingItems,
-            AdditionalWorkType workType,
-            string code,
-            string name)
+       List<AdditionalWorkNorm> existingItems,
+       AdditionalWorkType workType,
+       string code,
+       string name)
         {
             var existingItem = existingItems
                 .FirstOrDefault(x => x.Code == code);
@@ -423,6 +478,7 @@ namespace DepartmentLoadApp.Controllers
                     WorkType = workType,
                     Code = code,
                     Name = name,
+                    Count = workType == AdditionalWorkType.PostgraduateSupervision ? 0 : 1,
                     Hours = 0m,
                     IsDefault = false
                 });
@@ -432,9 +488,11 @@ namespace DepartmentLoadApp.Controllers
 
             existingItem.WorkType = workType;
             existingItem.Name = name;
+            existingItem.Count = workType == AdditionalWorkType.PostgraduateSupervision
+                ? Math.Max(0, existingItem.Count)
+                : 1;
             existingItem.IsDefault = false;
         }
-
         private static List<int> ReadIndexedIntValues(
             IFormCollection form,
             string collectionName,
@@ -506,6 +564,18 @@ namespace DepartmentLoadApp.Controllers
             }
 
             var normalized = value.Trim();
+
+            if (normalized.Contains(',') && !normalized.Contains('.'))
+            {
+                if (decimal.TryParse(
+                        normalized,
+                        NumberStyles.Number,
+                        CultureInfo.GetCultureInfo("ru-RU"),
+                        out var ruCommaValue))
+                {
+                    return ruCommaValue;
+                }
+            }
 
             if (decimal.TryParse(
                     normalized,

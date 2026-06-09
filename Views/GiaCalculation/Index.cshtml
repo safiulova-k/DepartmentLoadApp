@@ -44,7 +44,7 @@
     }
 }
 
-<h1>Расчет нагрузки по ГИА</h1>
+<h1 class="mb-4">Расчет нагрузки по ГИА</h1>
 
 @await Html.PartialAsync(
         "_CalculationTopPanel",
@@ -56,8 +56,10 @@
         ActiveTab = "gia"
     })
 
-<div class="alert alert-light border">
-    Для ГИА автоматически создаются строки по госэкзамену и ВКР. Вручную задаются только часы консультации к госэкзамену.
+<div class="alert alert-light border mb-3">
+    Для ГИА строки создаются автоматически из учебных планов.
+    Часы консультаций к госэкзамену задаются на странице норм времени.
+    Расчет выполняется общей кнопкой <strong>Рассчитать</strong>.
 </div>
 
 @if (Model.Rows == null || !Model.Rows.Any())
@@ -68,278 +70,48 @@
 }
 else
 {
-    <div class="direction-legend">
+    <div class="d-flex flex-wrap gap-2 mb-3">
         @foreach (var direction in directions)
         {
-            <div class="direction-legend-item">
-                <span class="direction-legend-color"
-                      style="background-color:@directionColorMap[direction]"></span>
-                <span>@direction</span>
-            </div>
+            <span class="badge rounded-pill text-dark border bg-white px-3 py-2">
+                <span class="d-inline-block rounded-circle me-2"
+                      style="width: 18px; height: 18px; background-color: @directionColorMap[direction]; vertical-align: middle;">
+                </span>
+                @direction
+            </span>
         }
     </div>
 
-    <form asp-action="Save" method="post">
-        @Html.AntiForgeryToken()
+    <h3 class="mt-4 mb-3">Госэкзамен</h3>
 
-        <input type="hidden" name="SelectedYearStart" value="@Model.SelectedYearStart" />
-        <input type="hidden" name="SelectedYear" value="@Model.SelectedYear" />
-
-        @{
-            var offset = 0;
-        }
-
-        <h3>Госэкзамен</h3>
-
-        @await Html.PartialAsync(
+    @await Html.PartialAsync(
                 "_GiaTable",
                 stateExamRows,
                 new ViewDataDictionary(ViewData)
-    {
-        ["IndexOffset"] = offset,
-        ["DirectionColorMap"] = directionColorMap
-    })
+        {
+            ["DirectionColorMap"] = directionColorMap
+        })
 
-        <button type="submit" class="btn btn-success mt-1 mb-4">
-            Сохранить часы консультаций и пересчитать
-        </button>
+    <h3 class="mt-4 mb-3">Дипломное проектирование</h3>
 
-        @{
-            offset += stateExamRows.Count;
-        }
-
-        <h3>Дипломное проектирование</h3>
-
-        @await Html.PartialAsync(
+    @await Html.PartialAsync(
                 "_GiaTable",
                 vkrRows,
                 new ViewDataDictionary(ViewData)
-    {
-        ["IndexOffset"] = offset,
-        ["DirectionColorMap"] = directionColorMap
-    })
+        {
+            ["DirectionColorMap"] = directionColorMap
+        })
 
-        @{
-            offset += vkrRows.Count;
-        }
+    <h3 class="mt-4 mb-3">ГЭК</h3>
 
-        <h3>ГЭК</h3>
-
-        @await Html.PartialAsync(
+    @await Html.PartialAsync(
                 "_GiaTable",
                 gecRows,
                 new ViewDataDictionary(ViewData)
-    {
-        ["IndexOffset"] = offset,
-        ["DirectionColorMap"] = directionColorMap
-    })
-    </form>
+        {
+            ["DirectionColorMap"] = directionColorMap
+        })
 }
 
 @section Scripts {
-    <script>
-        function isAutumnSemester(value) {
-            const text = String(value || "").toLowerCase();
-
-            return text.includes("осен")
-                || text.includes("осень")
-                || text.includes("1 сем")
-                || text.includes("1-й")
-                || text === "1";
-        }
-
-        function isSpringSemester(value) {
-            const text = String(value || "").toLowerCase();
-
-            return text.includes("вес")
-                || text.includes("весна")
-                || text.includes("2 сем")
-                || text.includes("2-й")
-                || text === "2";
-        }
-
-        function parseCalculationNumber(value) {
-            if (!value) {
-                return 0;
-            }
-
-            return Number(String(value).replace(",", ".")) || 0;
-        }
-
-        function getSelectedDirections() {
-            return Array.from(document.querySelectorAll(".js-direction-filter-checkbox:checked"))
-                .map(function (checkbox) {
-                    return checkbox.value;
-                });
-        }
-
-        function updateDirectionFilterButton() {
-            const button = document.querySelector(".js-direction-filter-button");
-            const selectedDirections = getSelectedDirections();
-
-            if (!button) {
-                return;
-            }
-
-            if (selectedDirections.length === 0) {
-                button.textContent = "Все направления";
-                return;
-            }
-
-            if (selectedDirections.length === 1) {
-                button.textContent = selectedDirections[0];
-                return;
-            }
-
-            button.textContent = "Выбрано: " + selectedDirections.length;
-        }
-
-        function buildDirectionFilter() {
-            const menu = document.querySelector(".js-direction-filter-menu");
-
-            if (!menu) {
-                return;
-            }
-
-            const directions = Array.from(document.querySelectorAll(".js-calculation-row"))
-                .map(function (row) {
-                    return row.dataset.direction || "";
-                })
-                .filter(function (direction) {
-                    return direction.length > 0;
-                })
-                .filter(function (direction, index, array) {
-                    return array.indexOf(direction) === index;
-                })
-                .sort();
-
-            if (directions.length === 0) {
-                menu.innerHTML = '<div class="text-muted small px-1">Направления не найдены.</div>';
-                return;
-            }
-
-            menu.innerHTML = "";
-
-            directions.forEach(function (direction) {
-                const id = "directionFilter_" + direction.replace(/[^a-zA-Zа-яА-Я0-9]/g, "_");
-
-                const label = document.createElement("label");
-                label.className = "calculation-direction-option";
-
-                label.innerHTML =
-                    `<input type="checkbox"
-                                    class="form-check-input js-direction-filter-checkbox"
-                                    value="${direction}"
-                                    id="${id}" />
-                             <span>${direction}</span>`;
-
-                menu.appendChild(label);
-            });
-        }
-
-        function applyCalculationFiltersAndSort() {
-            const sections = document.querySelectorAll(".js-gia-section");
-            const search = (document.querySelector(".js-calculation-search")?.value || "").toLowerCase().trim();
-            const filter = document.querySelector(".js-calculation-filter")?.value || "all";
-            const sort = document.querySelector(".js-calculation-sort")?.value || "name-asc";
-            const selectedDirections = getSelectedDirections();
-
-            sections.forEach(function (section) {
-                const tbody = section.querySelector(".js-calculation-table-body");
-
-                if (!tbody) {
-                    return;
-                }
-
-                const rows = Array.from(tbody.querySelectorAll(".js-calculation-row"));
-
-                rows.forEach(function (row) {
-                    const semester = row.dataset.semester || "";
-                    const direction = row.dataset.direction || "";
-                    const name = row.dataset.name || "";
-                    const giaSection = row.dataset.giaSection || "";
-
-                    let visible = true;
-
-                    if (search && !name.includes(search) && !direction.includes(search) && !semester.includes(search) && !giaSection.includes(search)) {
-                        visible = false;
-                    }
-
-                    if (selectedDirections.length > 0 && !selectedDirections.includes(direction)) {
-                        visible = false;
-                    }
-
-                    if (filter === "autumn" && !isAutumnSemester(semester)) {
-                        visible = false;
-                    }
-
-                    if (filter === "spring" && !isSpringSemester(semester)) {
-                        visible = false;
-                    }
-
-                    if (filter === "state-exam" && !giaSection.includes("госэкзамен")) {
-                        visible = false;
-                    }
-
-                    if (filter === "vkr" && !giaSection.includes("диплом")) {
-                        visible = false;
-                    }
-
-                    if (filter === "gek" && !giaSection.includes("гэк")) {
-                        visible = false;
-                    }
-
-                    row.classList.toggle("d-none", !visible);
-                });
-
-                rows.sort(function (a, b) {
-                    const nameA = a.dataset.name || "";
-                    const nameB = b.dataset.name || "";
-                    const directionA = a.dataset.direction || "";
-                    const directionB = b.dataset.direction || "";
-                    const courseA = parseCalculationNumber(a.dataset.course);
-                    const courseB = parseCalculationNumber(b.dataset.course);
-
-                    if (sort === "course-asc") {
-                        return courseA - courseB || nameA.localeCompare(nameB);
-                    }
-
-                    if (sort === "direction-asc") {
-                        return directionA.localeCompare(directionB) || nameA.localeCompare(nameB);
-                    }
-
-                    return nameA.localeCompare(nameB) || directionA.localeCompare(directionB);
-                });
-
-                rows.forEach(function (row) {
-                    tbody.appendChild(row);
-                });
-
-                const visibleCount = rows.filter(function (row) {
-                    return !row.classList.contains("d-none");
-                }).length;
-
-                section.classList.toggle("d-none", visibleCount === 0);
-            });
-
-            updateDirectionFilterButton();
-        }
-
-        document.addEventListener("input", function (event) {
-            if (event.target.classList.contains("js-calculation-search")) {
-                applyCalculationFiltersAndSort();
-            }
-        });
-
-        document.addEventListener("change", function (event) {
-            if (event.target.classList.contains("js-calculation-filter")
-                || event.target.classList.contains("js-calculation-sort")
-                || event.target.classList.contains("js-direction-filter-checkbox")) {
-                applyCalculationFiltersAndSort();
-            }
-        });
-
-        buildDirectionFilter();
-        applyCalculationFiltersAndSort();
-    </script>
 }

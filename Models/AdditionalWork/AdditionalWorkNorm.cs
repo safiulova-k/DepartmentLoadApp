@@ -18,6 +18,8 @@ namespace DepartmentLoadApp.Models.AdditionalWork
         [StringLength(300)]
         public string Name { get; set; } = string.Empty;
 
+        public int Count { get; set; }
+
         [Column(TypeName = "decimal(10,2)")]
         public decimal Hours { get; set; }
 

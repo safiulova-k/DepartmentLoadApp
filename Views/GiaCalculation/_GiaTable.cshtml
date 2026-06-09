@@ -1,137 +1,82 @@
 ﻿@model List<DepartmentLoadApp.Models.Gia.GiaWorkloadRow>
+@using System.Globalization
 
 @{
-    var indexOffset = (int?)ViewData["IndexOffset"] ?? 0;
-
-    var directionColorMap =
-        ViewData["DirectionColorMap"] as Dictionary<string, string>
+    var directionColorMap = ViewData["DirectionColorMap"] as Dictionary<string, string>
         ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-    var sectionName = Model.FirstOrDefault()?.GiaSection ?? string.Empty;
+    static string FormatDecimal(decimal value)
+    {
+        return value.ToString("0.##", CultureInfo.GetCultureInfo("ru-RU"));
+    }
+
+    static bool IsStateExamConsultation(string? workName)
+    {
+        if (string.IsNullOrWhiteSpace(workName))
+        {
+            return false;
+        }
+
+        var normalized = workName
+            .Trim()
+            .ToLowerInvariant()
+            .Replace("ё", "е");
+
+        return normalized == "консультация к госэкзамену"
+               || normalized == "консультации к госэкзамену";
+    }
 }
 
-<style>
-    .gia-calculation-table th,
-    .gia-calculation-table td {
-        vertical-align: middle;
-    }
+@if (Model.Count == 0)
+{
+    <div class="alert alert-light border">
+        Нет строк для отображения.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Семестр</th>
+                    <th>Код направления</th>
+                    <th>Вид работы</th>
+                    <th class="text-center">Курс</th>
+                    <th class="text-center">Групп</th>
+                    <th class="text-center">Студентов</th>
+                    <th class="text-center">Часы</th>
+                    <th class="text-center">Итого</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model)
+                {
+                    var directionColor = directionColorMap.TryGetValue(row.DirectionCode, out var color)
+                    ? color
+                    : "#ffffff";
 
-    .gia-calculation-table thead th {
-        background: #f8f9fa !important;
-        color: #212529 !important;
-        border-color: #dee2e6 !important;
-        white-space: nowrap;
-    }
-
-    .gia-calculation-table .number-column {
-        width: 110px;
-        text-align: center;
-    }
-
-    .gia-calculation-table .hours-input {
-        max-width: 100px;
-        margin: 0 auto;
-    }
-
-    .gia-calculation-table .total-column,
-    .gia-calculation-table .total-cell {
-        font-weight: 700;
-    }
-</style>
-
-<div class="js-gia-section" data-section="@sectionName.ToLower()">
-    @if (Model.Count == 0)
-    {
-        <div class="alert alert-info">
-            Нет строк для отображения.
-        </div>
-    }
-    else
-    {
-        <div class="table-responsive mb-3">
-            <table class="table table-bordered table-sm gia-calculation-table">
-                <thead>
-                    <tr>
-                        <th>Семестр</th>
-                        <th>Код направления</th>
-                        <th>Вид работы</th>
-                        <th class="number-column">Курс</th>
-                        <th class="number-column">Групп</th>
-                        <th class="number-column">Студентов</th>
-                        <th class="number-column">Часы</th>
-                        <th class="number-column total-column">Итого</th>
+                    <tr style="background-color: @directionColor;">
+                        <td>@row.SemesterName</td>
+                        <td>@row.DirectionCode</td>
+                        <td>@row.WorkName</td>
+                        <td class="text-center">@row.Course</td>
+                        <td class="text-center">@row.GroupCount</td>
+                        <td class="text-center">@row.StudentsCount</td>
+                        <td class="text-center">
+                            @if (IsStateExamConsultation(row.WorkName))
+                            {
+                                <span class="fw-semibold">@FormatDecimal(row.ManualHours)</span>
+                            }
+                            else
+                            {
+                                <span>—</span>
+                            }
+                        </td>
+                        <td class="text-center fw-bold">@FormatDecimal(row.TotalHours)</td>
                     </tr>
-                </thead>
-
-                <tbody class="js-calculation-table-body">
-                    @for (var i = 0; i < Model.Count; i++)
-                    {
-                        var index = indexOffset + i;
-                        var row = Model[i];
-
-                        var directionColor = directionColorMap.TryGetValue(row.DirectionCode, out var color)
-                        ? color
-                        : "#ffffff";
-
-                        <tr class="js-calculation-row calculation-row-colored"
-                            style="--direction-color:@directionColor"
-                            data-semester="@((row.SemesterName ?? string.Empty).ToLower())"
-                            data-direction="@((row.DirectionCode ?? string.Empty).ToLower())"
-                            data-name="@((row.WorkName ?? string.Empty).ToLower())"
-                            data-gia-section="@((row.GiaSection ?? string.Empty).ToLower())"
-                            data-course="@row.Course">
-
-                            <td>
-                                @row.SemesterName
-
-                                <input type="hidden" name="Rows[@index].Id" value="@row.Id" />
-                                <input type="hidden" name="Rows[@index].PlanYear" value="@row.PlanYear" />
-                                <input type="hidden" name="Rows[@index].AcademicPlanId" value="@row.AcademicPlanId" />
-                                <input type="hidden" name="Rows[@index].AcademicPlanRecordId" value="@row.AcademicPlanRecordId" />
-                                <input type="hidden" name="Rows[@index].GiaSection" value="@row.GiaSection" />
-                                <input type="hidden" name="Rows[@index].WorkName" value="@row.WorkName" />
-                                <input type="hidden" name="Rows[@index].DirectionCode" value="@row.DirectionCode" />
-                                <input type="hidden" name="Rows[@index].DirectionName" value="@row.DirectionName" />
-                                <input type="hidden" name="Rows[@index].Course" value="@row.Course" />
-                                <input type="hidden" name="Rows[@index].SemesterName" value="@row.SemesterName" />
-                                <input type="hidden" name="Rows[@index].EducationForm" value="@row.EducationForm" />
-                                <input type="hidden" name="Rows[@index].StudentsCount" value="@row.StudentsCount" />
-                                <input type="hidden" name="Rows[@index].GroupCount" value="@row.GroupCount" />
-                                <input type="hidden" name="Rows[@index].TotalHours" value="@row.TotalHours.ToString("0.####").Replace(",", ".")" />
-                            </td>
-
-                            <td>@row.DirectionCode</td>
-                            <td>@row.WorkName</td>
-                            <td class="text-center">@row.Course</td>
-                            <td class="text-center">@row.GroupCount</td>
-                            <td class="text-center">@row.StudentsCount</td>
-
-                            <td>
-                                @if (row.WorkName == "Консультация к госэкзамену")
-                                {
-                                    <input type="number"
-                                           name="Rows[@index].ManualHours"
-                                           value="@row.ManualHours.ToString("0.##").Replace(",", ".")"
-                                           min="0"
-                                           step="0.01"
-                                           class="form-control form-control-sm hours-input" />
-                                }
-                                else
-                                {
-                                    <span>—</span>
-                                    <input type="hidden"
-                                           name="Rows[@index].ManualHours"
-                                           value="@row.ManualHours.ToString("0.##").Replace(",", ".")" />
-                                }
-                            </td>
-
-                            <td class="text-center total-cell">
-                                @Math.Round(row.TotalHours, 0, MidpointRounding.AwayFromZero)
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    }
-</div>
+                }
+            </tbody>
+        </table>
+    </div>
+}
